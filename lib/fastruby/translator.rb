@@ -19,6 +19,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "rubygems"
+require "inline"
 
 module FastRuby
   class Context
@@ -57,15 +58,95 @@ module FastRuby
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
+
+      if mname == :infer
+        return to_c(recv)
+      end
+
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
 
       argnum = args.size - 1
 
-      if argnum == 0
-        "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), 0)"
+      recvtype = infer_type(recv)
+
+      if recvtype
+        mobject = recvtype.instance_method(tree[2])
+
+        address = getaddress(mobject)
+        len = getlen(mobject)
+
+        if address then
+          if argnum == 0
+            "((VALUE(*)(VALUE))0x#{address.to_s(16)})(#{to_c(recv)})"
+          else
+            "((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(#{to_c(recv)}, #{strargs})"
+          end
+        else
+
+          if argnum == 0
+            "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), 0)"
+          else
+            "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{argnum}, #{strargs} )"
+          end
+        end
+
       else
-        "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{argnum}, #{strargs} )"
+        if argnum == 0
+          "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), 0)"
+        else
+          "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{argnum}, #{strargs} )"
+        end
       end
+    end
+
+    def infer_type(recv)
+      if recv[0] == :call and recv[2] == :infer
+        eval(recv[3].last.last.to_s)
+      else
+        nil
+      end
+    end
+
+    inline :C  do |builder|
+      builder.include "<node.h>"
+      builder.c "VALUE getaddress(VALUE method) {
+          struct METHOD {
+            VALUE klass, rklass;
+            VALUE recv;
+            ID id, oid;
+            int safe_level;
+            NODE *body;
+          };
+
+          struct METHOD *data;
+          Data_Get_Struct(method, struct METHOD, data);
+
+          if (nd_type(data->body) == NODE_CFUNC) {
+            return INT2FIX(data->body->nd_cfnc);
+          }
+
+          return Qnil;
+      }"
+
+      builder.c "VALUE getlen(VALUE method) {
+          struct METHOD {
+            VALUE klass, rklass;
+            VALUE recv;
+            ID id, oid;
+            int safe_level;
+            NODE *body;
+          };
+
+          struct METHOD *data;
+          Data_Get_Struct(method, struct METHOD, data);
+
+          if (nd_type(data->body) == NODE_CFUNC) {
+            return INT2FIX(data->body->nd_argc);
+          }
+
+          return Qnil;
+      }"
+
     end
   end
 end
