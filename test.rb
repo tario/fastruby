@@ -4,7 +4,7 @@ require "fastruby"
 class X
 	fastruby "
 		def foo(a,b)
-			return a
+			return b
 		end
 	"
 
@@ -18,4 +18,4 @@ class X
 end
 
 x = X.new
-print x.foo(1,2),"\n"
+print x.foo(1,243),"\n"

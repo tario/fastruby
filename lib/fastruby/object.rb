@@ -22,6 +22,9 @@ require "fastruby/translator"
 require "ruby_parser"
 require "inline"
 
+# clean rubyinline cache
+system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
+
 class Object
   def self.fastruby(rubycode)
     tree = RubyParser.new.parse rubycode
