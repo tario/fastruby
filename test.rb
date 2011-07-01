@@ -4,7 +4,7 @@ require "fastruby"
 class X
 	fastruby "
 		def foo(a,b)
-			return 4
+			return a
 		end
 	"
 

@@ -48,5 +48,9 @@ module FastRuby
         #{to_c tree[3][1]}
       }"
     end
+
+    def to_c_lvar(tree)
+      tree[1].to_s
+    end
   end
 end
