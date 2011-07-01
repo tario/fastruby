@@ -58,7 +58,14 @@ module FastRuby
       mname = tree[2]
       args = tree[3]
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
-      "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{args.size - 1}, #{strargs} )"
+
+      argnum = args.size - 1
+
+      if argnum == 0
+        "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), 0)"
+      else
+        "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{argnum}, #{strargs} )"
+      end
     end
   end
 end
