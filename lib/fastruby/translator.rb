@@ -52,5 +52,13 @@ module FastRuby
     def to_c_lvar(tree)
       tree[1].to_s
     end
+
+    def to_c_call(tree)
+      recv = tree[1]
+      mname = tree[2]
+      args = tree[3]
+      strargs = args[1..-1].map{|arg| to_c arg}.join(",")
+      "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{args.size - 1}, #{strargs} )"
+    end
   end
 end
