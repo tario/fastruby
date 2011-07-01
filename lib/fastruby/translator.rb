@@ -84,17 +84,17 @@ module FastRuby
         else
 
           if argnum == 0
-            "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), 0)"
+            "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, 0)"
           else
-            "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{argnum}, #{strargs} )"
+            "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
           end
         end
 
       else
         if argnum == 0
-          "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), 0)"
+          "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, 0)"
         else
-          "rb_funcall(#{to_c tree[1]}, rb_intern(\"#{tree[2]}\"), #{argnum}, #{strargs} )"
+          "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
         end
       end
     end
