@@ -28,10 +28,24 @@ system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 class Object
   def self.fastruby(rubycode)
     tree = RubyParser.new.parse rubycode
+
+    if tree[0] != :defn
+      raise ArgumentError, "Only definition of methods are accepted"
+    end
+
+    method_name = tree[1]
+    args_tree = tree[2]
+
     context = FastRuby::Context.new
 
+    $hash = Hash.new
+
+    c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
+      VALUE method_hash = rb_gv_get(\"$hash\");
+      return method_hash;
+    }"
+
     inline :C  do |builder|
-      c_code = context.to_c(tree)
       print c_code,"\n"
       builder.c c_code
     end
