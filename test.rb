@@ -4,7 +4,7 @@ require "fastruby"
 class X
 	fastruby "
 		def foo(a,b)
-			return a.infer(Fixnum)+b
+			return a+b
 		end
 	"
 

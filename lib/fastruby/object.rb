@@ -45,6 +45,8 @@ class Object
       FastRuby::Builder.build(key, @tree)
     end
 
+    value_cast = ( ["VALUE"]*args_tree.size ).join(",")
+
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = rb_gv_get(\"$hash\");
       VALUE method = Qnil;
@@ -69,7 +71,17 @@ class Object
         Data_Get_Struct(method, struct METHOD, data);
 
         if (nd_type(data->body) == NODE_CFUNC) {
-          return ((VALUE(*)(VALUE,VALUE))data->body->nd_cfnc)(#{args_tree[1..-1].map(&:to_s).join(",") });
+          int argc = data->body->nd_argc;
+
+          if (argc == #{args_tree.size-1}) {
+            return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(Qnil,#{args_tree[1..-1].map(&:to_s).join(",") });
+          } else if (argc == -1) {
+            return Qnil;
+          } else if (argc == -2) {
+            return Qnil;
+          } else {
+            return Qnil;
+          }
         }
       }
 
