@@ -69,7 +69,7 @@ class Object
         Data_Get_Struct(method, struct METHOD, data);
 
         if (nd_type(data->body) == NODE_CFUNC) {
-           return data->body->nd_cfnc(#{args_tree[1..-1].map(&:to_s).join(",") } );
+          return ((VALUE(*)(VALUE,VALUE))data->body->nd_cfnc)(#{args_tree[1..-1].map(&:to_s).join(",") });
         }
       }
 
