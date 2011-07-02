@@ -19,6 +19,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "fastruby/translator"
+require "fastruby/builder"
 require "ruby_parser"
 require "inline"
 
@@ -36,9 +37,13 @@ class Object
     method_name = tree[1]
     args_tree = tree[2]
 
-    context = FastRuby::Context.new
 
     $hash = Hash.new
+    $hash.instance_eval{@tree = tree}
+
+    def $hash.build(key)
+      FastRuby::Builder.build(key, @tree)
+    end
 
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = rb_gv_get(\"$hash\");
@@ -46,8 +51,8 @@ class Object
       VALUE key = rb_obj_class(#{args_tree[1..-1].first});
 
       if (!st_lookup(RHASH(method_hash)->tbl, key, &method)) {
-        method = Qnil;
-        // TODO build method
+        method = rb_funcall(method_hash, #{:build.to_i}, 1, key);
+        st_insert(RHASH(method_hash)->tbl, key, method);
       }
 
       if (method != Qnil) {
