@@ -25,7 +25,23 @@ module FastRuby
     def self.build(signature, tree)
       context = FastRuby::Context.new
 
-      nil
+      args_tree = tree[2]
+      firstarg = args_tree[1]
+
+      # create random method name
+      mname = "mname" + rand(10000000000).to_s
+      context.alt_method_name = mname
+      context.infer_lvar_map[firstarg] = signature
+
+      c_code = context.to_c(tree)
+
+      inline :C  do |builder|
+        print c_code,"\n"
+        builder.include "<node.h>"
+        builder.c c_code
+      end
+
+      instance_method(mname)
     end
   end
 end

@@ -25,6 +25,7 @@ module FastRuby
   class Context
 
     attr_accessor :infer_lvar_map
+    attr_accessor :alt_method_name
 
     def initialize
       @infer_lvar_map = Hash.new
@@ -51,7 +52,7 @@ module FastRuby
     def to_c_defn(tree)
       method_name = tree[1]
       args_tree = tree[2]
-      "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
+      "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
         #{to_c tree[3][1]}
       }"
     end
