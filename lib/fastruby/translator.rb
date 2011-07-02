@@ -24,6 +24,12 @@ require "inline"
 module FastRuby
   class Context
 
+    attr_accessor :infer_lvar_map
+
+    def initialize
+      @infer_lvar_map = Hash.new
+    end
+
     def to_c(tree)
       send("to_c_" + tree[0].to_s, tree);
     end
@@ -100,8 +106,12 @@ module FastRuby
     end
 
     def infer_type(recv)
-      if recv[0] == :call and recv[2] == :infer
-        eval(recv[3].last.last.to_s)
+      if recv[0] == :call
+        if recv[2] == :infer
+          eval(recv[3].last.last.to_s)
+        end
+      elsif recv[0] == :lvar
+        @infer_lvar_map[recv[1]]
       else
         nil
       end
