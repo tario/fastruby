@@ -42,12 +42,40 @@ class Object
 
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = rb_gv_get(\"$hash\");
-      return method_hash;
+      VALUE method = Qnil;
+      VALUE key = rb_obj_class(#{args_tree[1..-1].first});
+
+      if (!st_lookup(RHASH(method_hash)->tbl, key, &method)) {
+        method = Qnil;
+        // TODO build method
+      }
+
+      if (method != Qnil) {
+
+        struct METHOD {
+           VALUE klass, rklass;
+           VALUE recv;
+           ID id, oid;
+           int safe_level;
+           NODE *body;
+        };
+
+        struct METHOD *data;
+        Data_Get_Struct(method, struct METHOD, data);
+
+        if (nd_type(data->body) == NODE_CFUNC) {
+           return data->body->nd_cfnc(#{args_tree[1..-1].map(&:to_s).join(",") } );
+        }
+      }
+
+      return Qnil;
     }"
 
     inline :C  do |builder|
       print c_code,"\n"
+      builder.include "<node.h>"
       builder.c c_code
     end
   end
 end
+
