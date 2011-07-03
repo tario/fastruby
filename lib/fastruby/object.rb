@@ -76,11 +76,13 @@ class Object
           if (argc == #{args_tree.size-1}) {
             return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(self,#{args_tree[1..-1].map(&:to_s).join(",") });
           } else if (argc == -1) {
-            return Qnil;
+            VALUE argv[] = {#{args_tree[1..-1].map(&:to_s).join(",")} };
+            return ((VALUE(*)(int,VALUE*,VALUE))data->body->nd_cfnc)(#{args_tree.size-1},argv,self);
           } else if (argc == -2) {
-            return Qnil;
+            VALUE argv[] = {#{args_tree[1..-1].map(&:to_s).join(",")} };
+            return ((VALUE(*)(VALUE,VALUE))data->body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size-1},argv));
           } else {
-            return Qnil;
+            rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
           }
         }
       }
