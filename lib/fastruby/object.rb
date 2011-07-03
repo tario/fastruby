@@ -74,7 +74,7 @@ class Object
           int argc = data->body->nd_argc;
 
           if (argc == #{args_tree.size-1}) {
-            return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(Qnil,#{args_tree[1..-1].map(&:to_s).join(",") });
+            return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(self,#{args_tree[1..-1].map(&:to_s).join(",") });
           } else if (argc == -1) {
             return Qnil;
           } else if (argc == -2) {
