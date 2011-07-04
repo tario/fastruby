@@ -22,14 +22,14 @@ require "fastruby/translator"
 
 module FastRuby
   class Builder
-    def self.build(signature, tree)
+    def self.build(signature, tree, alt_name = "")
       context = FastRuby::Context.new
 
       args_tree = tree[2]
       firstarg = args_tree[1]
 
       # create random method name
-      mname = "mname" + rand(10000000000).to_s
+      mname = "mname" + rand(10000000).to_s + alt_name
       context.alt_method_name = mname
       context.infer_lvar_map[firstarg] = signature
 

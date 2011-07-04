@@ -41,9 +41,10 @@ class Object
 
     hash = Hash.new
     hash.instance_eval{@tree = tree}
+    hash.instance_eval{@method_name = method_name.to_s}
 
     def hash.build(key)
-      FastRuby::Builder.build(key, @tree)
+      FastRuby::Builder.build(key, @tree, "_" + @method_name + "_" + key.to_s)
     end
 
     eval("#{hashname} = hash")
