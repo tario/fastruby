@@ -37,18 +37,21 @@ class Object
     method_name = tree[1]
     args_tree = tree[2]
 
+    hashname = "$hash" + rand(1000000).to_s
 
-    $hash = Hash.new
-    $hash.instance_eval{@tree = tree}
+    hash = Hash.new
+    hash.instance_eval{@tree = tree}
 
-    def $hash.build(key)
+    def hash.build(key)
       FastRuby::Builder.build(key, @tree)
     end
+
+    eval("#{hashname} = hash")
 
     value_cast = ( ["VALUE"]*args_tree.size ).join(",")
 
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
-      VALUE method_hash = rb_gv_get(\"$hash\");
+      VALUE method_hash = rb_gv_get(\"#{hashname}\");
       VALUE method = Qnil;
       VALUE key = rb_obj_class(#{args_tree[1..-1].first});
 
