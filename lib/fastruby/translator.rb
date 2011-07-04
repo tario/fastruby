@@ -86,7 +86,8 @@ module FastRuby
           if argnum == 0
             "((VALUE(*)(VALUE))0x#{address.to_s(16)})(#{to_c(recv)})"
           else
-            "((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(#{to_c(recv)}, #{strargs})"
+             value_cast = ( ["VALUE"]*args.size ).join(",")
+            "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c(recv)}, #{strargs})"
           end
         else
 
