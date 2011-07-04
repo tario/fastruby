@@ -46,7 +46,7 @@ module FastRuby
     end
 
     def to_c_lit(tree)
-      tree[1].to_s
+      "INT2FIX(#{tree[1].to_s})"
     end
 
     def to_c_defn(tree)
