@@ -52,7 +52,7 @@ class Object
     value_cast = ( ["VALUE"]*args_tree.size ).join(",")
 
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
-      VALUE method_hash = rb_gv_get(\"#{hashname}\");
+      VALUE method_hash = (VALUE)#{hash.internal_value};
       VALUE method = Qnil;
       VALUE key = rb_obj_class(#{args_tree[1..-1].first});
 
@@ -99,6 +99,12 @@ class Object
       builder.include "<node.h>"
       builder.c c_code
     end
+  end
+
+  inline :C do |builder|
+    builder.c "VALUE internal_value() {
+      return INT2FIX(self);
+    }"
   end
 end
 
