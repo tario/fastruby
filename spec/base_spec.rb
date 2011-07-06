@@ -34,4 +34,17 @@ describe FastRuby, "fastruby" do
   it "methods without return should return last expression result" do
     X.new.foo3(0).should be == 9
   end
+
+  class ::X2
+   fastruby "
+    def foo
+      0
+    end
+   "
+  end
+
+  it "methods without arguments should be called" do
+    ::X2.new.foo.should be == 0
+  end
+
 end
