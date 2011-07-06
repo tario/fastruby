@@ -51,10 +51,20 @@ class Object
 
     value_cast = ( ["VALUE"]*args_tree.size ).join(",")
 
+    main_signature_argument = args_tree[1..-1].first || "self"
+
+
+    strmethodargs = ""
+    if args_tree.size > 1
+      strmethodargs = "self,#{args_tree[1..-1].map(&:to_s).join(",") }"
+    else
+      strmethodargs = "self"
+    end
+
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = (VALUE)#{hash.internal_value};
       VALUE method = Qnil;
-      VALUE key = rb_obj_class(#{args_tree[1..-1].first});
+      VALUE key = rb_obj_class(#{main_signature_argument});
 
       if (!st_lookup(RHASH(method_hash)->tbl, key, &method)) {
         method = rb_funcall(method_hash, #{:build.to_i}, 1, key);
@@ -78,7 +88,7 @@ class Object
           int argc = data->body->nd_argc;
 
           if (argc == #{args_tree.size-1}) {
-            return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(self,#{args_tree[1..-1].map(&:to_s).join(",") });
+            return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(#{strmethodargs});
           } else if (argc == -1) {
             VALUE argv[] = {#{args_tree[1..-1].map(&:to_s).join(",")} };
             return ((VALUE(*)(int,VALUE*,VALUE))data->body->nd_cfnc)(#{args_tree.size-1},argv,self);
