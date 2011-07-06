@@ -36,9 +36,18 @@ module FastRuby
     end
 
     def to_c_block(tree)
-      tree[1..-1].map{ |subtree|
+      str = tree[1..-2].map{ |subtree|
         to_c(subtree)
       }.join(";")
+
+
+      if tree[-1][0] != :return
+        str = str + ";return (#{to_c(tree[-1])});"
+      else
+        str = str + ";#{to_c(tree[-1])};"
+      end
+
+      str
     end
 
     def to_c_return(tree)

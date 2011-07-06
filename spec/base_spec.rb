@@ -11,7 +11,7 @@ class X
   end
 
   fastruby "
-    def foo3
+    def foo3(a)
       9
     end
     "
@@ -32,6 +32,6 @@ describe FastRuby, "fastruby" do
   test_foo([1,2,3], [5,6])
 
   it "methods without return should return last expression result" do
-    X.new.foo3.should be == 9
+    X.new.foo3(0).should be == 9
   end
 end
