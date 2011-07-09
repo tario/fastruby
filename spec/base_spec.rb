@@ -47,4 +47,18 @@ describe FastRuby, "fastruby" do
     ::X2.new.foo.should be == 0
   end
 
+  class ::X3
+    fastruby "
+      def foo
+       while false
+       end
+       0
+      end
+    "
+  end
+
+  it "should execute methods with while" do
+    ::X3.new.foo.should be == 0
+  end
+
 end
