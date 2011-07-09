@@ -32,6 +32,7 @@ module FastRuby
     end
 
     def to_c(tree)
+      return "" unless tree
       send("to_c_" + tree[0].to_s, tree);
     end
 
@@ -114,6 +115,17 @@ module FastRuby
           "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
         end
       end
+    end
+
+    def to_c_while(tree)
+      "while (#{to_c tree[1]}) {
+        #{to_c tree[2]}
+      }
+      "
+    end
+
+    def to_c_false(tree)
+      "Qfalse"
     end
 
     def infer_type(recv)
