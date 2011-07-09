@@ -73,4 +73,21 @@ describe FastRuby, "fastruby" do
   it "should assign and read locals" do
     ::X4.new.foo.should be == 10
   end
+
+  class ::X5
+    fastruby "
+      def foo
+       i = 10
+       while i > 0
+        i = i - 1
+       end
+       0
+      end
+    "
+  end
+
+  it "should run 10 iterations" do
+    ::X5.new.foo.should be == 0
+  end
+
 end
