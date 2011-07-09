@@ -20,6 +20,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 require "rubygems"
 require "inline"
+require "set"
 
 module FastRuby
   class Context
@@ -29,6 +30,7 @@ module FastRuby
 
     def initialize
       @infer_lvar_map = Hash.new
+      @locals = Set.new
     end
 
     def to_c(tree)
@@ -62,9 +64,19 @@ module FastRuby
     def to_c_defn(tree)
       method_name = tree[1]
       args_tree = tree[2]
+
+      str_impl = to_c tree[3][1]
+      str_locals = @locals.map{|l| "VALUE #{l};"}.join
+
       "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
-        #{to_c tree[3][1]}
+        #{str_locals}
+        #{str_impl}
       }"
+    end
+
+    def to_c_lasgn(tree)
+      @locals << tree[1]
+      "#{tree[1]} = #{to_c tree[2]};"
     end
 
     def to_c_lvar(tree)
