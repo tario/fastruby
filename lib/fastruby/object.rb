@@ -55,6 +55,8 @@ class Object
 
 
     strmethodargs = ""
+    strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "rb_obj_class(#{arg.to_s})"}.join(",")
+
     if args_tree.size > 1
       strmethodargs = "self,#{args_tree[1..-1].map(&:to_s).join(",") }"
     else
@@ -64,7 +66,8 @@ class Object
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = (VALUE)#{hash.internal_value};
       VALUE method = Qnil;
-      VALUE key = rb_obj_class(#{main_signature_argument});
+      VALUE argv_class[] = {#{strmethodargs_class} };
+      VALUE key = rb_ary_new4(#{args_tree.size},argv_class);
 
       if (!st_lookup(RHASH(method_hash)->tbl, key, &method)) {
         method = rb_funcall(method_hash, #{:build.to_i}, 1, key);
