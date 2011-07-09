@@ -61,4 +61,16 @@ describe FastRuby, "fastruby" do
     ::X3.new.foo.should be == 0
   end
 
+  class ::X4
+    fastruby "
+      def foo
+       i = 10
+       i
+      end
+    "
+  end
+
+  it "should assign and read locals" do
+    ::X4.new.foo.should be == 10
+  end
 end
