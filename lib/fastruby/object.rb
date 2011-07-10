@@ -90,14 +90,13 @@ class Object
       ID id;
 
       id = rb_intern(method_name);
-
       body = rb_method_node(klass,id);
 
       if (body == 0) {
         VALUE argv_class[] = {#{strmethodargs_class} };
-        VALUE key = rb_ary_new4(#{args_tree.size},argv_class);
+        VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
 
-        rb_funcall(method_hash, #{:build.to_i}, 2, key, rb_str_new2(method_name));
+        rb_funcall(method_hash, #{:build.to_i}, 2, signature, rb_str_new2(method_name));
         body = rb_method_node(klass,id);
       }
 
