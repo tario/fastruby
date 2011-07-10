@@ -65,7 +65,28 @@ module FastRuby
       method_name = tree[1]
       args_tree = tree[2]
 
-      str_impl = to_c tree[3][1]
+      impl_tree = tree[3][1]
+
+      str_impl = ""
+      # if impl_tree is a block, implement the last node with a return
+      if impl_tree[0] == :block
+        str_impl = impl_tree[1..-2].map{ |subtree|
+          to_c(subtree)
+        }.join(";")
+
+        if impl_tree[-1][0] != :return
+          str_impl = str_impl + ";return (#{to_c(impl_tree[-1])});"
+        else
+          str_impl = str_impl + ";#{to_c(impl_tree[-1])};"
+        end
+      else
+        if impl_tree[0] != :return
+          str_impl = str_impl + ";return (#{to_c(impl_tree)});"
+        else
+          str_impl = str_impl + ";#{to_c(impl_tree)};"
+        end
+      end
+
       str_locals = @locals.map{|l| "VALUE #{l};"}.join
 
       "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
