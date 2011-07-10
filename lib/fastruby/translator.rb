@@ -44,11 +44,11 @@ module FastRuby
       }.join(";")
 
 
-      if tree[-1][0] != :return
-        str = str + ";return (#{to_c(tree[-1])});"
-      else
+#      if tree[-1][0] != :return
+ #       str = str + ";return (#{to_c(tree[-1])});"
+  #    else
         str = str + ";#{to_c(tree[-1])};"
-      end
+   #   end
 
       str
     end
