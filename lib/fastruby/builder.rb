@@ -45,5 +45,9 @@ module FastRuby
 
       instance_method(mname)
     end
+
+    def method_tree
+      Hash.new || @method_tree
+    end
   end
 end

@@ -120,7 +120,29 @@ module FastRuby
       recvtype = infer_type(recv)
 
       if recvtype
-        mobject = recvtype.instance_method(tree[2])
+
+        address = nil
+        mobject = nil
+
+        inference_complete = true
+        signature = [recvtype]
+
+        args[1..-1].each do |arg|
+          argtype = infer_type(arg)
+          if argtype
+            signature << argtype
+          else
+            inference_complete = false
+          end
+        end
+
+        if recvtype.respond_to? :method_tree and inference_complete
+          tree = recvtype.method_tree(tree[2])
+          mname = "_" + tree[2].to_s + signature.map(&:internal_value).map(&:to_s).join
+          mobject = recvtype.build(signature, tree, mname)
+        else
+          mobject = recvtype.instance_method(tree[2])
+        end
 
         address = getaddress(mobject)
         len = getlen(mobject)

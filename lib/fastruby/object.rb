@@ -50,6 +50,8 @@ class Object
       end
     end
 
+    self_.method_tree[method_name] = tree
+
     def hash.build(key, mname)
       @klass.build(key, @tree, mname)
     end
