@@ -47,7 +47,8 @@ module FastRuby
     end
 
     def method_tree
-      Hash.new || @method_tree
+      @method_tree = Hash.new unless @method_tree
+      @method_tree
     end
   end
 end
