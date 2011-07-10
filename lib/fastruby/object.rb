@@ -41,7 +41,6 @@ class Object
 
     hash = Hash.new
     hash.instance_eval{@tree = tree}
-    hash.instance_eval{@method_name = method_name.to_s}
     self_ = self
     hash.instance_eval{@klass = self_}
 
