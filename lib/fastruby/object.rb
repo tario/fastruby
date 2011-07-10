@@ -51,8 +51,8 @@ class Object
       end
     end
 
-    def hash.build(key)
-      @klass.build(key, @tree, "mname" + rand(10000000).to_s + "_" + @method_name + "_" + key.to_s)
+    def hash.build(key, mname)
+      @klass.build(key, @tree, mname)
     end
 
     eval("#{hashname} = hash")
@@ -70,14 +70,26 @@ class Object
       strmethodargs = "self"
     end
 
+    strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
+      "sprintf(method_name+strlen(method_name), \"%lu\", CLASS_OF(#{arg}));\n"
+    }.join
+
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = (VALUE)#{hash.internal_value};
       VALUE method = Qnil;
       VALUE argv_class[] = {#{strmethodargs_class} };
       VALUE key = rb_ary_new4(#{args_tree.size},argv_class);
 
+      char method_name[0x100];
+
+      method_name[0] = '_';
+      method_name[1] = 0;
+
+      sprintf(method_name+1, \"#{method_name}\");
+      #{strmethod_signature}
+
       if (!st_lookup(RHASH(method_hash)->tbl, key, &method)) {
-        method = rb_funcall(method_hash, #{:build.to_i}, 1, key);
+        method = rb_funcall(method_hash, #{:build.to_i}, 2, key, rb_str_new2(method_name));
         st_insert(RHASH(method_hash)->tbl, key, method);
       }
 
