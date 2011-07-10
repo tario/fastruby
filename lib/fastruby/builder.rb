@@ -21,8 +21,8 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/translator"
 
 module FastRuby
-  class Builder
-    def self.build(signature, tree, alt_name = "")
+  module BuilderModule
+    def build(signature, tree, alt_name = "")
       context = FastRuby::Context.new
 
       args_tree = tree[2]

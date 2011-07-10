@@ -42,9 +42,17 @@ class Object
     hash = Hash.new
     hash.instance_eval{@tree = tree}
     hash.instance_eval{@method_name = method_name.to_s}
+    self_ = self
+    hash.instance_eval{@klass = self_}
+
+    class_eval do
+      class << self
+        include FastRuby::BuilderModule
+      end
+    end
 
     def hash.build(key)
-      FastRuby::Builder.build(key, @tree, "_" + @method_name + "_" + key.to_s)
+      @klass.build(key, @tree, "_" + @method_name + "_" + key.to_s)
     end
 
     eval("#{hashname} = hash")
@@ -53,9 +61,8 @@ class Object
 
     main_signature_argument = args_tree[1..-1].first || "self"
 
-
     strmethodargs = ""
-    strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "rb_obj_class(#{arg.to_s})"}.join(",")
+    strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
     if args_tree.size > 1
       strmethodargs = "self,#{args_tree[1..-1].map(&:to_s).join(",") }"
