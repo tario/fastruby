@@ -111,6 +111,12 @@ module FastRuby
 
       if mname == :infer
         return to_c(recv)
+      elsif mname == :lvar_type
+        lvar_name = args[1][1]
+        lvar_type = eval(args[2][1].to_s)
+
+        @infer_lvar_map[lvar_name] = lvar_type
+        return ""
       end
 
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
