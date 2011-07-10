@@ -52,7 +52,7 @@ class Object
     end
 
     def hash.build(key)
-      @klass.build(key, @tree, "_" + @method_name + "_" + key.to_s)
+      @klass.build(key, @tree, "mname" + rand(10000000).to_s + "_" + @method_name + "_" + key.to_s)
     end
 
     eval("#{hashname} = hash")

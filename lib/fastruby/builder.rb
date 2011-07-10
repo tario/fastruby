@@ -22,13 +22,12 @@ require "fastruby/translator"
 
 module FastRuby
   module BuilderModule
-    def build(signature, tree, alt_name = "")
+    def build(signature, tree, mname)
       context = FastRuby::Context.new
 
       args_tree = tree[2]
 
       # create random method name
-      mname = "mname" + rand(10000000).to_s + alt_name
       context.alt_method_name = mname
 
       (1..signature.size).each do |i|
