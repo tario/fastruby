@@ -76,9 +76,7 @@ class Object
 
     c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
       VALUE method_hash = (VALUE)#{hash.internal_value};
-      VALUE method = Qnil;
-      VALUE argv_class[] = {#{strmethodargs_class} };
-      VALUE key = rb_ary_new4(#{args_tree.size},argv_class);
+      VALUE klass = (VALUE)#{self.internal_value};
 
       char method_name[0x100];
 
@@ -88,40 +86,36 @@ class Object
       sprintf(method_name+1, \"#{method_name}\");
       #{strmethod_signature}
 
-      if (!st_lookup(RHASH(method_hash)->tbl, key, &method)) {
-        method = rb_funcall(method_hash, #{:build.to_i}, 2, key, rb_str_new2(method_name));
-        st_insert(RHASH(method_hash)->tbl, key, method);
+      NODE* body;
+      ID id;
+
+      id = rb_intern(method_name);
+
+      body = rb_method_node(klass,id);
+
+      if (body == 0) {
+        VALUE argv_class[] = {#{strmethodargs_class} };
+        VALUE key = rb_ary_new4(#{args_tree.size},argv_class);
+
+        rb_funcall(method_hash, #{:build.to_i}, 2, key, rb_str_new2(method_name));
+        body = rb_method_node(klass,id);
       }
 
-      if (method != Qnil) {
-
-        struct METHOD {
-           VALUE klass, rklass;
-           VALUE recv;
-           ID id, oid;
-           int safe_level;
-           NODE *body;
-        };
-
-        struct METHOD *data;
-        Data_Get_Struct(method, struct METHOD, data);
-
-        if (nd_type(data->body) == NODE_CFUNC) {
-          int argc = data->body->nd_argc;
+        if (nd_type(body) == NODE_CFUNC) {
+          int argc = body->nd_argc;
 
           if (argc == #{args_tree.size-1}) {
-            return ((VALUE(*)(#{value_cast}))data->body->nd_cfnc)(#{strmethodargs});
+            return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
           } else if (argc == -1) {
             VALUE argv[] = {#{args_tree[1..-1].map(&:to_s).join(",")} };
-            return ((VALUE(*)(int,VALUE*,VALUE))data->body->nd_cfnc)(#{args_tree.size-1},argv,self);
+            return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size-1},argv,self);
           } else if (argc == -2) {
             VALUE argv[] = {#{args_tree[1..-1].map(&:to_s).join(",")} };
-            return ((VALUE(*)(VALUE,VALUE))data->body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size-1},argv));
+            return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size-1},argv));
           } else {
             rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
           }
         }
-      }
 
       return Qnil;
     }"
