@@ -90,4 +90,19 @@ describe FastRuby, "fastruby" do
     ::X5.new.foo.should be == 0
   end
 
+  class ::X6
+    fastruby "
+      def foo(ary)
+        ary.each do |a|
+        end
+        0
+      end
+    "
+  end
+
+  it "should compile blocks" do
+    ::X6.new.foo([1,2,3]).should be == 0
+  end
+
+
 end
