@@ -18,38 +18,9 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
-require "fastruby/inline_extension"
-
-module FastRuby
-  module BuilderModule
-    def build(signature, tree, mname)
-      context = FastRuby::Context.new
-
-      args_tree = tree[2]
-
-      # create random method name
-      context.alt_method_name = mname
-
-      (1..signature.size).each do |i|
-        arg = args_tree[i]
-        context.infer_lvar_map[arg] = signature[i]
-      end
-
-      c_code = context.to_c(tree)
-
-      inline :C  do |builder|
-        print c_code,"\n"
-        builder.include "<node.h>"
-        builder.c c_code
-      end
-
-      instance_method(mname)
-    end
-
-    def method_tree
-      @method_tree = Hash.new unless @method_tree
-      @method_tree
-    end
-  end
+module Inline
+class C
+	attr_reader :inc
 end
+end
+
