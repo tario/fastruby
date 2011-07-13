@@ -27,15 +27,47 @@ module FastRuby
 
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
+    attr_reader :extra_code
 
     def initialize
       @infer_lvar_map = Hash.new
       @locals = Set.new
+      @extra_code = ""
     end
 
     def to_c(tree)
       return "" unless tree
       send("to_c_" + tree[0].to_s, tree);
+    end
+
+    def anonymous_function(method)
+
+      name = "anonymous" + rand(10000000).to_s
+      extra_code << method.call(name)
+
+      name
+    end
+
+    def to_c_iter(tree)
+
+      recv_tree = tree[1]
+      method_name = tree[2]
+
+      caller_code = proc { |name| "
+        static VALUE #{name}(VALUE arg) {
+          return rb_funcall(arg, #{method_name.to_i}, 0);
+        }
+      "
+      }
+
+      block_code = proc { |name| "
+        static VALUE #{name}(VALUE block_arg, VALUE nil) {
+          return Qnil;
+        }
+      "
+      }
+
+      "rb_iterate(#{anonymous_function(caller_code)}, #{to_c recv_tree}, #{anonymous_function(block_code)}, Qnil)"
     end
 
     def to_c_block(tree)
