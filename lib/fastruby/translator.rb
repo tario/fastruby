@@ -50,12 +50,15 @@ module FastRuby
 
     def to_c_iter(tree)
 
-      recv_tree = tree[1]
-      method_name = tree[2]
+      call_tree = tree[1]
+      recv_tree = call_tree[1]
+
+      other_call_tree = call_tree.dup
+      other_call_tree[1] = s(:lvar, :arg)
 
       caller_code = proc { |name| "
         static VALUE #{name}(VALUE arg) {
-          return rb_funcall(arg, #{method_name.to_i}, 0);
+          return #{to_c other_call_tree};
         }
       "
       }

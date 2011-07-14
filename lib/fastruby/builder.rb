@@ -40,6 +40,9 @@ module FastRuby
 
       inline :C  do |builder|
         print c_code,"\n"
+        print context.extra_code,"\n"
+
+        builder.inc << context.extra_code
         builder.include "<node.h>"
         builder.c c_code
       end
