@@ -57,13 +57,30 @@ module FastRuby
       other_call_tree = call_tree.dup
       other_call_tree[1] = s(:lvar, :arg)
 
-      caller_code = proc { |name| "
-        static VALUE #{name}(VALUE arg) {
-          return #{to_c other_call_tree};
-        }
-      "
-      }
+      call_args_tree = call_tree[3]
 
+      caller_code = nil
+
+      if call_args_tree.size > 1
+        str_called_code_args = (1..call_args_tree.size-1).map{|i| "rb_ary_entry(arg,#{i})" }.join(",")
+
+        caller_code = proc { |name| "
+          static VALUE #{name}(VALUE arg) {
+            VALUE recv = rb_ary_entry(arg,0);
+            return rb_funcall(recv, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+          }
+        "
+        }
+      else
+
+        caller_code = proc { |name| "
+          static VALUE #{name}(VALUE arg) {
+            VALUE recv = rb_ary_entry(arg,0);
+            return rb_funcall(recv, #{call_tree[2].to_i}, 0);
+          }
+        "
+        }
+      end
 
       anonymous_impl = tree[3]
       str_impl = ""
@@ -112,7 +129,14 @@ module FastRuby
       "
       }
 
-      "rb_iterate(#{anonymous_function(caller_code)}, #{to_c recv_tree}, #{anonymous_function(block_code)}, Qnil)"
+      block_params = ""
+      if call_args_tree.size > 1
+        block_params = "rb_ary_new3(#{call_args_tree.size},#{to_c recv_tree}, #{call_args_tree[1..-1].map{|subtree| to_c subtree}.join(",")})"
+      else
+        block_params = "rb_ary_new3(1,#{to_c recv_tree})"
+      end
+
+      "rb_iterate(#{anonymous_function(caller_code)}, #{block_params}, #{anonymous_function(block_code)}, Qnil)"
     end
 
     def to_c_block(tree)
