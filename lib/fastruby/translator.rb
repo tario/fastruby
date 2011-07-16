@@ -90,16 +90,23 @@ module FastRuby
         str_impl = "return Qnil;"
       end
 
-      str_args = ""
+      str_arg_initialization = ""
 
       if args_tree.first == :lasgn
-        str_args = args_tree[1..-1].map{|x| "VALUE #{x}"}.join(",")
+        str_arg_initialization = "VALUE #{args_tree[1]} = arg;"
       elsif args_tree.first == :masgn
-        str_args = args_tree[1][1..-1].map{|x| "VALUE #{x.last}"}.join(",")
+        arguments = args_tree[1][1..-1].map(&:last)
+
+        (0..arguments.size-1).each do |i|
+          str_arg_initialization << "VALUE #{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+        end
       end
 
+      str_arg_initialization
+
       block_code = proc { |name| "
-        static VALUE #{name}(#{str_args}) {
+        static VALUE #{name}(VALUE arg, VALUE param) {
+          #{str_arg_initialization}
           #{str_impl}
         }
       "
