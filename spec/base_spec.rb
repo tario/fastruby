@@ -166,4 +166,24 @@ describe FastRuby, "fastruby" do
     ::X10.new.foo(::Y10.new, 10).should be == 10
   end
 
+  class ::Y11
+    def bar(arg1, arg2)
+      yield
+      arg1+arg2
+    end
+  end
+
+  class ::X11
+    fastruby "
+      def foo(obj, arg1, arg2)
+        obj.bar(arg1, arg2) do |a|
+        end
+      end
+    "
+  end
+
+  it "should compile iter calls with multiple arguments" do
+    ::X11.new.foo(::Y11.new, 10, 9).should be == 19
+  end
+
 end
