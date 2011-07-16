@@ -51,6 +51,7 @@ module FastRuby
     def to_c_iter(tree)
 
       call_tree = tree[1]
+      args_tree = tree[2]
       recv_tree = call_tree[1]
 
       other_call_tree = call_tree.dup
@@ -88,8 +89,10 @@ module FastRuby
         str_impl = "return Qnil;"
       end
 
+      str_args = args_tree[1..-1].map{|x| "VALUE #{x}"}.join(",")
+
       block_code = proc { |name| "
-        static VALUE #{name}(VALUE block_arg, VALUE nil) {
+        static VALUE #{name}(#{str_args}) {
           #{str_impl}
         }
       "
