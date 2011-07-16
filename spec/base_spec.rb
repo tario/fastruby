@@ -132,5 +132,18 @@ describe FastRuby, "fastruby" do
     ::X8.new.foo([1,2,3]).should be == [1,2,3]
   end
 
+  class ::X9
+    fastruby "
+      def foo(hash)
+        hash.map do |k,v|
+          k+v
+        end
+      end
+    "
+  end
+
+  it "should compile blocks with code inside refering multiple block arguments" do
+    ::X9.new.foo({1 => 2, 3 => 4}).sort.should be == [3,7]
+  end
 
 end
