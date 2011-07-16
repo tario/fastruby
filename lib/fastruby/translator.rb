@@ -63,9 +63,34 @@ module FastRuby
       "
       }
 
+      anonymous_impl = tree[3]
+      str_impl = ""
+      # if impl_tree is a block, implement the last node with a return
+      if anonymous_impl
+        if anonymous_impl[0] == :block
+          str_impl = anonymous_impl[1..-2].map{ |subtree|
+            to_c(subtree)
+          }.join(";")
+
+          if anonymous_impl[-1][0] != :return
+            str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+          else
+            str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+          end
+        else
+          if anonymous_impl[0] != :return
+            str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+          else
+            str_impl = str_impl + ";#{to_c(anonymous_impl)};"
+          end
+        end
+      else
+        str_impl = "return Qnil;"
+      end
+
       block_code = proc { |name| "
         static VALUE #{name}(VALUE block_arg, VALUE nil) {
-          return Qnil;
+          #{str_impl}
         }
       "
       }
