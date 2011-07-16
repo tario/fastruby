@@ -104,5 +104,19 @@ describe FastRuby, "fastruby" do
     ::X6.new.foo([1,2,3]).should be == 0
   end
 
+  class ::X7
+    fastruby "
+      def foo(ary)
+        ary.map do |a|
+          0
+        end
+      end
+    "
+  end
+
+  it "should compile blocks with code inside" do
+    ::X7.new.foo([1,2,3]).should be == [0,0,0]
+  end
+
 
 end
