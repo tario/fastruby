@@ -64,6 +64,7 @@ module FastRuby
       "
       }
 
+
       anonymous_impl = tree[3]
       str_impl = ""
       # if impl_tree is a block, implement the last node with a return
@@ -89,7 +90,13 @@ module FastRuby
         str_impl = "return Qnil;"
       end
 
-      str_args = args_tree[1..-1].map{|x| "VALUE #{x}"}.join(",")
+      str_args = ""
+
+      if args_tree.first == :lasgn
+        str_args = args_tree[1..-1].map{|x| "VALUE #{x}"}.join(",")
+      elsif args_tree.first == :masgn
+        str_args = args_tree[1][1..-1].map{|x| "VALUE #{x.last}"}.join(",")
+      end
 
       block_code = proc { |name| "
         static VALUE #{name}(#{str_args}) {
