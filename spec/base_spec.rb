@@ -146,4 +146,24 @@ describe FastRuby, "fastruby" do
     ::X9.new.foo({1 => 2, 3 => 4}).sort.should be == [3,7]
   end
 
+  class ::Y10
+    def bar(arg1)
+      yield
+      arg1
+    end
+  end
+
+  class ::X10
+    fastruby "
+      def foo(obj, arg1)
+        obj.bar(arg1) do |a|
+        end
+      end
+    "
+  end
+
+  it "should compile iter calls with arguments" do
+    ::X10.new.foo(::Y10.new, 10).should be == 10
+  end
+
 end
