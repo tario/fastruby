@@ -118,5 +118,19 @@ describe FastRuby, "fastruby" do
     ::X7.new.foo([1,2,3]).should be == [0,0,0]
   end
 
+  class ::X8
+    fastruby "
+      def foo(ary)
+        ary.map do |a|
+          a
+        end
+      end
+    "
+  end
+
+  it "should compile blocks with code inside refering block arguments" do
+    ::X8.new.foo([1,2,3]).should be == [1,2,3]
+  end
+
 
 end
