@@ -186,4 +186,19 @@ describe FastRuby, "fastruby" do
     ::X11.new.foo(::Y11.new, 10, 9).should be == 19
   end
 
+  class ::X12
+    fastruby "
+      def foo(ary)
+        a = 1
+        ary.map do |x|
+          a
+        end
+      end
+    "
+  end
+
+  it "should allow accessing local variables on block" do
+    ::X12.new.foo([1,2,3,4]).should be == [1,1,1,1]
+  end
+
 end
