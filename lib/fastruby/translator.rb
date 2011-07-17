@@ -188,7 +188,16 @@ module FastRuby
         end
       end
 
-      str_locals = @locals.map{|l| "VALUE #{l};"}.join
+      str_locals = "struct {
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join}
+        } locals;
+
+        #{args_tree[1..-1].map { |arg|
+          "locals.#{arg} = #{arg};\n"
+        }.join("") }
+
+        \n"
 
       "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
         #{str_locals}
@@ -198,11 +207,11 @@ module FastRuby
 
     def to_c_lasgn(tree)
       @locals << tree[1]
-      "#{tree[1]} = #{to_c tree[2]};"
+      "locals.#{tree[1]} = #{to_c tree[2]};"
     end
 
     def to_c_lvar(tree)
-      tree[1].to_s
+      "locals." + tree[1].to_s
     end
 
     def to_c_call(tree)
