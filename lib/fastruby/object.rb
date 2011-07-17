@@ -20,6 +20,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 require "fastruby/translator"
 require "fastruby/builder"
+require "fastruby/getlocals"
 require "ruby_parser"
 require "inline"
 
@@ -40,7 +41,11 @@ class Object
     hashname = "$hash" + rand(1000000).to_s
 
     hash = Hash.new
+
+    locals = FastRuby::GetLocalsProcessor.get_locals(RubyParser.new.parse(rubycode))
+
     hash.instance_eval{@tree = tree}
+    hash.instance_eval{@locals = locals}
     self_ = self
     hash.instance_eval{@klass = self_}
 
@@ -53,7 +58,7 @@ class Object
     self_.method_tree[method_name] = tree
 
     def hash.build(key, mname)
-      @klass.build(key, @tree, mname)
+      @klass.build(key, @tree, mname, @locals)
     end
 
     eval("#{hashname} = hash")

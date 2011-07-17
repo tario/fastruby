@@ -27,11 +27,11 @@ module FastRuby
 
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
+    attr_accessor :locals
     attr_reader :extra_code
 
     def initialize
       @infer_lvar_map = Hash.new
-      @locals = Set.new
       @extra_code = ""
     end
 

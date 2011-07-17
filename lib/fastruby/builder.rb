@@ -23,8 +23,9 @@ require "fastruby/inline_extension"
 
 module FastRuby
   module BuilderModule
-    def build(signature, tree, mname)
+    def build(signature, tree, mname, locals)
       context = FastRuby::Context.new
+      context.locals = locals
 
       args_tree = tree[2]
 
