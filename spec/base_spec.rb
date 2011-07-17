@@ -197,8 +197,23 @@ describe FastRuby, "fastruby" do
     "
   end
 
-  it "should allow accessing local variables on block" do
+  it "should allow accessing local variables from block" do
     ::X12.new.foo([1,2,3,4]).should be == [1,1,1,1]
+  end
+
+  class ::X13
+    fastruby "
+      def foo(ary)
+        a = 1
+        ary.map do |x|
+          a+x
+        end
+      end
+    "
+  end
+
+  it "should allow accessing local variables and block parameters from block" do
+    ::X13.new.foo([1,2,3,4]).should be == [2,3,4,5]
   end
 
 end
