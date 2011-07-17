@@ -107,15 +107,18 @@ module FastRuby
         str_impl = "return Qnil;"
       end
 
+      str_lvar_initialization = @locals_struct + " *plocals;
+                                plocals = (void*)param;"
+
       str_arg_initialization = ""
 
       if args_tree.first == :lasgn
-        str_arg_initialization = "VALUE #{args_tree[1]} = arg;"
+        str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
       elsif args_tree.first == :masgn
         arguments = args_tree[1][1..-1].map(&:last)
 
         (0..arguments.size-1).each do |i|
-          str_arg_initialization << "VALUE #{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+          str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
         end
       end
 
@@ -123,6 +126,7 @@ module FastRuby
 
       block_code = proc { |name| "
         static VALUE #{name}(VALUE arg, VALUE param) {
+          #{str_lvar_initialization};
           #{str_arg_initialization}
           #{str_impl}
         }
@@ -136,7 +140,7 @@ module FastRuby
         block_params = "rb_ary_new3(1,#{to_c recv_tree})"
       end
 
-      "rb_iterate(#{anonymous_function(caller_code)}, #{block_params}, #{anonymous_function(block_code)}, Qnil)"
+      "rb_iterate(#{anonymous_function(caller_code)}, #{block_params}, #{anonymous_function(block_code)}, (VALUE)&locals)"
     end
 
     def to_c_block(tree)
@@ -168,6 +172,11 @@ module FastRuby
 
       impl_tree = tree[3][1]
 
+      @locals_struct = "struct {
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join}
+        }"
+
       str_impl = ""
       # if impl_tree is a block, implement the last node with a return
       if impl_tree[0] == :block
@@ -188,25 +197,19 @@ module FastRuby
         end
       end
 
-      str_locals = "struct {
-        #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join}
-        } locals;
+      "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
+        #{@locals_struct} locals;
 
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
 
-        \n"
-
-      "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
-        #{str_locals}
+        \n
         #{str_impl}
       }"
     end
 
     def to_c_lasgn(tree)
-      @locals << tree[1]
       "locals.#{tree[1]} = #{to_c tree[2]};"
     end
 
