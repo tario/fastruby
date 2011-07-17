@@ -33,6 +33,16 @@ module FastRuby
     def initialize
       @infer_lvar_map = Hash.new
       @extra_code = ""
+      @on_block = false
+    end
+
+    def on_block
+      begin
+        @on_block = true
+        yield
+      ensure
+        @on_block = false
+      end
     end
 
     def to_c(tree)
@@ -84,27 +94,31 @@ module FastRuby
 
       anonymous_impl = tree[3]
       str_impl = ""
-      # if impl_tree is a block, implement the last node with a return
-      if anonymous_impl
-        if anonymous_impl[0] == :block
-          str_impl = anonymous_impl[1..-2].map{ |subtree|
-            to_c(subtree)
-          }.join(";")
 
-          if anonymous_impl[-1][0] != :return
-            str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+      on_block do
+        # if impl_tree is a block, implement the last node with a return
+        if anonymous_impl
+          if anonymous_impl[0] == :block
+            str_impl = anonymous_impl[1..-2].map{ |subtree|
+              to_c(subtree)
+            }.join(";")
+
+            if anonymous_impl[-1][0] != :return
+              str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+            else
+              str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+            end
           else
-            str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+            if anonymous_impl[0] != :return
+              str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+            else
+              str_impl = str_impl + ";#{to_c(anonymous_impl)};"
+            end
           end
         else
-          if anonymous_impl[0] != :return
-            str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
-          else
-            str_impl = str_impl + ";#{to_c(anonymous_impl)};"
-          end
+          str_impl = "return Qnil;"
         end
-      else
-        str_impl = "return Qnil;"
+
       end
 
       str_lvar_initialization = @locals_struct + " *plocals;
@@ -214,7 +228,11 @@ module FastRuby
     end
 
     def to_c_lvar(tree)
-      "locals." + tree[1].to_s
+      if @on_block
+        "plocals->" + tree[1].to_s
+      else
+        "locals." + tree[1].to_s
+      end
     end
 
     def to_c_call(tree)
