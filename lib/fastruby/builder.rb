@@ -55,5 +55,11 @@ module FastRuby
       @method_tree = Hash.new unless @method_tree
       @method_tree
     end
+
+    def method_locals
+      @method_locals = Hash.new unless @method_locals
+      @method_locals
+    end
+
   end
 end

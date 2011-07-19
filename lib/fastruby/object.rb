@@ -56,6 +56,7 @@ class Object
     end
 
     self_.method_tree[method_name] = tree
+    self_.method_locals[method_name] = locals
 
     def hash.build(key, mname)
       @klass.build(key, @tree, mname, @locals)

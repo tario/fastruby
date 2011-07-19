@@ -275,10 +275,11 @@ module FastRuby
 
         if recvtype.respond_to? :method_tree and inference_complete
           method_tree = recvtype.method_tree[tree[2]]
+          method_locals = recvtype.method_locals[tree[2]]
 
           if method_tree
             mname = "_" + tree[2].to_s + signature.map(&:internal_value).map(&:to_s).join
-            mobject = recvtype.build(signature, method_tree, mname)
+            mobject = recvtype.build(signature, method_tree, mname, method_locals)
           else
             mobject = recvtype.instance_method(tree[2])
           end
