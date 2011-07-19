@@ -236,5 +236,22 @@ describe FastRuby, "fastruby" do
     ::X14.new.foo(::Y14.new){ }.should be == false
   end
 
+  class ::X15
+    fastruby "
+      def foo
+        bar
+      end
+    "
+
+    private
+      def bar
+        true
+      end
+  end
+
+  it "should allow calls to private methods" do
+    ::X15.new.foo.should be == true
+  end
+
 
 end
