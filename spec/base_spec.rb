@@ -216,4 +216,25 @@ describe FastRuby, "fastruby" do
     ::X13.new.foo([1,2,3,4]).should be == [2,3,4,5]
   end
 
+  class ::Y14
+    fastruby "
+      def bar
+        block_given?
+      end
+    "
+  end
+
+  class ::X14
+    fastruby "
+      def foo(y)
+        y.bar
+      end
+    "
+  end
+
+  it "method calls should not repass blocks" do
+    ::X14.new.foo(::Y14.new){ }.should be == false
+  end
+
+
 end
