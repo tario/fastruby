@@ -235,6 +235,10 @@ module FastRuby
       end
     end
 
+    def to_c_self(tree)
+      "self"
+    end
+
     def to_c_call(tree)
       recv = tree[1]
       mname = tree[2]
@@ -253,6 +257,8 @@ module FastRuby
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
 
       argnum = args.size - 1
+
+      recv = recv || s(:self)
 
       recvtype = infer_type(recv)
 
@@ -300,17 +306,17 @@ module FastRuby
         else
 
           if argnum == 0
-            "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, 0)"
+            "rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)"
           else
-            "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
+            "rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
           end
         end
 
       else
         if argnum == 0
-          "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, 0)"
+          "rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)"
         else
-          "rb_funcall(#{to_c tree[1]}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
+          "rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
         end
       end
     end
