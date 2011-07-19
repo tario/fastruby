@@ -57,9 +57,6 @@ class C
         unless return_type == "void" then
           raise SyntaxError, "Couldn't find return statement for #{function_name}" unless
             result =~ /return/
-          result.gsub!(/return\s+([^\;\}]+)/) do
-            "return #{c2ruby(return_type)}(#{$1})"
-          end
         else
           result.sub!(/\s*\}\s*\Z/, "\nreturn Qnil;\n}")
         end
