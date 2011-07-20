@@ -71,25 +71,39 @@ module FastRuby
 
       caller_code = nil
 
+      str_lvar_initialization = @locals_struct + " *plocals;
+                                plocals = (void*)param;"
+
       if call_args_tree.size > 1
-        str_called_code_args = (1..call_args_tree.size-1).map{|i| "rb_ary_entry(arg,#{i})" }.join(",")
 
-        caller_code = proc { |name| "
-          static VALUE #{name}(VALUE arg) {
-            VALUE recv = rb_ary_entry(arg,0);
-            return rb_funcall(recv, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+        str_called_code_args = ""
+        str_recv = ""
+        on_block do
+          str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+          str_recv = to_c recv_tree
+        end
+
+          caller_code = proc { |name| "
+            static VALUE #{name}(VALUE param) {
+              #{str_lvar_initialization}
+              return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+            }
+          "
           }
-        "
-        }
+
       else
+        str_recv = ""
+        on_block do
+          str_recv = to_c recv_tree
+        end
 
-        caller_code = proc { |name| "
-          static VALUE #{name}(VALUE arg) {
-            VALUE recv = rb_ary_entry(arg,0);
-            return rb_funcall(recv, #{call_tree[2].to_i}, 0);
+          caller_code = proc { |name| "
+            static VALUE #{name}(VALUE param) {
+              #{str_lvar_initialization}
+              return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
+            }
+          "
           }
-        "
-        }
       end
 
       anonymous_impl = tree[3]
@@ -147,14 +161,7 @@ module FastRuby
       "
       }
 
-      block_params = ""
-      if call_args_tree.size > 1
-        block_params = "rb_ary_new3(#{call_args_tree.size},#{to_c recv_tree}, #{call_args_tree[1..-1].map{|subtree| to_c subtree}.join(",")})"
-      else
-        block_params = "rb_ary_new3(1,#{to_c recv_tree})"
-      end
-
-      "rb_iterate(#{anonymous_function(caller_code)}, #{block_params}, #{anonymous_function(block_code)}, (VALUE)&locals)"
+      "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
     end
 
     def to_c_block(tree)
