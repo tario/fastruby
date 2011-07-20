@@ -253,5 +253,23 @@ describe FastRuby, "fastruby" do
     ::X15.new.foo.should be == true
   end
 
+  class ::X16
+    fastruby "
+      def foo
+        bar do
+          12
+        end
+      end
+    "
+
+    def bar
+      yield
+    end
+  end
+
+  it "should allow calls with block to self methods" do
+    ::X16.new.foo.should be == 12
+  end
+
 
 end
