@@ -83,6 +83,8 @@ module FastRuby
           str_recv = to_c recv_tree
         end
 
+        str_recv = "locals->self" unless recv_tree
+
           caller_code = proc { |name| "
             static VALUE #{name}(VALUE param) {
               #{str_lvar_initialization}
@@ -96,6 +98,8 @@ module FastRuby
         on_block do
           str_recv = to_c recv_tree
         end
+
+        str_recv = "locals->self" unless recv_tree
 
           caller_code = proc { |name| "
             static VALUE #{name}(VALUE param) {
@@ -140,7 +144,9 @@ module FastRuby
 
       str_arg_initialization = ""
 
-      if args_tree.first == :lasgn
+      if not args_tree
+        str_arg_initialization = ""
+      elsif args_tree.first == :lasgn
         str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
       elsif args_tree.first == :masgn
         arguments = args_tree[1][1..-1].map(&:last)
