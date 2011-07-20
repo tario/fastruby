@@ -42,7 +42,12 @@ class Object
 
     hash = Hash.new
 
-    locals = FastRuby::GetLocalsProcessor.get_locals(RubyParser.new.parse(rubycode))
+    locals = Set.new
+    locals << :self
+
+    FastRuby::GetLocalsProcessor.get_locals(RubyParser.new.parse(rubycode)).each do |local|
+      locals << local
+    end
 
     hash.instance_eval{@tree = tree}
     hash.instance_eval{@locals = locals}

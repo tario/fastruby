@@ -83,7 +83,7 @@ module FastRuby
           str_recv = to_c recv_tree
         end
 
-        str_recv = "locals->self" unless recv_tree
+        str_recv = "plocals->self" unless recv_tree
 
           caller_code = proc { |name| "
             static VALUE #{name}(VALUE param) {
@@ -99,7 +99,7 @@ module FastRuby
           str_recv = to_c recv_tree
         end
 
-        str_recv = "locals->self" unless recv_tree
+        str_recv = "plocals->self" unless recv_tree
 
           caller_code = proc { |name| "
             static VALUE #{name}(VALUE param) {
@@ -230,6 +230,8 @@ module FastRuby
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
+
+        locals.self = self;
 
         \n
         #{str_impl}
