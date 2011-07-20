@@ -298,7 +298,13 @@ module FastRuby
 
         if address then
           if argnum == 0
-            "((VALUE(*)(VALUE))0x#{address.to_s(16)})(#{to_c(recv)})"
+            wrapper_func = proc { |name| "
+              static VALUE #{name}(VALUE arg1) {
+                return ((VALUE(*)(VALUE))0x#{address.to_s(16)})(arg1);
+              }
+            " }
+
+            anonymous_function(wrapper_func) + "(#{to_c(recv)})"
           else
              value_cast = ( ["VALUE"]*args.size ).join(",")
             "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c(recv)}, #{strargs})"
