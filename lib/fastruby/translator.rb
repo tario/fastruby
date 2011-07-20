@@ -299,15 +299,32 @@ module FastRuby
         if address then
           if argnum == 0
             wrapper_func = proc { |name| "
-              static VALUE #{name}(VALUE arg1) {
-                return ((VALUE(*)(VALUE))0x#{address.to_s(16)})(arg1);
+              static VALUE #{name}(VALUE recv) {
+                if (rb_block_given_p()) {
+                  // no passing block, recall
+                  return rb_funcall(recv, #{tree[2].to_i}, 0);
+                } else {
+                  return ((VALUE(*)(VALUE))0x#{address.to_s(16)})(recv);
+                }
               }
             " }
 
             anonymous_function(wrapper_func) + "(#{to_c(recv)})"
           else
-             value_cast = ( ["VALUE"]*args.size ).join(",")
-            "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c(recv)}, #{strargs})"
+            value_cast = ( ["VALUE"]*args.size ).join(",")
+
+            wrapper_func = proc { |name| "
+              static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
+                if (rb_block_given_p()) {
+                  // no passing block, recall
+                  return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                } else {
+                  return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                }
+              }
+            " }
+
+            anonymous_function(wrapper_func) + "(#{to_c(recv)}, #{strargs})"
           end
         else
 
