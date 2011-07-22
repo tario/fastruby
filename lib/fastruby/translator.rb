@@ -197,6 +197,15 @@ module FastRuby
       "(VALUE)#{tree[1].internal_value}"
     end
 
+    def to_c_array(tree)
+      if tree.size > 1
+        strargs = tree[1..-1].map{|subtree| to_c subtree}.join(",")
+        "rb_ary_new3(#{tree.size-1}, #{strargs})"
+      else
+        "rb_ary_new3(0)"
+      end
+    end
+
     def to_c_defn(tree)
       method_name = tree[1]
       args_tree = tree[2]
