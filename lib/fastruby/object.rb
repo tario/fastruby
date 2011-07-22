@@ -28,8 +28,10 @@ require "inline"
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 
 class Object
-  def self.fastruby(rubycode, *options)
+  def self.fastruby(rubycode, *options_hashes)
     tree = RubyParser.new.parse rubycode
+
+    options_hash = options_hashes.inject{|x,y| x.merge(y)}
 
     if tree[0] != :defn
       raise ArgumentError, "Only definition of methods are accepted"
@@ -53,6 +55,7 @@ class Object
     hash.instance_eval{@locals = locals}
     self_ = self
     hash.instance_eval{@klass = self_}
+    hash.instance_eval{@options = options_hash}
 
     class_eval do
       class << self
@@ -62,9 +65,10 @@ class Object
 
     self_.method_tree[method_name] = tree
     self_.method_locals[method_name] = locals
+    self_.method_options[method_name] = options_hash
 
     def hash.build(key, mname)
-      @klass.build(key, @tree, mname, @locals)
+      @klass.build(key, @tree, mname, @locals, @options)
     end
 
     eval("#{hashname} = hash")

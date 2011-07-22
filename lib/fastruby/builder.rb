@@ -23,9 +23,10 @@ require "fastruby/inline_extension"
 
 module FastRuby
   module BuilderModule
-    def build(signature, tree, mname, locals)
+    def build(signature, tree, mname, locals, options)
       context = FastRuby::Context.new
       context.locals = locals
+      context.options = options
 
       args_tree = tree[2]
 
@@ -59,6 +60,11 @@ module FastRuby
     def method_locals
       @method_locals = Hash.new unless @method_locals
       @method_locals
+    end
+
+    def method_options
+      @method_options = Hash.new unless @method_options
+      @method_options
     end
 
   end

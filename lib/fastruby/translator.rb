@@ -28,12 +28,14 @@ module FastRuby
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
     attr_accessor :locals
+    attr_accessor :options
     attr_reader :extra_code
 
     def initialize
       @infer_lvar_map = Hash.new
       @extra_code = ""
       @on_block = false
+      @options = {}
     end
 
     def on_block
@@ -336,7 +338,7 @@ module FastRuby
 
           if method_tree
             mname = "_" + tree[2].to_s + signature.map(&:internal_value).map(&:to_s).join
-            mobject = recvtype.build(signature, method_tree, mname, method_locals)
+            mobject = recvtype.build(signature, method_tree, mname, method_locals, recvtype.method_options[tree[2]])
           else
             mobject = recvtype.instance_method(tree[2])
           end
