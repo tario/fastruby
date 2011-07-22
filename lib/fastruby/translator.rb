@@ -190,7 +190,7 @@ module FastRuby
     end
 
     def to_c_lit(tree)
-      "INT2FIX(#{tree[1].to_s})"
+      "(VALUE)#{tree[1].internal_value}"
     end
 
     def to_c_str(tree)
