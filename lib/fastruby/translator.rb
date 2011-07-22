@@ -277,7 +277,19 @@ module FastRuby
     end
 
     def to_c_lasgn(tree)
-      "locals.#{tree[1]} = #{to_c tree[2]};"
+      if options[:validate_lvar_types]
+        klass = @infer_lvar_map[tree[1]]
+        if klass
+          "locals.#{tree[1]} = #{to_c tree[2]};
+          if (CLASS_OF(locals.#{tree[1]})!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\");
+          "
+
+        else
+          "locals.#{tree[1]} = #{to_c tree[2]};"
+        end
+      else
+        "locals.#{tree[1]} = #{to_c tree[2]};"
+      end
     end
 
     def to_c_lvar(tree)
