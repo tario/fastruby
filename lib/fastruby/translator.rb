@@ -193,6 +193,10 @@ module FastRuby
       "INT2FIX(#{tree[1].to_s})"
     end
 
+    def to_c_str(tree)
+      "(VALUE)#{tree[1].internal_value}"
+    end
+
     def to_c_defn(tree)
       method_name = tree[1]
       args_tree = tree[2]
