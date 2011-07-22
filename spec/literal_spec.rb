@@ -22,7 +22,7 @@ describe FastRuby, "fastruby" do
   end
 
   it "should compile string literals" do
-    ::Z2.new.foo.should be == 'test_string'
+    ::Z2.new.foo.should be == 'test string'
   end
 
   class ::Z3
@@ -48,7 +48,7 @@ describe FastRuby, "fastruby" do
   it "should compile regexp literals" do
     ::Z4.new.foo.should be == /aaa/
   end
-  
+
   class ::Z5
     fastruby "
       def foo
