@@ -18,7 +18,7 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
-require "fastruby/object"
-require "fastruby/exceptions"
-
+module FastRuby
+  class TypeMismatchAssignmentException < Exception
+  end
+end
