@@ -13,7 +13,7 @@ describe FastRuby, "fastruby" do
     "
   end
 
-  it "should deny wrong type assignments at build time by default" do
+  it "should deny wrong type assignments at runtime by default" do
     lambda {
     ::Y1.new.foo("test string")
     }.should raise_error(FastRuby::BadTypeAssignment)
@@ -30,7 +30,7 @@ describe FastRuby, "fastruby" do
     ", :validate_lvar_types => true
   end
 
-  it "should deny wrong type assignments at build time when validate_lvar_types is true" do
+  it "should deny wrong type assignments at runtime when validate_lvar_types is true" do
     lambda {
     ::Y2.new.foo("test string")
     }.should raise_error(FastRuby::BadTypeAssignment)
@@ -47,7 +47,7 @@ describe FastRuby, "fastruby" do
     ", :validate_lvar_types => false
   end
 
-  it "should NOT deny wrong type assignments at build time when validate_lvar_types is false" do
+  it "should NOT deny wrong type assignments at runtime when validate_lvar_types is false" do
     lambda {
     ::Y3.new.foo("test string")
     }.should_not raise_error
