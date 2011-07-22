@@ -28,7 +28,7 @@ require "inline"
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 
 class Object
-  def self.fastruby(rubycode)
+  def self.fastruby(rubycode, *options)
     tree = RubyParser.new.parse rubycode
 
     if tree[0] != :defn
