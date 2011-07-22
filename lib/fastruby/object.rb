@@ -31,7 +31,10 @@ class Object
   def self.fastruby(rubycode, *options_hashes)
     tree = RubyParser.new.parse rubycode
 
-    options_hash = options_hashes.inject{|x,y| x.merge(y)}
+    options_hash = {:validate_lvar_types => true}
+    options_hashes.each do |opt|
+      options_hash.merge!(opt)
+    end
 
     if tree[0] != :defn
       raise ArgumentError, "Only definition of methods are accepted"
