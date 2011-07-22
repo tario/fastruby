@@ -197,6 +197,29 @@ module FastRuby
       "(VALUE)#{tree[1].internal_value}"
     end
 
+    def to_c_hash(tree)
+
+      hash_aset_code = ""
+      on_block do
+        (0..(tree.size-3)/2).each do |i|
+          strkey = to_c tree[1 + i * 2]
+          strvalue = to_c tree[2 + i * 2]
+          hash_aset_code << "rb_hash_aset(hash, #{strkey}, #{strvalue});"
+        end
+      end
+
+      wrapper_func = proc { |name| "
+        static VALUE #{name}(VALUE value_params) {
+          #{@locals_struct} *plocals = (void*)value_params;
+          VALUE hash = rb_hash_new();
+          #{hash_aset_code}
+          return hash;
+        }
+      " }
+
+      anonymous_function(wrapper_func) + "((VALUE)&locals)"
+    end
+
     def to_c_array(tree)
       if tree.size > 1
         strargs = tree[1..-1].map{|subtree| to_c subtree}.join(",")
