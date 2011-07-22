@@ -16,7 +16,7 @@ describe FastRuby, "fastruby" do
   it "should deny wrong type assignments at runtime by default" do
     lambda {
     ::Y1.new.foo("test string")
-    }.should raise_error(FastRuby::BadTypeAssignment)
+    }.should raise_error(FastRuby::TypeMismatchAssignmentException)
   end
 
   class ::Y2
@@ -33,7 +33,7 @@ describe FastRuby, "fastruby" do
   it "should deny wrong type assignments at runtime when validate_lvar_types is true" do
     lambda {
     ::Y2.new.foo("test string")
-    }.should raise_error(FastRuby::BadTypeAssignment)
+    }.should raise_error(FastRuby::TypeMismatchAssignmentException)
   end
 
   class ::Y3
