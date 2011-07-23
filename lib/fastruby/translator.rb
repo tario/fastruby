@@ -195,6 +195,10 @@ module FastRuby
       "(VALUE)#{tree[1].internal_value}"
     end
 
+    def to_c_nil(tree)
+      "Qnil"
+    end
+
     def to_c_str(tree)
       "(VALUE)#{tree[1].internal_value}"
     end
