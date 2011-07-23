@@ -60,4 +60,17 @@ describe FastRuby, "fastruby" do
   it "should compile hash literals" do
     ::Z5.new.foo.should be == { 1 => 2, 3 => 4}
   end
+
+  class ::Z6
+    fastruby "
+      def foo
+        nil
+      end
+    "
+  end
+
+  it "should compile nil" do
+    ::Z6.new.foo.should be == nil
+  end
+
 end
