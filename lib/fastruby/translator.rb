@@ -173,7 +173,11 @@ module FastRuby
     end
 
     def to_c_yield(tree)
-      "rb_yield(Qnil)"
+      if (tree.size == 1)
+        "rb_yield(Qnil)"
+      else
+        "rb_yield_values(#{tree.size-1}, #{tree[1..-1].map{|subtree| to_c subtree}.join(",")} )"
+      end
     end
 
     def to_c_block(tree)
