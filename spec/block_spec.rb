@@ -211,4 +211,29 @@ describe FastRuby, "fastruby" do
     ::X18.new.foo{ 9 }.should be == 9
   end
 
+  class ::Y19
+    fastruby "
+      def bar
+        yield
+      end
+    "
+  end
+
+  class ::X19
+    fastruby "
+      def foo(y)
+        y.bar {
+          9
+        }
+      end
+    "
+  end
+
+  it "should execute block class between fastruby methods when no block is passed" do
+    ::X19.new.foo(::Y19.new).should be == 9
+  end
+
+  it "should execute block class between fastruby methods when block is passed" do
+    ::X19.new.foo(::Y19.new){}.should be == 9
+  end
 end
