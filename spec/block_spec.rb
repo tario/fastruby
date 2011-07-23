@@ -181,4 +181,21 @@ describe FastRuby, "fastruby" do
   it "should allow calls with block to self methods" do
     ::X16.new.foo.should be == 12
   end
+
+  class ::X17
+    fastruby "
+      def foo(z)
+        i = 9
+        z.each do |x|
+          i = x
+          0
+        end
+        i
+      end
+    "
+  end
+
+  it "should allow calls with block to self methods" do
+    ::X17.new.foo([1,2,3]).should be == 3
+  end
 end
