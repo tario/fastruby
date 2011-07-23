@@ -89,4 +89,17 @@ describe FastRuby, "fastruby" do
   it "should run 10 iterations" do
     ::X5.new.foo.should be == 0
   end
+
+  class ::A1
+    fastruby "
+      def foo
+        i = 9
+      end
+    "
+  end
+
+  it "should compile a methd with lvar assignment as the last instruction" do
+    ::A1.new.foo.should be == 9
+  end
+
 end
