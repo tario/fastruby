@@ -172,6 +172,10 @@ module FastRuby
       "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
     end
 
+    def to_c_yield(tree)
+      "rb_yield(Qnil)"
+    end
+
     def to_c_block(tree)
       str = tree[1..-2].map{ |subtree|
         to_c(subtree)
