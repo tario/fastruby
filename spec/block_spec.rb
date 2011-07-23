@@ -236,4 +236,34 @@ describe FastRuby, "fastruby" do
   it "should execute block class between fastruby methods when block is passed" do
     ::X19.new.foo(::Y19.new){}.should be == 9
   end
+
+  class ::X20
+    fastruby "
+      def foo
+        yield(1)
+      end
+    "
+  end
+
+  it "should execute block from fastruby methods with one argument" do
+    ::X20.new.foo do |n1|
+      n1.should be == 1
+    end
+  end
+
+  class ::X21
+    fastruby "
+      def foo
+        yield(1,2)
+      end
+    "
+  end
+
+  it "should execute block from fastruby methods with two arguments" do
+    ::X21.new.foo do |n1,n2|
+      n1.should be == 1
+      n2.should be == 2
+    end
+  end
+
 end
