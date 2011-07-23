@@ -195,7 +195,20 @@ describe FastRuby, "fastruby" do
     "
   end
 
-  it "should allow calls with block to self methods" do
+  it "should allow assignment of locals from blocks" do
     ::X17.new.foo([1,2,3]).should be == 3
   end
+
+  class ::X18
+    fastruby "
+      def foo
+        yield
+      end
+    "
+  end
+
+  it "should allow block calls" do
+    ::X18.new.foo{ 9 }.should be == 9
+  end
+
 end
