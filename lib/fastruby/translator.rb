@@ -291,14 +291,14 @@ module FastRuby
         klass = @infer_lvar_map[tree[1]]
         if klass
           "#{struct_accessor}#{tree[1]} = #{to_c tree[2]};
-          if (CLASS_OF(locals.#{tree[1]})!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\");
+          if (CLASS_OF(locals.#{tree[1]})!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\")
           "
 
         else
-          "#{struct_accessor}#{tree[1]} = #{to_c tree[2]};"
+          "#{struct_accessor}#{tree[1]} = #{to_c tree[2]}"
         end
       else
-        "#{struct_accessor}#{tree[1]} = #{to_c tree[2]};"
+        "#{struct_accessor}#{tree[1]} = #{to_c tree[2]}"
       end
     end
 
@@ -421,7 +421,7 @@ module FastRuby
 
     def to_c_while(tree)
       "while (#{to_c tree[1]}) {
-        #{to_c tree[2]}
+        #{to_c tree[2]};
       }
       "
     end
