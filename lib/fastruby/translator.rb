@@ -295,7 +295,7 @@ module FastRuby
         klass = @infer_lvar_map[tree[1]]
         if klass
           "#{struct_accessor}#{tree[1]} = #{to_c tree[2]};
-          if (CLASS_OF(locals.#{tree[1]})!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\")
+          if (CLASS_OF(#{struct_accessor}#{tree[1]})!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\")
           "
 
         else
