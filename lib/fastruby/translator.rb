@@ -369,6 +369,8 @@ module FastRuby
           end
         end
 
+        convention = nil
+
         if recvtype.respond_to? :method_tree and inference_complete
           method_tree = recvtype.method_tree[tree[2]]
           method_locals = recvtype.method_locals[tree[2]]
@@ -376,23 +378,26 @@ module FastRuby
           if method_tree
             mname = "_" + tree[2].to_s + signature.map(&:internal_value).map(&:to_s).join
             mobject = recvtype.build(signature, method_tree, mname, method_locals, recvtype.method_options[tree[2]])
+            convention = :fastruby
           else
             mobject = recvtype.instance_method(tree[2])
+            convention = :cruby
           end
         else
           mobject = recvtype.instance_method(tree[2])
+          convention = :cruby
         end
 
         address = getaddress(mobject)
         len = getlen(mobject)
 
-        extraargs = ", "
-        extraargs = ", Qnil" if inference_complete
+        extraargs = ""
+        extraargs = ", Qnil" if convention == :fastruby
 
         if address then
           if argnum == 0
             value_cast = "VALUE"
-            value_cast = value_cast + ", VALUE" if inference_complete
+            value_cast = value_cast + ", VALUE" if convention == :fastruby
 
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv) {
@@ -409,7 +414,7 @@ module FastRuby
             anonymous_function(wrapper_func) + "(#{to_c(recv)})"
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",")
-            value_cast = value_cast + ", VALUE" if inference_complete
+            value_cast = value_cast + ", VALUE" if convention == :fastruby
 
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
