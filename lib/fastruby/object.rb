@@ -84,9 +84,9 @@ class Object
     strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
     if args_tree.size > 1
-      strmethodargs = "self,Qfalse,#{args_tree[1..-1].map(&:to_s).join(",") }"
+      strmethodargs = "self,block,#{args_tree[1..-1].map(&:to_s).join(",") }"
     else
-      strmethodargs = "self,Qfalse"
+      strmethodargs = "self,block"
     end
 
     strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
@@ -122,13 +122,27 @@ class Object
         if (nd_type(body) == NODE_CFUNC) {
           int argc = body->nd_argc;
 
+          VALUE block = Qfalse;
+
+          if (rb_block_given_p()) {
+            struct {
+              void *block_function_address;
+              void *block_function_param;
+            } block_struct;
+
+            block_struct.block_function_address = re_yield;
+            block_struct.block_function_param = 0;
+
+            block = (VALUE)&block_struct;
+          }
+
           if (argc == #{args_tree.size}) {
             return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
           } else if (argc == -1) {
-            VALUE argv[] = {#{(["Qfalse"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+            VALUE argv[] = {#{(["block"]+args_tree[1..-1]).map(&:to_s).join(",")} };
             return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
           } else if (argc == -2) {
-            VALUE argv[] = {#{(["Qfalse"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+            VALUE argv[] = {#{(["block"]+args_tree[1..-1]).map(&:to_s).join(",")} };
             return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
           } else {
             rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
@@ -141,6 +155,9 @@ class Object
     inline :C  do |builder|
       print c_code,"\n"
       builder.include "<node.h>"
+      builder.inc << "static VALUE re_yield(VALUE arg, VALUE param) {
+        return Qnil;
+      }"
       builder.c c_code
     end
   end
