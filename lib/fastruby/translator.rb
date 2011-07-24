@@ -386,8 +386,14 @@ module FastRuby
         address = getaddress(mobject)
         len = getlen(mobject)
 
+        extraargs = ", "
+        extraargs = ", Qnil" if inference_complete
+
         if address then
           if argnum == 0
+            value_cast = "VALUE"
+            value_cast = value_cast + ", VALUE" if inference_complete
+
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv) {
                 // call to #{recvtype}##{mname}
@@ -395,14 +401,15 @@ module FastRuby
                   // no passing block, recall
                   return rb_funcall(recv, #{tree[2].to_i}, 0);
                 } else {
-                  return ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(recv, Qnil);
+                  return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv #{extraargs});
                 }
               }
             " }
 
             anonymous_function(wrapper_func) + "(#{to_c(recv)})"
           else
-            value_cast = ( ["VALUE"]*(args.size+1) ).join(",")
+            value_cast = ( ["VALUE"]*(args.size) ).join(",")
+            value_cast = value_cast + ", VALUE" if inference_complete
 
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
@@ -411,7 +418,7 @@ module FastRuby
                   // no passing block, recall
                   return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
                 } else {
-                  return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv, Qnil, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                  return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv #{extraargs}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
                 }
               }
             " }

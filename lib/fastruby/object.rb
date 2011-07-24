@@ -84,9 +84,9 @@ class Object
     strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
     if args_tree.size > 1
-      strmethodargs = "self,Qnil,#{args_tree[1..-1].map(&:to_s).join(",") }"
+      strmethodargs = "self,INT2FIX(2),#{args_tree[1..-1].map(&:to_s).join(",") }"
     else
-      strmethodargs = "self,Qnil"
+      strmethodargs = "self,INT2FIX(2)"
     end
 
     strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
