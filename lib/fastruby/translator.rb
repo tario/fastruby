@@ -257,8 +257,14 @@ module FastRuby
       @locals_struct = "struct {
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
-        VALUE block;
+        void* block_function_address;
+        VALUE block_function_param;
         }"
+
+      @block_struct = "struct {
+        void* block_function_address;
+        void* block_function_param;
+      }"
 
       str_impl = ""
       # if impl_tree is a block, implement the last node with a return
@@ -282,15 +288,23 @@ module FastRuby
 
       "VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
         #{@locals_struct} locals;
+        #{@block_struct} *pblock;
 
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
 
         locals.self = self;
-        locals.block = block;
 
-        \n
+        pblock = (void*)block;
+        if (pblock) {
+          locals.block_function_address = pblock->block_function_address;
+          locals.block_function_param = (VALUE)pblock->block_function_param;
+        } else {
+          locals.block_function_address = 0;
+          locals.block_function_param = Qnil;
+        }
+
         #{str_impl}
       }"
     end
@@ -394,7 +408,7 @@ module FastRuby
         len = getlen(mobject)
 
         extraargs = ""
-        extraargs = ", Qnil" if convention == :fastruby
+        extraargs = ", Qfalse" if convention == :fastruby
 
         if address then
           if argnum == 0

@@ -84,9 +84,9 @@ class Object
     strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
     if args_tree.size > 1
-      strmethodargs = "self,INT2FIX(2),#{args_tree[1..-1].map(&:to_s).join(",") }"
+      strmethodargs = "self,Qfalse,#{args_tree[1..-1].map(&:to_s).join(",") }"
     else
-      strmethodargs = "self,INT2FIX(2)"
+      strmethodargs = "self,Qfalse"
     end
 
     strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
@@ -125,10 +125,10 @@ class Object
           if (argc == #{args_tree.size}) {
             return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
           } else if (argc == -1) {
-            VALUE argv[] = {#{(["Qnil"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+            VALUE argv[] = {#{(["Qfalse"]+args_tree[1..-1]).map(&:to_s).join(",")} };
             return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
           } else if (argc == -2) {
-            VALUE argv[] = {#{(["Qnil"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+            VALUE argv[] = {#{(["Qfalse"]+args_tree[1..-1]).map(&:to_s).join(",")} };
             return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
           } else {
             rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
