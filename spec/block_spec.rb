@@ -266,4 +266,27 @@ describe FastRuby, "fastruby" do
     end
   end
 
+  class ::Y22
+    fastruby "
+      def foo
+        yield
+      end
+    "
+
+    fastruby "
+      def bar(x)
+        i = 10
+        lvar_type(i,Fixnum)
+        x.foo do
+          i = i - 1
+        end
+        i
+      end
+    "
+  end
+
+  it "should execute block calls after lvar_type directive" do
+    y22 = ::Y22.new
+    y22.bar(y22).should be == 9
+  end
 end
