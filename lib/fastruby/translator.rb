@@ -256,7 +256,8 @@ module FastRuby
 
       @locals_struct = "struct {
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
+        VALUE block;
         }"
 
       str_impl = ""
@@ -287,6 +288,7 @@ module FastRuby
         }.join("") }
 
         locals.self = self;
+        locals.block = block;
 
         \n
         #{str_impl}
