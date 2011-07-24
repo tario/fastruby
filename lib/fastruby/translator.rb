@@ -294,10 +294,16 @@ module FastRuby
       if options[:validate_lvar_types]
         klass = @infer_lvar_map[tree[1]]
         if klass
-          "#{struct_accessor}#{tree[1]} = #{to_c tree[2]};
-          if (CLASS_OF(#{struct_accessor}#{tree[1]})!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\")
-          "
 
+          verify_type_function = proc { |name| "
+            static VALUE #{name}(VALUE arg) {
+              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\");
+              return arg;
+            }
+          "
+          }
+
+          "#{struct_accessor}#{tree[1]} = #{anonymous_function(verify_type_function)}(#{to_c tree[2]})"
         else
           "#{struct_accessor}#{tree[1]} = #{to_c tree[2]}"
         end
