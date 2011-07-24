@@ -279,7 +279,7 @@ module FastRuby
         end
       end
 
-      "VALUE #{@alt_method_name || method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
+      "VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
         #{@locals_struct} locals;
 
         #{args_tree[1..-1].map { |arg|
@@ -395,14 +395,14 @@ module FastRuby
                   // no passing block, recall
                   return rb_funcall(recv, #{tree[2].to_i}, 0);
                 } else {
-                  return ((VALUE(*)(VALUE))0x#{address.to_s(16)})(recv);
+                  return ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(recv, Qnil);
                 }
               }
             " }
 
             anonymous_function(wrapper_func) + "(#{to_c(recv)})"
           else
-            value_cast = ( ["VALUE"]*args.size ).join(",")
+            value_cast = ( ["VALUE"]*(args.size+1) ).join(",")
 
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
@@ -411,7 +411,7 @@ module FastRuby
                   // no passing block, recall
                   return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
                 } else {
-                  return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                  return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv, Qnil, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
                 }
               }
             " }
