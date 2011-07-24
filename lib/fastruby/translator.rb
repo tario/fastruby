@@ -178,10 +178,26 @@ module FastRuby
     end
 
     def to_c_yield(tree)
-      if (tree.size == 1)
-        "rb_yield(Qnil)"
+
+      block_code = proc { |name| "
+        static VALUE #{name}(VALUE locals_param, VALUE block_args) {
+
+          #{@locals_struct} *plocals;
+          plocals = (VALUE)locals_param;
+
+          if (plocals->block_function_address == 0) {
+            rb_raise(rb_eLocalJumpError, \"no block given\");
+          } else {
+            return ((VALUE(*)(VALUE,VALUE))plocals->block_function_address)(block_args, plocals->block_function_param);
+          }
+        }
+      "
+      }
+
+      if tree.size > 1
+        anonymous_function(block_code)+"((VALUE)&locals, rb_ary_new3(#{tree.size-1}, #{tree[1..-1].map{|subtree| to_c subtree}.join(",")}))"
       else
-        "rb_yield_values(#{tree.size-1}, #{tree[1..-1].map{|subtree| to_c subtree}.join(",")} )"
+        anonymous_function(block_code)+"((VALUE)&locals, rb_ary_new3(0))"
       end
     end
 
