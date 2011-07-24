@@ -89,6 +89,8 @@ module FastRuby
 
           caller_code = proc { |name| "
             static VALUE #{name}(VALUE param) {
+              // call to #{call_tree[2]}
+
               #{str_lvar_initialization}
               return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
             }
@@ -105,6 +107,7 @@ module FastRuby
 
           caller_code = proc { |name| "
             static VALUE #{name}(VALUE param) {
+              // call to #{call_tree[2]}
               #{str_lvar_initialization}
               return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
             }
@@ -162,6 +165,8 @@ module FastRuby
 
       block_code = proc { |name| "
         static VALUE #{name}(VALUE arg, VALUE param) {
+          // block for call to #{call_tree[2]}
+
           #{str_lvar_initialization};
           #{str_arg_initialization}
           #{str_impl}
@@ -385,6 +390,7 @@ module FastRuby
           if argnum == 0
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv) {
+                // call to #{recvtype}##{mname}
                 if (rb_block_given_p()) {
                   // no passing block, recall
                   return rb_funcall(recv, #{tree[2].to_i}, 0);
@@ -400,6 +406,7 @@ module FastRuby
 
             wrapper_func = proc { |name| "
               static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
+                // call to #{recvtype}##{mname}
                 if (rb_block_given_p()) {
                   // no passing block, recall
                   return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
