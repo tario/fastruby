@@ -23,7 +23,11 @@ require "fastruby/inline_extension"
 
 module FastRuby
   module BuilderModule
-    def build(signature, tree, mname, locals, options)
+    def build(signature, mname, method_name)
+      tree = self.method_tree[method_name]
+      locals = self.method_locals[method_name]
+      options = self.method_options[method_name]
+
       context = FastRuby::Context.new
       context.locals = locals
       context.options = options

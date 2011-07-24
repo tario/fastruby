@@ -54,11 +54,9 @@ class Object
       locals << local
     end
 
-    hash.instance_eval{@tree = tree}
-    hash.instance_eval{@locals = locals}
     self_ = self
     hash.instance_eval{@klass = self_}
-    hash.instance_eval{@options = options_hash}
+    hash.instance_eval{@method_name = method_name}
 
     class_eval do
       class << self
@@ -71,7 +69,7 @@ class Object
     self_.method_options[method_name] = options_hash
 
     def hash.build(key, mname)
-      @klass.build(key, @tree, mname, @locals, @options)
+      @klass.build(key, mname, @method_name)
     end
 
     eval("#{hashname} = hash")
