@@ -68,8 +68,8 @@ class Object
     self_.method_locals[method_name] = locals
     self_.method_options[method_name] = options_hash
 
-    def hash.build(key, mname)
-      @klass.build(key, mname, @method_name)
+    def hash.build(key)
+      @klass.build(key, @method_name)
     end
 
     eval("#{hashname} = hash")
@@ -113,7 +113,7 @@ class Object
         VALUE argv_class[] = {#{strmethodargs_class} };
         VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
 
-        rb_funcall(method_hash, #{:build.to_i}, 2, signature, rb_str_new2(method_name));
+        rb_funcall(method_hash, #{:build.to_i}, 1, signature);
         body = rb_method_node(klass,id);
       }
 
