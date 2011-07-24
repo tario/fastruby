@@ -156,7 +156,7 @@ class Object
       print c_code,"\n"
       builder.include "<node.h>"
       builder.inc << "static VALUE re_yield(VALUE arg, VALUE param) {
-        return Qnil;
+        return rb_yield_splat(arg);
       }"
       builder.c c_code
     end
