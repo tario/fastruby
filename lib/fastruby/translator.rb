@@ -226,45 +226,6 @@ module FastRuby
         "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
       elsif convention == :fastruby
 
-        if call_args_tree.size > 1
-
-          str_called_code_args = ""
-          str_recv = ""
-          on_block do
-            str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
-            str_recv = to_c recv_tree
-          end
-
-          str_recv = "plocals->self" unless recv_tree
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-
-                #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
-              }
-            "
-            }
-
-        else
-          str_recv = ""
-          on_block do
-            str_recv = to_c recv_tree
-          end
-
-          str_recv = "plocals->self" unless recv_tree
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-                #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
-              }
-            "
-            }
-        end
-
         anonymous_impl = tree[3]
         str_impl = ""
 
@@ -323,6 +284,46 @@ module FastRuby
           }
         "
         }
+
+
+        if call_args_tree.size > 1
+
+          str_called_code_args = ""
+          str_recv = ""
+          on_block do
+            str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+            str_recv = to_c recv_tree
+          end
+
+          str_recv = "plocals->self" unless recv_tree
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+              }
+            "
+            }
+
+        else
+          str_recv = ""
+          on_block do
+            str_recv = to_c recv_tree
+          end
+
+          str_recv = "plocals->self" unless recv_tree
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
+              }
+            "
+            }
+        end
 
         "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
       end
