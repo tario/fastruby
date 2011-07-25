@@ -295,14 +295,23 @@ module FastRuby
             str_recv = to_c recv_tree
           end
 
+          value_cast = ( ["VALUE"]*(args.size) ).join(",")
+          value_cast = value_cast + ", VALUE" if convention == :fastruby
+
           str_recv = "plocals->self" unless recv_tree
 
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
+                #{@block_struct} block;
+
+                block.block_function_address = (void*)#{anonymous_function(block_code)};
+                block.block_function_param = (void*)param;
+
                 // call to #{call_tree[2]}
 
                 #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+
+                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(plocals->self, (VALUE)&block, #{str_called_code_args})
               }
             "
             }
@@ -317,9 +326,15 @@ module FastRuby
 
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
+                #{@block_struct} block;
+
+                block.block_function_address = (void*)#{anonymous_function(block_code)};
+                block.block_function_param = (void*)param;
+
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
+
+                ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(plocals->self, (VALUE)&block);
               }
             "
             }
