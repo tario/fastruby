@@ -76,6 +76,53 @@ module FastRuby
       str_lvar_initialization = @locals_struct + " *plocals;
                                 plocals = (void*)param;"
 
+      recvtype = infer_type(recv_tree || s(:self))
+
+      address = nil
+      mobject = nil
+      len = nil
+
+      convention = :ruby
+
+      if recvtype
+
+        inference_complete = true
+        signature = [recvtype]
+
+        call_args_tree[1..-1].each do |arg|
+          argtype = infer_type(arg)
+          if argtype
+            signature << argtype
+          else
+            inference_complete = false
+          end
+        end
+
+        convention = nil
+
+        if recvtype.respond_to? :method_tree and inference_complete
+
+          if recvtype.method_tree[call_tree[2]]
+            mobject = recvtype.build(signature, call_tree[2])
+            convention = :fastruby
+          else
+            mobject = recvtype.instance_method(call_tree[2])
+            convention = :cruby
+          end
+        else
+          mobject = recvtype.instance_method(call_tree[2])
+          convention = :cruby
+        end
+
+        address = getaddress(mobject)
+        len = getlen(mobject)
+
+        unless address
+          convention = :ruby
+        end
+
+      end
+
       if call_args_tree.size > 1
 
         str_called_code_args = ""
