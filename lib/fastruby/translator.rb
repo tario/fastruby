@@ -407,7 +407,7 @@ module FastRuby
 
         if recvtype.respond_to? :method_tree and inference_complete
 
-          if recvtype.method_tree[tree[2].to_s]
+          if recvtype.method_tree[tree[2]]
             mobject = recvtype.build(signature, tree[2])
             convention = :fastruby
           else
