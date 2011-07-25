@@ -123,105 +123,209 @@ module FastRuby
 
       end
 
-      if call_args_tree.size > 1
+      if convention == :ruby or convention == :cruby
 
-        str_called_code_args = ""
-        str_recv = ""
-        on_block do
-          str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
-          str_recv = to_c recv_tree
+        if call_args_tree.size > 1
+
+          str_called_code_args = ""
+          str_recv = ""
+          on_block do
+            str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+            str_recv = to_c recv_tree
+          end
+
+          str_recv = "plocals->self" unless recv_tree
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+              }
+            "
+            }
+
+        else
+          str_recv = ""
+          on_block do
+            str_recv = to_c recv_tree
+          end
+
+          str_recv = "plocals->self" unless recv_tree
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
+              }
+            "
+            }
         end
 
-        str_recv = "plocals->self" unless recv_tree
+        anonymous_impl = tree[3]
+        str_impl = ""
 
-          caller_code = proc { |name| "
-            static VALUE #{name}(VALUE param) {
-              // call to #{call_tree[2]}
-
-              #{str_lvar_initialization}
-              return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
-            }
-          "
-          }
-
-      else
-        str_recv = ""
         on_block do
-          str_recv = to_c recv_tree
-        end
+          # if impl_tree is a block, implement the last node with a return
+          if anonymous_impl
+            if anonymous_impl[0] == :block
+              str_impl = anonymous_impl[1..-2].map{ |subtree|
+                to_c(subtree)
+              }.join(";")
 
-        str_recv = "plocals->self" unless recv_tree
-
-          caller_code = proc { |name| "
-            static VALUE #{name}(VALUE param) {
-              // call to #{call_tree[2]}
-              #{str_lvar_initialization}
-              return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
-            }
-          "
-          }
-      end
-
-      anonymous_impl = tree[3]
-      str_impl = ""
-
-      on_block do
-        # if impl_tree is a block, implement the last node with a return
-        if anonymous_impl
-          if anonymous_impl[0] == :block
-            str_impl = anonymous_impl[1..-2].map{ |subtree|
-              to_c(subtree)
-            }.join(";")
-
-            if anonymous_impl[-1][0] != :return
-              str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+              if anonymous_impl[-1][0] != :return
+                str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+              else
+                str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+              end
             else
-              str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+              if anonymous_impl[0] != :return
+                str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+              else
+                str_impl = str_impl + ";#{to_c(anonymous_impl)};"
+              end
             end
           else
-            if anonymous_impl[0] != :return
-              str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
-            else
-              str_impl = str_impl + ";#{to_c(anonymous_impl)};"
-            end
+            str_impl = "return Qnil;"
           end
-        else
-          str_impl = "return Qnil;"
+
         end
 
-      end
+        str_lvar_initialization = @locals_struct + " *plocals;
+                                  plocals = (void*)param;"
 
-      str_lvar_initialization = @locals_struct + " *plocals;
-                                plocals = (void*)param;"
-
-      str_arg_initialization = ""
-
-      if not args_tree
         str_arg_initialization = ""
-      elsif args_tree.first == :lasgn
-        str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
-      elsif args_tree.first == :masgn
-        arguments = args_tree[1][1..-1].map(&:last)
 
-        (0..arguments.size-1).each do |i|
-          str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+        if not args_tree
+          str_arg_initialization = ""
+        elsif args_tree.first == :lasgn
+          str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
+        elsif args_tree.first == :masgn
+          arguments = args_tree[1][1..-1].map(&:last)
+
+          (0..arguments.size-1).each do |i|
+            str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+          end
         end
-      end
 
-      str_arg_initialization
+        str_arg_initialization
 
-      block_code = proc { |name| "
-        static VALUE #{name}(VALUE arg, VALUE param) {
-          // block for call to #{call_tree[2]}
+        block_code = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE param) {
+            // block for call to #{call_tree[2]}
 
-          #{str_lvar_initialization};
-          #{str_arg_initialization}
-          #{str_impl}
+            #{str_lvar_initialization};
+            #{str_arg_initialization}
+            #{str_impl}
+          }
+        "
         }
-      "
-      }
 
-      "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
+        "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
+      elsif convention == :fastruby
+
+        if call_args_tree.size > 1
+
+          str_called_code_args = ""
+          str_recv = ""
+          on_block do
+            str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+            str_recv = to_c recv_tree
+          end
+
+          str_recv = "plocals->self" unless recv_tree
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+              }
+            "
+            }
+
+        else
+          str_recv = ""
+          on_block do
+            str_recv = to_c recv_tree
+          end
+
+          str_recv = "plocals->self" unless recv_tree
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
+              }
+            "
+            }
+        end
+
+        anonymous_impl = tree[3]
+        str_impl = ""
+
+        on_block do
+          # if impl_tree is a block, implement the last node with a return
+          if anonymous_impl
+            if anonymous_impl[0] == :block
+              str_impl = anonymous_impl[1..-2].map{ |subtree|
+                to_c(subtree)
+              }.join(";")
+
+              if anonymous_impl[-1][0] != :return
+                str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+              else
+                str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+              end
+            else
+              if anonymous_impl[0] != :return
+                str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+              else
+                str_impl = str_impl + ";#{to_c(anonymous_impl)};"
+              end
+            end
+          else
+            str_impl = "return Qnil;"
+          end
+
+        end
+
+        str_lvar_initialization = @locals_struct + " *plocals;
+                                  plocals = (void*)param;"
+
+        str_arg_initialization = ""
+
+        if not args_tree
+          str_arg_initialization = ""
+        elsif args_tree.first == :lasgn
+          str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
+        elsif args_tree.first == :masgn
+          arguments = args_tree[1][1..-1].map(&:last)
+
+          (0..arguments.size-1).each do |i|
+            str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+          end
+        end
+
+        str_arg_initialization
+
+        block_code = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE param) {
+            // block for call to #{call_tree[2]}
+
+            #{str_lvar_initialization};
+            #{str_arg_initialization}
+            #{str_impl}
+          }
+        "
+        }
+
+        "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
+      end
     end
 
     def to_c_yield(tree)
