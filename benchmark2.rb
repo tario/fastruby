@@ -18,8 +18,8 @@ class Y
 			ret = 0
 			while i > 0
 				x.foo do
-				  i = i - 1
 				end
+				  i = i - 1
 			end
 			0
 		end

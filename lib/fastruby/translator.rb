@@ -364,7 +364,7 @@ module FastRuby
       if tree.size > 1
         anonymous_function(block_code)+"((VALUE)&locals, rb_ary_new3(#{tree.size-1}, #{tree[1..-1].map{|subtree| to_c subtree}.join(",")}))"
       else
-        anonymous_function(block_code)+"((VALUE)&locals, rb_ary_new3(0))"
+        anonymous_function(block_code)+"((VALUE)&locals, Qnil)"
       end
     end
 
