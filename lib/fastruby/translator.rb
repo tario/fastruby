@@ -540,7 +540,7 @@ module FastRuby
         @infer_lvar_map[lvar_name] = lvar_type
         return ""
       elsif mname == :block_given?
-        return "locals.block_function_address == 0 ? Qfalse : Qtrue"
+        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
       end
 
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
