@@ -334,13 +334,13 @@ module FastRuby
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
 
-                ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(plocals->self, (VALUE)&block);
+                return ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(plocals->self, (VALUE)&block);
               }
             "
             }
         end
 
-        "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
+        "#{anonymous_function(caller_code)}((VALUE)&locals)"
       end
     end
 
