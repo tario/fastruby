@@ -289,4 +289,29 @@ describe FastRuby, "fastruby" do
     y22 = ::Y22.new
     y22.bar(y22).should be == 9
   end
+
+  class ::Y23
+    def foo
+      yield
+    end
+
+    def foo2
+      77
+    end
+
+    fastruby "
+      def bar(x)
+        i = 0
+        x.foo do
+          i = foo2
+        end
+        i
+      end
+    "
+  end
+
+  it "should call self methods from inside a block" do
+    y23 = ::Y23.new
+    y23.bar(y23).should be == 77
+  end
 end
