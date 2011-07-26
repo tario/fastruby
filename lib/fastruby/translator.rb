@@ -66,6 +66,19 @@ module FastRuby
       args_tree = tree[2]
       recv_tree = call_tree[1]
 
+      mname = call_tree[2]
+      if mname == :infer
+        return to_c(recv)
+      elsif mname == :lvar_type
+        lvar_name = args[1][1]
+        lvar_type = eval(args[2][1].to_s)
+
+        @infer_lvar_map[lvar_name] = lvar_type
+        return ""
+      elsif mname == :block_given?
+        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
+      end
+
       other_call_tree = call_tree.dup
       other_call_tree[1] = s(:lvar, :arg)
 
