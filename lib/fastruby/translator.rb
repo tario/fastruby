@@ -525,7 +525,11 @@ module FastRuby
     end
 
     def to_c_self(tree)
-      "self"
+      if @on_block
+        "plocals->self"
+      else
+        "locals.self"
+      end
     end
 
     def to_c_call(tree)
