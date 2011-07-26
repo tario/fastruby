@@ -276,19 +276,19 @@ module FastRuby
         if not args_tree
           str_arg_initialization = ""
         elsif args_tree.first == :lasgn
-          str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
+          str_arg_initialization = "plocals->#{args_tree[1]} = argv[0];"
         elsif args_tree.first == :masgn
           arguments = args_tree[1][1..-1].map(&:last)
 
           (0..arguments.size-1).each do |i|
-            str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+            str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
           end
         end
 
         str_arg_initialization
 
         block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE param) {
+          static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
             // block for call to #{call_tree[2]}
 
             #{str_lvar_initialization};
@@ -360,7 +360,7 @@ module FastRuby
     def to_c_yield(tree)
 
       block_code = proc { |name| "
-        static VALUE #{name}(VALUE locals_param, VALUE block_args) {
+        static VALUE #{name}(VALUE locals_param, VALUE* block_args) {
 
           #{@locals_struct} *plocals;
           plocals = (VALUE)locals_param;
@@ -368,16 +368,16 @@ module FastRuby
           if (plocals->block_function_address == 0) {
             rb_raise(rb_eLocalJumpError, \"no block given\");
           } else {
-            return ((VALUE(*)(VALUE,VALUE))plocals->block_function_address)(block_args, plocals->block_function_param);
+            return ((VALUE(*)(int,VALUE*,VALUE))plocals->block_function_address)(#{tree.size-1}, block_args, plocals->block_function_param);
           }
         }
       "
       }
 
       if tree.size > 1
-        anonymous_function(block_code)+"((VALUE)&locals, rb_ary_new3(#{tree.size-1}, #{tree[1..-1].map{|subtree| to_c subtree}.join(",")}))"
+        anonymous_function(block_code)+"((VALUE)&locals, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
       else
-        anonymous_function(block_code)+"((VALUE)&locals, Qnil)"
+        anonymous_function(block_code)+"((VALUE)&locals, (VALUE[]){})"
       end
     end
 

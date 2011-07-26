@@ -153,8 +153,8 @@ class Object
     inline :C  do |builder|
       print c_code,"\n"
       builder.include "<node.h>"
-      builder.inc << "static VALUE re_yield(VALUE arg, VALUE param) {
-        return rb_yield_splat(arg);
+      builder.inc << "static VALUE re_yield(int argc, VALUE* argv, VALUE param) {
+        return rb_yield_splat(rb_ary_new4(argc,argv));
       }"
       builder.c c_code
     end
