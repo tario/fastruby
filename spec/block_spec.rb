@@ -314,4 +314,31 @@ describe FastRuby, "fastruby" do
     y23 = ::Y23.new
     y23.bar(y23).should be == 77
   end
+
+  class ::Y24
+    def foo
+      yield
+    end
+
+    fastruby "
+      def bar(x)
+        i = 0
+        x.foo do
+          i = block_given?
+        end
+        i
+      end
+    "
+  end
+
+  it "should call block_given? from inside a block when a block is not passed should return false" do
+    y24 = ::Y24.new
+    y24.bar(y24).should be == false
+  end
+
+  it "should call block_given? from inside a block when a block is not passed should return true" do
+    y24 = ::Y24.new
+    y24.bar(y24){}.should be == true
+  end
+
 end
