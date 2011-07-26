@@ -492,9 +492,11 @@ module FastRuby
       }"
     end
 
-    def to_c_lasgn(tree)
-      struct_accessor = @on_block ? "plocals->" : "locals."
+    def locals_accessor
+      @on_block ? "plocals->" : "locals."
+    end
 
+    def to_c_lasgn(tree)
       if options[:validate_lvar_types]
         klass = @infer_lvar_map[tree[1]]
         if klass
@@ -507,29 +509,21 @@ module FastRuby
           "
           }
 
-          "#{struct_accessor}#{tree[1]} = #{anonymous_function(verify_type_function)}(#{to_c tree[2]})"
+          "#{locals_accessor}#{tree[1]} = #{anonymous_function(verify_type_function)}(#{to_c tree[2]})"
         else
-          "#{struct_accessor}#{tree[1]} = #{to_c tree[2]}"
+          "#{locals_accessor}#{tree[1]} = #{to_c tree[2]}"
         end
       else
-        "#{struct_accessor}#{tree[1]} = #{to_c tree[2]}"
+        "#{locals_accessor}#{tree[1]} = #{to_c tree[2]}"
       end
     end
 
     def to_c_lvar(tree)
-      if @on_block
-        "plocals->" + tree[1].to_s
-      else
-        "locals." + tree[1].to_s
-      end
+      locals_accessor + tree[1].to_s
     end
 
     def to_c_self(tree)
-      if @on_block
-        "plocals->self"
-      else
-        "locals.self"
-      end
+      locals_accessor + "self"
     end
 
     def to_c_call(tree)
