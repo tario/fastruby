@@ -514,11 +514,11 @@ module FastRuby
     end
 
     def to_c_gvar(tree)
-      "rb_gv_get(\"#{tree[1].to_s}\")"
+      "rb_gvar_get((struct global_entry*)0x#{global_entry(tree[1]).to_s(16)})"
     end
 
     def to_c_gasgn(tree)
-      "rb_gv_set(\"#{tree[1].to_s}\", #{to_c tree[2]})"
+      "rb_gvar_set((struct global_entry*)0x#{global_entry(tree[1]).to_s(16)}, #{to_c tree[2]})"
     end
 
     def to_c_lasgn(tree)
@@ -742,6 +742,14 @@ module FastRuby
           return Qnil;
       }"
 
+      builder.c "VALUE global_entry(VALUE global_id) {
+        ID id = SYM2ID(global_id);
+        struct global_entry* entry;
+
+        entry = rb_global_entry(id);
+        return INT2FIX(entry);
+      }
+      "
     end
   end
 end
