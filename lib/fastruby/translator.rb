@@ -513,6 +513,10 @@ module FastRuby
       @on_block ? "plocals" : "&locals"
     end
 
+    def to_c_gvar(tree)
+      "rb_gv_get(\"#{tree[1].to_s}\")"
+    end
+
     def to_c_lasgn(tree)
       if options[:validate_lvar_types]
         klass = @infer_lvar_map[tree[1]]
