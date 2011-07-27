@@ -517,6 +517,10 @@ module FastRuby
       "rb_gv_get(\"#{tree[1].to_s}\")"
     end
 
+    def to_c_gasgn(tree)
+      "rb_gv_set(\"#{tree[1].to_s}\", #{to_c tree[2]})"
+    end
+
     def to_c_lasgn(tree)
       if options[:validate_lvar_types]
         klass = @infer_lvar_map[tree[1]]
