@@ -525,6 +525,10 @@ module FastRuby
       "rb_ivar_get(#{locals_accessor}self,#{tree[1].to_i})"
     end
 
+    def to_c_iasgn(tree)
+      "rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
+    end
+
     def to_c_lasgn(tree)
       if options[:validate_lvar_types]
         klass = @infer_lvar_map[tree[1]]
