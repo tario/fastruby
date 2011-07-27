@@ -67,10 +67,8 @@ y2 = Y2.new
 y_ = Y_.new
 y2_ = Y2_.new
 
-y.bar
-y2.bar
-y_.bar
-y2_.bar
+Y.build([Y],:bar)
+Y_.build([Y_],:bar)
 
 require 'benchmark'
 

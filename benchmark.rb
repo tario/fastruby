@@ -51,9 +51,7 @@ y = Y.new
 y2 = Y2.new
 x2 = X2.new
 
-y.bar(x)
-y2.bar(x2)
-#y.bar(x2)
+Y.build([Y,X],:bar)
 
 require 'benchmark'
 
@@ -66,9 +64,4 @@ Benchmark::bm(20) do |b|
 	b.report("ruby") do
 		y2.bar(x2)
 	end
-=begin
-	b.report("ruby_") do
-		y.bar(x2)
-	end
-=end
 end

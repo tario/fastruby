@@ -53,8 +53,7 @@ y = Y.new
 y2 = Y2.new
 x2 = X2.new
 
-y.bar(x)
-y2.bar(x2)
+Y.build([Y,X],:bar)
 
 require 'benchmark'
 
