@@ -387,7 +387,7 @@ describe FastRuby, "fastruby" do
 
     block_num_calls = 0
 
-    y26.bar do
+    y26.foo do
       block_num_calls = block_num_calls + 1
     end
 
