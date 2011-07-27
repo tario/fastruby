@@ -375,9 +375,9 @@ module FastRuby
       }
 
       if tree.size > 1
-        anonymous_function(block_code)+"((VALUE)&locals, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
+        anonymous_function(block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
       else
-        anonymous_function(block_code)+"((VALUE)&locals, (VALUE[]){})"
+        anonymous_function(block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){})"
       end
     end
 
@@ -507,6 +507,10 @@ module FastRuby
 
     def locals_accessor
       @on_block ? "plocals->" : "locals."
+    end
+
+    def locals_pointer
+      @on_block ? "plocals" : "&locals"
     end
 
     def to_c_lasgn(tree)
