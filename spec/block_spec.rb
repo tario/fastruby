@@ -368,5 +368,29 @@ describe FastRuby, "fastruby" do
     y25.bar(y25){}.should be == true
   end
 
+  class ::Y26
+    def bar
+      yield
+    end
 
+    fastruby "
+      def foo
+        bar do
+          yield
+        end
+      end
+    "
+  end
+
+  it "should call yield from inside a block" do
+    y26 = ::Y26.new
+
+    block_num_calls = 0
+
+    y26.bar do
+      block_num_calls = block_num_calls + 1
+    end
+
+    block_num_calls.should be == 1
+  end
 end
