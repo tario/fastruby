@@ -102,4 +102,24 @@ describe FastRuby, "fastruby" do
     ::A1.new.foo.should be == 9
   end
 
+  class ::B2
+    fastruby "
+      def foo
+        self
+      end
+    "
+  end
+  class ::A2
+    fastruby "
+      def foo(b2)
+        b2.foo
+      end
+    "
+  end
+
+  it "should read self of nested frame" do
+    b2 = ::B2.new
+    ::A2.new.foo(b2).should be == b2
+  end
+
 end
