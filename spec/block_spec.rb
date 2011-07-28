@@ -393,4 +393,26 @@ describe FastRuby, "fastruby" do
 
     block_num_calls.should be == 1
   end
+
+  class ::Y27
+    fastruby "
+      def foo(x)
+        x
+      end
+    "
+  end
+
+  class ::Y28
+    fastruby "
+      def foo(y27, a)
+        y27.foo(a) do
+        end
+      end
+    "
+  end
+
+  it "should pass arguments when call with block" do
+    y28 = ::Y28.new
+    y28.foo(::Y27.new, 713).should be == 713
+  end
 end
