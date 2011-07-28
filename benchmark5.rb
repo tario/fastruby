@@ -1,23 +1,32 @@
 require "fastruby"
 
-class Y
+class X
+	fastruby "
+		def bar
+		end
+	"
 	
 	fastruby "
 		def foo
+			yield(self)
 		end
 	"
-	
-	
+end
+
+class Y
 	fastruby "
-		def bar
+		def bar(x)
 			i = 1000000
 			
 			lvar_type(i,Fixnum)
-			
+	
+			x2 = 0
 			ret = 0
 			while i > 0
-			  foo
-			  i = i - 1
+				x.foo do |x2|
+					x2.bar
+				end
+				  i = i - 1
 			end
 			0
 		end
@@ -25,39 +34,48 @@ class Y
 	"
 end
 
-class Y2
+class X2
+	def bar
+	end
 	
 	def foo
+		yield(self)
 	end
-		
-		def bar
+end
+
+class Y2
+		def bar(x)
 			i = 1000000
 			
 			ret = 0
 			while i > 0
-			 foo
-			  i = i - 1
+				x.foo do |x2|
+					x2.bar
+				end
+				  i = i - 1
 			end
 			0
 		end
 end
 
 
+x = X.new
 y = Y.new
 y2 = Y2.new
+x2 = X2.new
 
-Y.build([Y],:bar)
-Y.build([Y],:foo)
+Y.build([Y,X],:bar) # this triggers the build of  X#foo and X#bar
+X.build([X],:bar)
 
 require 'benchmark'
 
 Benchmark::bm(20) do |b|
 
 	b.report("fastruby") do
-		y.bar
+		y.bar(x)
 	end
 
 	b.report("ruby") do
-		y2.bar
+		y2.bar(x2)
 	end
 end
