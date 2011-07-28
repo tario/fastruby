@@ -308,10 +308,13 @@ module FastRuby
         end
 
         if call_args_tree.size > 1
-          str_called_code_args = ""
-
-          value_cast = ( ["VALUE"]*(args.size) ).join(",")
+          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",")
           value_cast = value_cast + ", VALUE" if convention == :fastruby
+
+          str_called_code_args = nil
+          on_block do
+            str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
+          end
 
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
@@ -324,7 +327,7 @@ module FastRuby
 
                 #{str_lvar_initialization}
 
-                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, #{str_called_code_args})
+                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, #{str_called_code_args});
               }
             "
             }
