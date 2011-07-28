@@ -299,17 +299,16 @@ module FastRuby
         }
 
 
-        if call_args_tree.size > 1
+        str_recv = "plocals->self"
 
-          str_called_code_args = ""
-
-           str_recv = "plocals->self"
-
-           if recv_tree
-             on_block do
-               str_recv = to_c recv_tree
-             end
+        if recv_tree
+           on_block do
+             str_recv = to_c recv_tree
            end
+        end
+
+        if call_args_tree.size > 1
+          str_called_code_args = ""
 
           value_cast = ( ["VALUE"]*(args.size) ).join(",")
           value_cast = value_cast + ", VALUE" if convention == :fastruby
@@ -331,14 +330,6 @@ module FastRuby
             }
 
         else
-          str_recv = "plocals->self"
-
-          if recv_tree
-            on_block do
-              str_recv = to_c recv_tree
-            end
-          end
-
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
                 #{@block_struct} block;
