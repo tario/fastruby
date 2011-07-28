@@ -302,16 +302,17 @@ module FastRuby
         if call_args_tree.size > 1
 
           str_called_code_args = ""
-          str_recv = ""
-          on_block do
-            str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
-            str_recv = to_c recv_tree
-          end
+
+           str_recv = "plocals->self"
+
+           if recv_tree
+             on_block do
+               str_recv = to_c recv_tree
+             end
+           end
 
           value_cast = ( ["VALUE"]*(args.size) ).join(",")
           value_cast = value_cast + ", VALUE" if convention == :fastruby
-
-          str_recv = "plocals->self" unless recv_tree
 
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
@@ -324,18 +325,19 @@ module FastRuby
 
                 #{str_lvar_initialization}
 
-                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(plocals->self, (VALUE)&block, #{str_called_code_args})
+                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, #{str_called_code_args})
               }
             "
             }
 
         else
-          str_recv = ""
-          on_block do
-            str_recv = to_c recv_tree
-          end
+          str_recv = "plocals->self"
 
-          str_recv = "plocals->self" unless recv_tree
+          if recv_tree
+            on_block do
+              str_recv = to_c recv_tree
+            end
+          end
 
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
@@ -347,7 +349,7 @@ module FastRuby
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
 
-                return ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(plocals->self, (VALUE)&block);
+                return ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block);
               }
             "
             }
@@ -629,7 +631,7 @@ module FastRuby
             value_cast = value_cast + ", VALUE" if convention == :fastruby
 
             if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(self, Qfalse)"
+              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse)"
             else
               wrapper_func = proc { |name| "
                 static VALUE #{name}(VALUE recv) {
@@ -652,7 +654,7 @@ module FastRuby
 
             wrapper_func = nil
             if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(self, Qfalse, #{strargs})"
+              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, #{strargs})"
             else
               wrapper_func = proc { |name| "
                 static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
