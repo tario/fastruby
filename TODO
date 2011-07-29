@@ -16,5 +16,8 @@ Improves:
 * Fastruby builds himself to improve performance of dynamic builds
 * Multiblocks: multiple transparent block implementations for the same block
 * Fastruby method allow defining many methods in only one call and allow define classes
+* Oracle testing using normal ruby as oracle
+* Inference using "return types" of methods when the implementation of the method is known
 * RubySpec: make code executed by fastruby pass RubySpec
+
 

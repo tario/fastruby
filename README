@@ -59,6 +59,25 @@ Normally, the method is built at runtime when is called with a new signature, Yo
   p X.new.foo("fast", "ruby") # will use the prebuilded method
   p X.new.foo(["fast"], ["ruby"]) # will build foo for X,Array,Array signature and then execute it
 
+=== Example 3: Explicit inference
+
+Current fastruby allows to explictly define a type for a expression, a basic example show as tell to fastruby to assume that the result of to_s is of type String in the following case:
+
+  require "fastruby"
+  
+  class X
+    fastruby '
+    def foo(a)
+      a.to_s.infer(String) + "_"
+    end
+    '
+  end
+  
+  p X.new.foo(9) 
+
+When fastruby can infer the type of an expression, the method calls that involve that expression can be accelerated. This is not necessary for arguments passed to a method or block
+
+
 == Copying
 
 Copyright (c) 2010-2011 Dario Seminara, released under the GPL License (see LICENSE)
