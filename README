@@ -26,12 +26,39 @@ There is a few known limitations:
   * fastruby can't take more than one method
   * fastruby only can be called from inside a class scope, and only can be used to define instance methods (no class methods)
 
-=== Example 1
+=== Example 1: How invoke fastruby
 
   require "fastruby"
   
   class X
+    fastruby '
     def foo
-      print "hello world"
+      print "hello world\n"
     end
+    '
   end
+  
+  X.new.foo
+  
+=== Example 2: Prebuild
+
+Normally, the method is built at runtime when is called with a new signature, You can prebuild the method to prevent this when the method is called for first time
+
+  require "fastruby"
+  
+  class X
+    fastruby '
+    def foo(a,b)
+      a+b
+    end
+    '
+  end
+  
+  X.build([X,String,String] , :foo)
+  
+  p X.new.foo("fast", "ruby") # will use the prebuilded method
+  p X.new.foo(["fast"], ["ruby"]) # will build foo for X,Array,Array signature and then execute it
+
+== Copying
+
+Copyright (c) 2010-2011 Dario Seminara, released under the GPL License (see LICENSE)
