@@ -122,4 +122,15 @@ describe FastRuby, "fastruby" do
     ::A2.new.foo(b2).should be == b2
   end
 
+  class ::A3
+    fastruby "
+      def foo(x)
+        x.to_i(16)
+      end
+    "
+  end
+
+  it "should execute native methods with variable arguments" do
+    ::A3.new.foo("40").should be == 64
+  end
 end
