@@ -126,4 +126,4 @@ With no lvar_type, the calls to Fixnum#> and Fixnum#- will be dynamic and more e
 
 == Copying
 
-Copyright (c) 2010-2011 Dario Seminara, released under the GPL License (see LICENSE)
+Copyright (c) 2011 Dario Seminara, released under the GPL License (see LICENSE)
