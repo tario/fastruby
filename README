@@ -1,0 +1,37 @@
+= Fastruby - fast execution of ruby code
+
+Fastruby is a gem which allows to execute ruby code faster than normal (about 100X of the MRI1.8)
+
+Fastruby IS NOT a separated ruby interpreter. Then, the design is simple
+
+== Installation
+
+The install is as simple as execute the well-known gem install:
+
+sudo gem install fastruby
+
+== Documentation
+
+Since this first version of fastruby is in part an spike/PoC, there is no stable API to document. 
+So, I recommend not to develop other software on top of fastruby since its API could change in any moment. 
+But I will try as much as possible keep the backward compatibility in the near future
+
+I will stabilize the API and document it for next releases. I promise
+
+== Usage
+
+The basic method is fastruby, fastruby takes a string with ruby code and compile it
+
+There is a few known limitations:
+  * fastruby can't take more than one method
+  * fastruby only can be called from inside a class scope, and only can be used to define instance methods (no class methods)
+
+=== Example 1
+
+  require "fastruby"
+  
+  class X
+    def foo
+      print "hello world"
+    end
+  end
