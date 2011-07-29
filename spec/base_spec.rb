@@ -133,4 +133,17 @@ describe FastRuby, "fastruby" do
   it "should execute native methods with variable arguments" do
     ::A3.new.foo("40").should be == 64
   end
+
+  class ::A4
+    fastruby "
+      def foo(x)
+        x.to_i
+      end
+    "
+  end
+
+  it "should execute native methods with variable arguments (and no arguments is passed)" do
+    ::A4.new.foo("40").should be == 40
+  end
+
 end
