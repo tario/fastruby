@@ -54,7 +54,16 @@ module FastRuby
         builder.c c_code
       end
 
-      instance_method(mname)
+      ret = instance_method(mname)
+
+      ret.extend MethodExtent
+      ret.yield_signature = context.yield_signature
+
+      ret
+    end
+
+    module MethodExtent
+      attr_accessor :yield_signature
     end
 
     def method_tree

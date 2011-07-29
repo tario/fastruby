@@ -30,6 +30,7 @@ module FastRuby
     attr_accessor :locals
     attr_accessor :options
     attr_reader :extra_code
+    attr_reader :yield_signature
 
     def initialize
       @infer_lvar_map = Hash.new
@@ -369,6 +370,8 @@ module FastRuby
         }
       "
       }
+
+      @yield_signature = tree[1..-1].map{|subtree| infer_type subtree}
 
       if tree.size > 1
         anonymous_function(block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
