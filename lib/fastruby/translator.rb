@@ -125,7 +125,7 @@ module FastRuby
 
             if args_tree.first == :lasgn
               if yield_signature[0]
-              extra_inference[args_tree.second] = yield_signature[0]
+              extra_inference[args_tree.last] = yield_signature[0]
               end
             elsif args_tree.first == :masgn
               yield_args = args_tree[1][1..-1].map(&:last)
