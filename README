@@ -3,6 +3,34 @@
 Fastruby is a gem which allows to execute ruby code faster than normal (about 100X of the MRI1.8)
 
 Fastruby IS NOT a separated ruby interpreter. Then, the design is simple
+Fastruby IS NOT a DSL to define C code or a Ruby to C translator, the goal of fastruby is to execute RUBY code
+
+== Core Concepts
+
+=== Native build
+
+All code processed by fastruby ends with a native representation, in the current version, this is acomplished using RubyParser to parse rubycode. 
+The ruby code is translated to C and then processed with RubyInline
+
+=== Transparent multimethods (and multiblocks)
+
+The methods processed by fastruby has multiple internal implementations depending on the type of the arguments. 
+Each possible signature has a version of the method and this are built in runtime when the method is called with a new signature.
+The same concept will be applied to blocks (anonymous methods) in future releases
+
+=== Type inference
+
+Each version of a method is built for a specific signature, so, the builder can asume a type for the arguments and build method calls using that assumption.
+Whereever the translator can asume a type for a expression involved in a method call (used as argument or as receiver), this information can be used to encode 
+direct calls instead of normal and expensive ruby calls.
+
+The currently implementation only can infer types for method and block arguments, and for literals
+
+=== Customization through build directives and API
+
+To compensate for the described limitations, fastruby suport a few build directives to allow the programmer help the inference.
+The syntaxis of these directives are the same as normal ruby call (see examples)
+Also, fastruby will define a API to customize aspects of fastruby internals. E.g the build method to invoke the build of methods with a specific signature (see examples)
 
 == Installation
 
