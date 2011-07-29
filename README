@@ -46,6 +46,14 @@ But I will try as much as possible keep the backward compatibility in the near f
 
 I will stabilize the API and document it for next releases. I promise
 
+== Known Limitations & Issues
+
+* monkey patching does not work with fastruby methods
+* does not support singleton methods (both define & call)
+* does not support methods with variable number of arguments
+* does not support exception handling (rescue, ensure, etc...)
+* Inline expression does not work. Example: print( if condition; 0; else; 1 )
+
 == Usage
 
 The basic method is fastruby, fastruby takes a string with ruby code and compile it
