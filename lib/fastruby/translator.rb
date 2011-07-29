@@ -29,6 +29,7 @@ module FastRuby
     attr_accessor :alt_method_name
     attr_accessor :locals
     attr_accessor :options
+    attr_accessor :infer_self
     attr_reader :extra_code
     attr_reader :yield_signature
 
@@ -124,7 +125,7 @@ module FastRuby
 
             if args_tree.first == :lasgn
               if yield_signature[0]
-              extra_inference[yield_args[0]] = yield_signature[0]
+              extra_inference[args_tree.second] = yield_signature[0]
               end
             elsif args_tree.first == :masgn
               yield_args = args_tree[1][1..-1].map(&:last)
@@ -688,6 +689,8 @@ module FastRuby
         end
       elsif recv[0] == :lvar
         @infer_lvar_map[recv[1]]
+      elsif recv[0] == :self
+        @infer_self
       else
         nil
       end

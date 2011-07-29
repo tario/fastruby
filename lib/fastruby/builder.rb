@@ -43,6 +43,8 @@ module FastRuby
         context.infer_lvar_map[arg] = signature[i]
       end
 
+      context.infer_self = signature[0]
+
       c_code = context.to_c(tree)
 
       inline :C  do |builder|
