@@ -730,6 +730,8 @@ module FastRuby
         @infer_lvar_map[recv[1]]
       elsif recv[0] == :self
         @infer_self
+      elsif recv[0] == :str or recv[0] == :lit
+        recv[1].class
       else
         nil
       end
