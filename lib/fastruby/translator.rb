@@ -470,13 +470,13 @@ module FastRuby
         }.join(";")
 
         if impl_tree[-1][0] != :return
-          str_impl = str_impl + ";return (#{to_c(impl_tree[-1])});"
+          str_impl = str_impl + ";last_expression = #{to_c(impl_tree[-1])};"
         else
           str_impl = str_impl + ";#{to_c(impl_tree[-1])};"
         end
       else
         if impl_tree[0] != :return
-          str_impl = str_impl + ";return (#{to_c(impl_tree)});"
+          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
         else
           str_impl = str_impl + ";#{to_c(impl_tree)};"
         end
@@ -485,6 +485,7 @@ module FastRuby
       "VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
         #{@locals_struct} locals;
         #{@block_struct} *pblock;
+        VALUE last_expression;
 
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
@@ -502,6 +503,8 @@ module FastRuby
         }
 
         #{str_impl}
+
+        return last_expression;
       }"
     end
 
