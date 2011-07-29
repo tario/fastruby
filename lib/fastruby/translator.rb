@@ -123,7 +123,8 @@ module FastRuby
             mobject = recvtype.build(signature, call_tree[2])
             yield_signature = mobject.yield_signature
 
-            if args_tree.first == :lasgn
+            if not args_tree
+            elsif args_tree.first == :lasgn
               if yield_signature[0]
               extra_inference[args_tree.last] = yield_signature[0]
               end
