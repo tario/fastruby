@@ -20,10 +20,14 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 require "fastruby/translator"
 require "fastruby/inline_extension"
+require "fastruby/logging"
 
 module FastRuby
   module BuilderModule
     def build(signature, method_name)
+
+      FastRuby.logger.info "Building #{self}::#{method_name} for signature #{signature.inspect}"
+
       tree = self.method_tree[method_name]
       locals = self.method_locals[method_name]
       options = self.method_options[method_name]
