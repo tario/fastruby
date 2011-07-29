@@ -33,4 +33,23 @@ describe FastRuby, "fastruby" do
   it "should execute if when the condition is false" do
     ::C2.new.foo.should be == 0
   end
+
+
+  class ::C3
+    fastruby '
+      def foo
+        ret = 0
+        if false
+          ret = 32
+        else
+          ret = 16
+        end
+        ret
+      end
+    '
+  end
+
+  it "should execute if with else when the condition is false" do
+    ::C3.new.foo.should be == 16
+  end
 end
