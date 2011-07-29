@@ -559,6 +559,23 @@ module FastRuby
       locals_accessor + "self"
     end
 
+    def to_c_false(tree)
+      "Qfalse"
+    end
+
+    def to_c_true(tree)
+      "Qtrue"
+    end
+
+    def to_c_if(tree)
+      condition_tree = tree[1]
+      impl_tree = tree[2]
+      "if (RTEST(#{to_c condition_tree})) {
+        #{to_c impl_tree};
+      }
+      "
+    end
+
     def to_c_call(tree)
       recv = tree[1]
       mname = tree[2]
