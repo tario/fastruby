@@ -1,0 +1,19 @@
+Refactor:
+
+* hashes of methods on builder refactored into an only hash
+* refactor anonoymous methods (tip: use ruby format string for names)
+* Clean of duplicated code
+* Remove ruby inline explicit dependency
+
+Basic functionality:
+
+* Control setences: if, case, rescue, ensure, etc...
+* Defining and call of methods with variable number of arguments
+* Blocks with variable number of arguments
+
+Improves:
+
+* Fastruby builds himself to improve performance of dynamic builds
+* Multiblocks: multiple transparent block implementations for the same block
+* RubySpec: make code executed by fastruby pass RubySpec
+
