@@ -56,7 +56,7 @@
     </tr>
     <tr class="top-aligned-row">
       <td><strong>Last Update:</strong></td>
-      <td>Fri Jul 29 13:27:04 -0300 2011</td>
+      <td>Fri Jul 29 19:45:18 -0300 2011</td>
     </tr>
     </table>
   </div>
@@ -68,6 +68,193 @@
 
   <div id="contextContent">
 
+    <div id="description">
+      <h1>Fastruby - fast execution of ruby code</h1>
+<p>
+Fastruby is a gem which allows to execute ruby code faster than normal
+(about 100X of the MRI1.8)
+</p>
+<p>
+Fastruby IS NOT a separated ruby interpreter. Then, the design is simple
+Fastruby IS NOT a DSL to define C code or a Ruby to C translator, the goal
+of fastruby is to execute RUBY code
+</p>
+<h2>Core Concepts</h2>
+<h3>Native build</h3>
+<p>
+All code processed by fastruby ends with a native representation, in the
+current version, this is acomplished using RubyParser to parse rubycode.
+The ruby code is translated to C and then processed with RubyInline
+</p>
+<h3>Transparent multimethods (and multiblocks)</h3>
+<p>
+The methods processed by fastruby has multiple internal implementations
+depending on the type of the arguments. Each possible signature has a
+version of the method and this are built in runtime when the method is
+called with a new signature. The same concept will be applied to blocks
+(anonymous methods) in future releases
+</p>
+<h3>Type inference</h3>
+<p>
+Each version of a method is built for a specific signature, so, the builder
+can asume a type for the arguments and build method calls using that
+assumption. Whereever the translator can asume a type for a expression
+involved in a method call (used as argument or as receiver), this
+information can be used to encode direct calls instead of normal and
+expensive ruby calls.
+</p>
+<p>
+The currently implementation only can infer types for method and block
+arguments, and for literals
+</p>
+<h3>Customization through build directives and API</h3>
+<p>
+To compensate for the described limitations, fastruby suport a few build
+directives to allow the programmer help the inference. The syntaxis of
+these directives are the same as normal ruby call (see examples) Also,
+fastruby will define a API to customize aspects of fastruby internals. E.g
+the build method to invoke the build of methods with a specific signature
+(see examples)
+</p>
+<h2>Installation</h2>
+<p>
+The install is as simple as execute the well-known gem install:
+</p>
+<p>
+sudo gem install fastruby
+</p>
+<h2>Documentation</h2>
+<p>
+Since this first version of fastruby is in part an spike/PoC, there is no
+stable API to document. So, I recommend not to develop other software on
+top of fastruby since its API could change in any moment. But I will try as
+much as possible keep the backward compatibility in the near future
+</p>
+<p>
+I will stabilize the API and document it for next releases. I promise
+</p>
+<h2>Known Limitations &amp; Issues</h2>
+<ul>
+<li>monkey patching does not work with fastruby methods
+
+</li>
+<li>does not support singleton methods (both define &amp; call)
+
+</li>
+<li>does not support methods with variable number of arguments
+
+</li>
+<li>does not support exception handling (rescue, ensure, etc&#8230;)
+
+</li>
+<li><a href="../classes/Inline.html">Inline</a> expression does not work.
+Example: print( if condition; 0; else; 1 )
+
+</li>
+</ul>
+<h2>Usage</h2>
+<p>
+The basic method is fastruby, fastruby takes a string with ruby code and
+compile it
+</p>
+<p>
+There is a few known limitations:
+</p>
+<pre>
+  * fastruby can't take more than one method
+  * fastruby only can be called from inside a class scope, and only can be used to define instance methods (no class methods)
+</pre>
+<h3>Example 1: How invoke fastruby</h3>
+<pre>
+  require &quot;fastruby&quot;
+
+  class X
+    fastruby '
+    def foo
+      print &quot;hello world\n&quot;
+    end
+    '
+  end
+
+  X.new.foo
+</pre>
+<h3>Example 2: Prebuild</h3>
+<p>
+Normally, the method is built at runtime when is called with a new
+signature, You can prebuild the method to prevent this when the method is
+called for first time
+</p>
+<pre>
+  require &quot;fastruby&quot;
+
+  class X
+    fastruby '
+    def foo(a,b)
+      a+b
+    end
+    '
+  end
+
+  X.build([X,String,String] , :foo)
+
+  p X.new.foo(&quot;fast&quot;, &quot;ruby&quot;) # will use the prebuilded method
+  p X.new.foo([&quot;fast&quot;], [&quot;ruby&quot;]) # will build foo for X,Array,Array signature and then execute it
+</pre>
+<h3>Example 3: Explicit inference</h3>
+<p>
+Current fastruby allows to explictly define a type for a expression, a
+basic example show as tell to fastruby to assume that the result of to_s is
+of type String in the following case:
+</p>
+<pre>
+  require &quot;fastruby&quot;
+
+  class X
+    fastruby '
+    def foo(a)
+      a.to_s.infer(String) + &quot;_&quot;
+    end
+    '
+  end
+
+  p X.new.foo(9)
+</pre>
+<p>
+When fastruby can infer the type of an expression, the method calls that
+involve that expression can be accelerated. This is not necessary for
+arguments passed to a method or block
+</p>
+<h3>Example 4: Variable types</h3>
+<p>
+Like static languages, you can define a type for a variable to help the
+inference and gain some performance. This can be done by using lvar_type
+directive
+</p>
+<pre>
+  class X
+    fastruby '
+    def foo
+      lvar_type(i, Fixnum)
+      i = 100
+      while (i &gt; 0)
+        i = i - 1
+      end
+      nil
+    end
+    '
+  end
+</pre>
+<p>
+With no lvar_type, the calls to Fixnum#&gt; and Fixnum#- will be dynamic
+and more expensive
+</p>
+<h2>Copying</h2>
+<p>
+Copyright (c) 2011 Dario Seminara, released under the GPL License (see
+LICENSE)
+</p>
+
+    </div>
 
 
    </div>

@@ -255,7 +255,6 @@
     }&quot;</span>
 
     <span class="ruby-identifier">inline</span> <span class="ruby-identifier">:C</span>  <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">builder</span><span class="ruby-operator">|</span>
-      <span class="ruby-identifier">print</span> <span class="ruby-identifier">c_code</span>,<span class="ruby-value str">&quot;\n&quot;</span>
       <span class="ruby-identifier">builder</span>.<span class="ruby-identifier">include</span> <span class="ruby-value str">&quot;&lt;node.h&gt;&quot;</span>
       <span class="ruby-identifier">builder</span>.<span class="ruby-identifier">inc</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value str">&quot;static VALUE re_yield(int argc, VALUE* argv, VALUE param) {
         return rb_yield_splat(rb_ary_new4(argc,argv));
