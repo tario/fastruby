@@ -98,6 +98,8 @@ module FastRuby
 
       convention = :ruby
 
+      extra_inference = {}
+
       if recvtype
 
         inference_complete = true
@@ -144,35 +146,35 @@ module FastRuby
 
       str_arg_initialization = ""
 
-
-
       str_impl = ""
-      on_block do
-        # if impl_tree is a block, implement the last node with a return
-        if anonymous_impl
-          if anonymous_impl[0] == :block
-            str_impl = anonymous_impl[1..-2].map{ |subtree|
-              to_c(subtree)
-            }.join(";")
 
-            if anonymous_impl[-1][0] != :return
-              str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+      with_extra_inference(extra_inference) do
+        on_block do
+          # if impl_tree is a block, implement the last node with a return
+          if anonymous_impl
+            if anonymous_impl[0] == :block
+              str_impl = anonymous_impl[1..-2].map{ |subtree|
+                to_c(subtree)
+              }.join(";")
+
+              if anonymous_impl[-1][0] != :return
+                str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+              else
+                str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+              end
             else
-              str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+              if anonymous_impl[0] != :return
+                str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+              else
+                str_impl = str_impl + ";#{to_c(anonymous_impl)};"
+              end
             end
           else
-            if anonymous_impl[0] != :return
-              str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
-            else
-              str_impl = str_impl + ";#{to_c(anonymous_impl)};"
-            end
+            str_impl = "return Qnil;"
           end
-        else
-          str_impl = "return Qnil;"
+
         end
-
       end
-
 
       if convention == :ruby or convention == :cruby
 
@@ -675,6 +677,16 @@ module FastRuby
         @infer_lvar_map[recv[1]]
       else
         nil
+      end
+    end
+
+    def with_extra_inference(extra_inference)
+      previous_infer_lvar_map = @infer_lvar_map
+      begin
+        previous_infer_lvar_map = previous_infer_lvar_map.merge(extra_inference)
+        yield
+      ensure
+        @infer_lvar_map = previous_infer_lvar_map
       end
     end
 
