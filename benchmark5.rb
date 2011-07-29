@@ -64,13 +64,11 @@ y = Y.new
 y2 = Y2.new
 x2 = X2.new
 
-Y.build([Y,X],:bar) # this triggers the build of  X#foo and X#bar
-X.build([X],:bar)
+Y.build([Y,X],:bar) 
 
 require 'benchmark'
 
 Benchmark::bm(20) do |b|
-
 	b.report("fastruby") do
 		y.bar(x)
 	end
