@@ -653,6 +653,18 @@ module FastRuby
             if convention == :fastruby
               "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, #{strargs})"
             else
+
+              str_incall_args = nil
+              if len == -1
+                str_incall_args = "#{argnum}, (VALUE[]){#{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}}, recv"
+                value_cast = "int,VALUE*,VALUE"
+              elsif len == -2
+                str_incall_args = "recv, rb_ary_new4(#{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")})"
+                value_cast = "VALUE,VALUE"
+              else
+                str_incall_args = "recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}"
+              end
+
               wrapper_func = proc { |name| "
                 static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
                   // call to #{recvtype}##{mname}
@@ -660,7 +672,7 @@ module FastRuby
                     // no passing block, recall
                     return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
                   } else {
-                    return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                    return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                   }
                 }
               " }
