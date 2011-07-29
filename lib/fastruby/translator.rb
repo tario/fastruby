@@ -120,6 +120,19 @@ module FastRuby
 
           if recvtype.method_tree[call_tree[2]]
             mobject = recvtype.build(signature, call_tree[2])
+            yield_signature = mobject.yield_signature
+
+            if args_tree.first == :lasgn
+              if yield_signature[0]
+              extra_inference[yield_args[0]] = yield_signature[0]
+              end
+            elsif args_tree.first == :masgn
+              yield_args = args_tree[1][1..-1].map(&:last)
+              (0...yield_signature.size-1).each do |i|
+                extra_inference[yield_args[i]] = yield_signature[i]
+              end
+            end
+
             convention = :fastruby
           else
             mobject = recvtype.instance_method(call_tree[2])
