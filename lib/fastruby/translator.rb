@@ -357,7 +357,21 @@ module FastRuby
       "
       }
 
-      @yield_signature = tree[1..-1].map{|subtree| infer_type subtree}
+      new_yield_signature = tree[1..-1].map{|subtree| infer_type subtree}
+      # merge the new_yield_signature with the new
+      if @yield_signature
+        if new_yield_signature.size == @yield_signature.size
+          (0..new_yield_signature.size-1).each do |i|
+            if @yield_signature[i] != new_yield_signature[i]
+              @yield_signature[i] = nil
+            end
+          end
+        else
+          @yield_signature = new_yield_signature.map{|x| nil}
+        end
+      else
+        @yield_signature = new_yield_signature
+      end
 
       if tree.size > 1
         anonymous_function(block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
