@@ -137,6 +137,43 @@ module FastRuby
 
       end
 
+      anonymous_impl = tree[3]
+
+      str_lvar_initialization = @locals_struct + " *plocals;
+                                  plocals = (void*)param;"
+
+      str_arg_initialization = ""
+
+
+
+      str_impl = ""
+      on_block do
+        # if impl_tree is a block, implement the last node with a return
+        if anonymous_impl
+          if anonymous_impl[0] == :block
+            str_impl = anonymous_impl[1..-2].map{ |subtree|
+              to_c(subtree)
+            }.join(";")
+
+            if anonymous_impl[-1][0] != :return
+              str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+            else
+              str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
+            end
+          else
+            if anonymous_impl[0] != :return
+              str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+            else
+              str_impl = str_impl + ";#{to_c(anonymous_impl)};"
+            end
+          end
+        else
+          str_impl = "return Qnil;"
+        end
+
+      end
+
+
       if convention == :ruby or convention == :cruby
 
         if call_args_tree.size > 1
@@ -178,40 +215,6 @@ module FastRuby
             }
         end
 
-        anonymous_impl = tree[3]
-        str_impl = ""
-
-        on_block do
-          # if impl_tree is a block, implement the last node with a return
-          if anonymous_impl
-            if anonymous_impl[0] == :block
-              str_impl = anonymous_impl[1..-2].map{ |subtree|
-                to_c(subtree)
-              }.join(";")
-
-              if anonymous_impl[-1][0] != :return
-                str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
-              else
-                str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
-              end
-            else
-              if anonymous_impl[0] != :return
-                str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
-              else
-                str_impl = str_impl + ";#{to_c(anonymous_impl)};"
-              end
-            end
-          else
-            str_impl = "return Qnil;"
-          end
-
-        end
-
-        str_lvar_initialization = @locals_struct + " *plocals;
-                                  plocals = (void*)param;"
-
-        str_arg_initialization = ""
-
         if not args_tree
           str_arg_initialization = ""
         elsif args_tree.first == :lasgn
@@ -240,38 +243,6 @@ module FastRuby
         "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
       elsif convention == :fastruby
 
-        anonymous_impl = tree[3]
-        str_impl = ""
-
-        on_block do
-          # if impl_tree is a block, implement the last node with a return
-          if anonymous_impl
-            if anonymous_impl[0] == :block
-              str_impl = anonymous_impl[1..-2].map{ |subtree|
-                to_c(subtree)
-              }.join(";")
-
-              if anonymous_impl[-1][0] != :return
-                str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
-              else
-                str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
-              end
-            else
-              if anonymous_impl[0] != :return
-                str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
-              else
-                str_impl = str_impl + ";#{to_c(anonymous_impl)};"
-              end
-            end
-          else
-            str_impl = "return Qnil;"
-          end
-
-        end
-
-        str_lvar_initialization = @locals_struct + " *plocals;
-                                  plocals = (void*)param;"
-
         str_arg_initialization = ""
 
         if not args_tree
@@ -285,8 +256,6 @@ module FastRuby
             str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
           end
         end
-
-        str_arg_initialization
 
         block_code = proc { |name| "
           static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
