@@ -567,6 +567,14 @@ module FastRuby
       "Qtrue"
     end
 
+    def to_c_and(tree)
+      "(RTEST(#{to_c tree[1]}) && RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
+    end
+
+    def to_c_or(tree)
+      "(RTEST(#{to_c tree[1]}) || RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
+    end
+
     def to_c_not(tree)
       "RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue"
     end
