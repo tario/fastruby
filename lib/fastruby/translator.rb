@@ -570,10 +570,21 @@ module FastRuby
     def to_c_if(tree)
       condition_tree = tree[1]
       impl_tree = tree[2]
-      "if (RTEST(#{to_c condition_tree})) {
+      else_tree = tree[3]
+      code = "if (RTEST(#{to_c condition_tree})) {
         #{to_c impl_tree};
       }
       "
+
+      if (else_tree)
+        code = code + " else {
+          #{to_c else_tree};
+        }
+        "
+      end
+
+
+      code
     end
 
     def to_c_call(tree)
