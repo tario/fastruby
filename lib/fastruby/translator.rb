@@ -567,6 +567,10 @@ module FastRuby
       "Qtrue"
     end
 
+    def to_c_not(tree)
+      "RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue"
+    end
+
     def to_c_if(tree)
       condition_tree = tree[1]
       impl_tree = tree[2]
