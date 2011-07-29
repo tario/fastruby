@@ -105,6 +105,24 @@ Current fastruby allows to explictly define a type for a expression, a basic exa
 
 When fastruby can infer the type of an expression, the method calls that involve that expression can be accelerated. This is not necessary for arguments passed to a method or block
 
+=== Example 4: Variable types
+
+Like static languages, you can define a type for a variable to help the inference and gain some performance. This can be done by using lvar_type directive
+
+  class X
+    fastruby '
+    def foo
+      lvar_type(i, Fixnum)
+      i = 100
+      while (i > 0)
+	i = i - 1
+      end
+      nil
+    end
+    '
+  end
+  
+With no lvar_type, the calls to Fixnum#> and Fixnum#- will be dynamic and more expensive
 
 == Copying
 
