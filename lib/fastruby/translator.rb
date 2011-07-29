@@ -699,7 +699,7 @@ module FastRuby
     def with_extra_inference(extra_inference)
       previous_infer_lvar_map = @infer_lvar_map
       begin
-        previous_infer_lvar_map = previous_infer_lvar_map.merge(extra_inference)
+        @infer_lvar_map = @infer_lvar_map.merge(extra_inference)
         yield
       ensure
         @infer_lvar_map = previous_infer_lvar_map
