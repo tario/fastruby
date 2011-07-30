@@ -92,18 +92,9 @@ module FastRuby
       args_tree = tree[2]
       recv_tree = call_tree[1]
 
-      mname = call_tree[2]
-      if mname == :infer
-        return to_c(recv)
-      elsif mname == :lvar_type
-
-        lvar_name = args[1][1]
-        lvar_type = eval(args[2][1].to_s)
-
-        @infer_lvar_map[lvar_name] = lvar_type
-        return "Qnil"
-      elsif mname == :block_given?
-        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
+      directive_code = directive(call_tree)
+      if directive_code
+        return directive_code
       end
 
       other_call_tree = call_tree.dup
@@ -642,29 +633,9 @@ module FastRuby
       mname = tree[2]
       args = tree[3]
 
-      if mname == :infer
-        return to_c(recv)
-      elsif mname == :lvar_type
-        lvar_name = args[1][1] || args[1][2]
-        lvar_type = eval(args[2][1].to_s)
-
-        @infer_lvar_map[lvar_name] = lvar_type
-        return ""
-      elsif mname == :block_given?
-        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
-      elsif mname == :inline_c
-        code = args[1][1]
-
-        caller_code = proc { |name| "
-           static VALUE #{name}(VALUE param) {
-            #{@locals_struct} *plocals = (void*)param;
-            #{code};
-            return Qnil;
-          }
-         "
-        }
-
-        return anonymous_function(caller_code)+"((VALUE)plocals)"
+      directive_code = directive(tree)
+      if directive_code
+        return directive_code
       end
 
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
@@ -843,6 +814,39 @@ module FastRuby
         yield
       ensure
         @infer_lvar_map = previous_infer_lvar_map
+      end
+    end
+
+    def directive(tree)
+      recv = tree[1]
+      mname = tree[2]
+      args = tree[3]
+
+      if mname == :infer
+        return to_c(recv)
+      elsif mname == :lvar_type
+        lvar_name = args[1][1] || args[1][2]
+        lvar_type = eval(args[2][1].to_s)
+
+        @infer_lvar_map[lvar_name] = lvar_type
+        return ""
+      elsif mname == :block_given?
+        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
+      elsif mname == :inline_c
+        code = args[1][1]
+
+        caller_code = proc { |name| "
+           static VALUE #{name}(VALUE param) {
+            #{@locals_struct} *plocals = (void*)param;
+            #{code};
+            return Qnil;
+          }
+         "
+        }
+
+        return anonymous_function(caller_code)+"((VALUE)plocals)"
+      else
+        nil
       end
     end
 
