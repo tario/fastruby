@@ -315,4 +315,43 @@ describe FastRuby, "fastruby" do
   it "should compile inline C when it is used as rvalue and return nil when no return is specified" do
     ::A12.new.foo(55).should be == 44;
   end
+
+  class ::A13
+    fastruby '
+      def foo(b)
+        a = b
+        x = inline_c(" if (plocals->a == Qnil) {
+            plocals->a = INT2FIX(43);
+          } else {
+            plocals->a = INT2FIX(44);
+          }
+          ")
+        x
+      end
+    '
+  end
+
+  it "should compile inline C when it is used as rvalue and assign nil if not return is specified" do
+    ::A13.new.foo(55).should be == nil;
+  end
+
+  class ::A14
+    fastruby '
+      def foo(b)
+        a = b
+        x = inline_c(" if (plocals->a == Qnil) {
+            return INT2FIX(43);
+          } else {
+            return INT2FIX(44);
+          }
+          ")
+        x
+      end
+    '
+  end
+
+  it "should compile inline C when it is used as rvalue and assign the returned expression" do
+    ::A14.new.foo(55).should be == 44;
+  end
+
 end
