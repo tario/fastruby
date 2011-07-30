@@ -25,13 +25,14 @@ require "fastruby/logging"
 module FastRuby
   module BuilderModule
     def build(signature, method_name)
-
       FastRuby.logger.info "Building #{self}::#{method_name} for signature #{signature.inspect}"
 
       tree = self.method_tree[method_name]
       locals = self.method_locals[method_name]
       options = self.method_options[method_name]
       mname = "_" + method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
+
+      FastRuby.logger.info mname.to_s
 
       context = FastRuby::Context.new
       context.locals = locals
@@ -56,6 +57,7 @@ module FastRuby
         builder.include "<node.h>"
         builder.c c_code
       end
+
 
       ret = instance_method(mname)
 
