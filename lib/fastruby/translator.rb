@@ -362,7 +362,7 @@ module FastRuby
         static VALUE #{name}(VALUE locals_param, VALUE* block_args) {
 
           #{@locals_struct} *plocals;
-          plocals = (VALUE)locals_param;
+          plocals = (void*)locals_param;
 
           if (plocals->block_function_address == 0) {
             rb_raise(rb_eLocalJumpError, \"no block given\");
@@ -651,7 +651,7 @@ module FastRuby
 
         caller_code = proc { |name| "
            static VALUE #{name}(VALUE param) {
-            #{@locals_struct} *plocals = (VALUE)param;
+            #{@locals_struct} *plocals = (void*)param;
             #{code};
             return Qnil;
           }
