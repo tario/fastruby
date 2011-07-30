@@ -648,7 +648,17 @@ module FastRuby
         return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
         code = args[1][1]
-        return code
+
+        caller_code = proc { |name| "
+           static VALUE #{name}(VALUE param) {
+            #{@locals_struct} *plocals = (VALUE)param;
+            #{code};
+            return Qnil;
+          }
+         "
+        }
+
+        return anonymous_function(caller_code)+"((VALUE)plocals)"
       end
 
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
