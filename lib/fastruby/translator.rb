@@ -174,19 +174,19 @@ module FastRuby
               }.join(";")
 
               if anonymous_impl[-1][0] != :return
-                str_impl = str_impl + ";return (#{to_c(anonymous_impl[-1])});"
+                str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl[-1])});"
               else
                 str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
               end
             else
               if anonymous_impl[0] != :return
-                str_impl = str_impl + ";return (#{to_c(anonymous_impl)});"
+                str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl)});"
               else
                 str_impl = str_impl + ";#{to_c(anonymous_impl)};"
               end
             end
           else
-            str_impl = "return Qnil;"
+            str_impl = "last_expression = Qnil;"
           end
 
         end
@@ -250,10 +250,13 @@ module FastRuby
         block_code = proc { |name| "
           static VALUE #{name}(VALUE arg, VALUE param) {
             // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
 
             #{str_lvar_initialization};
             #{str_arg_initialization}
             #{str_impl}
+
+            return last_expression;
           }
         "
         }
@@ -278,10 +281,13 @@ module FastRuby
         block_code = proc { |name| "
           static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
             // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
 
             #{str_lvar_initialization};
             #{str_arg_initialization}
             #{str_impl}
+
+            return last_expression;
           }
         "
         }
