@@ -36,7 +36,6 @@ module FastRuby
     def initialize
       @infer_lvar_map = Hash.new
       @extra_code = ""
-      @on_block = false
       @options = {}
 
       extra_code << '#include "node.h"
@@ -63,13 +62,7 @@ module FastRuby
     end
 
     def on_block
-      old_on_block = @on_block
-      begin
-        @on_block = true
-        yield
-      ensure
-        @on_block = old_on_block
-      end
+      yield
     end
 
     def to_c(tree)
@@ -188,7 +181,6 @@ module FastRuby
       str_impl = ""
 
       with_extra_inference(extra_inference) do
-        on_block do
           # if impl_tree is a block, implement the last node with a return
           if anonymous_impl
             if anonymous_impl[0] == :block
@@ -212,19 +204,14 @@ module FastRuby
             str_impl = "last_expression = Qnil;"
           end
 
-        end
       end
 
       if convention == :ruby or convention == :cruby
 
         if call_args_tree.size > 1
 
-          str_called_code_args = ""
-          str_recv = ""
-          on_block do
-            str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
-            str_recv = to_c recv_tree
-          end
+          str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+          str_recv = to_c recv_tree
 
           str_recv = "plocals->self" unless recv_tree
 
@@ -239,11 +226,7 @@ module FastRuby
             }
 
         else
-          str_recv = ""
-          on_block do
-            str_recv = to_c recv_tree
-          end
-
+          str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
             caller_code = proc { |name| "
@@ -319,19 +302,14 @@ module FastRuby
         str_recv = "plocals->self"
 
         if recv_tree
-           on_block do
-             str_recv = to_c recv_tree
-           end
+           str_recv = to_c recv_tree
         end
 
         if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",")
           value_cast = value_cast + ", VALUE" if convention == :fastruby
 
-          str_called_code_args = nil
-          on_block do
-            str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
-          end
+          str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
 
             caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
@@ -413,17 +391,14 @@ module FastRuby
     def to_c_block(tree)
 
       str = ""
-      on_block do
+      str = tree[1..-2].map{ |subtree|
+        to_c(subtree)
+      }.join(";")
 
-        str = tree[1..-2].map{ |subtree|
-          to_c(subtree)
-        }.join(";")
-
-        if tree[-1][0] != :return
-          str = str + ";last_expression = #{to_c(tree[-1])};"
-        else
-          str = str + ";#{to_c(tree[-1])};"
-        end
+      if tree[-1][0] != :return
+        str = str + ";last_expression = #{to_c(tree[-1])};"
+      else
+        str = str + ";#{to_c(tree[-1])};"
       end
 
       caller_code = proc { |name| "
@@ -460,12 +435,10 @@ module FastRuby
     def to_c_hash(tree)
 
       hash_aset_code = ""
-      on_block do
-        (0..(tree.size-3)/2).each do |i|
-          strkey = to_c tree[1 + i * 2]
-          strvalue = to_c tree[2 + i * 2]
-          hash_aset_code << "rb_hash_aset(hash, #{strkey}, #{strvalue});"
-        end
+      (0..(tree.size-3)/2).each do |i|
+        strkey = to_c tree[1 + i * 2]
+        strvalue = to_c tree[2 + i * 2]
+        hash_aset_code << "rb_hash_aset(hash, #{strkey}, #{strvalue});"
       end
 
       wrapper_func = proc { |name| "
@@ -521,6 +494,7 @@ module FastRuby
 
       "VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
         #{@locals_struct} locals;
+        #{@locals_struct} *plocals = (void*)&locals;
         #{@block_struct} *pblock;
         VALUE last_expression;
 
@@ -544,11 +518,11 @@ module FastRuby
     end
 
     def locals_accessor
-      @on_block ? "plocals->" : "locals."
+      "plocals->"
     end
 
     def locals_pointer
-      @on_block ? "plocals" : "&locals"
+      "plocals"
     end
 
     def to_c_gvar(tree)
