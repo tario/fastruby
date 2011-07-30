@@ -66,7 +66,7 @@ module FastRuby
     end
 
     def to_c(tree)
-      return "" unless tree
+      return "Qnil" unless tree
       send("to_c_" + tree[0].to_s, tree);
     end
 
