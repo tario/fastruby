@@ -1,3 +1,23 @@
+Basic functionality:
+
+* Flow control setences: case
+* Exceptions
+* Defining and call of methods with variable number of arguments
+* Blocks with variable number of arguments
+* call to monkey patched methods from fastruby code
+* callcc
+
+To improve:
+
+* Inlining of methods
+* Error check (e.g. calling a directive with invalid parameters)
+* Fastruby builds himself to improve performance of dynamic builds
+* Multiblocks
+* Fastruby method allow defining many methods in only one call and allow define classes
+* Oracle testing using normal ruby as oracle
+* Inference using "return types" of methods when the implementation of the method is known
+* RubySpec: make code executed by fastruby pass RubySpec
+
 Refactor:
 
 * hashes of methods on builder refactored into an only hash
@@ -5,19 +25,7 @@ Refactor:
 * Clean of duplicated code
 * Remove ruby inline explicit dependency
 
-Basic functionality:
+Documentation:
 
-* Control setences: if, case, rescue, ensure, etc...
-* Defining and call of methods with variable number of arguments
-* Blocks with variable number of arguments
-
-Improves:
-
-* Fastruby builds himself to improve performance of dynamic builds
-* Multiblocks: multiple transparent block implementations for the same block
-* Fastruby method allow defining many methods in only one call and allow define classes
-* Oracle testing using normal ruby as oracle
-* Inference using "return types" of methods when the implementation of the method is known
-* RubySpec: make code executed by fastruby pass RubySpec
-
-
+* Builder directives
+* Build API
