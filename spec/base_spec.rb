@@ -181,10 +181,10 @@ describe FastRuby, "fastruby" do
       def foo(x,a,b)
         bar(
           if (x)
-            print 'ho'
+            x.to_s
             a
           else
-            print 'ha'
+            x.to_s
             b
           end
         )
@@ -207,10 +207,10 @@ describe FastRuby, "fastruby" do
       def foo(x,a,b)
         bar(
           if (x)
-            print 'ho'
+            x.to_s
             a
           else
-            print 'ha'
+            x.to_s
             b
           end
         ) {
@@ -227,10 +227,10 @@ describe FastRuby, "fastruby" do
     fastruby "
       def foo(x)
           a = if (x)
-                print 'ho'
+                x.to_s
                 1
               else
-                print 'ha'
+                x.to_s
                 2
               end
 
@@ -248,10 +248,10 @@ describe FastRuby, "fastruby" do
     fastruby "
       def foo(x)
             if (x)
-              print 'ho'
+              x.to_s
               1
             else
-              print 'ha'
+              x.to_s
               2
             end
       end
