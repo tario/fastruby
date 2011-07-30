@@ -53,4 +53,22 @@ describe FastRuby, "fastruby" do
     }.should_not raise_error
   end
 
+
+  class ::Y4
+    fastruby "
+      def foo(x)
+		x+1
+      end
+    "
+  end
+
+  it "should builds be re-entrants, multiple calls should not produce any error if the first call works" do
+    lambda {
+	::Y4.build([Y4,Fixnum],:foo)
+	::Y4.build([Y4,Fixnum],:foo)
+	::Y4.build([Y4,Fixnum],:foo)
+	
+	::Y4.new.foo(1).should be ==2
+    }.should_not raise_error
+  end
 end
