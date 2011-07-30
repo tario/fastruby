@@ -101,7 +101,7 @@ module FastRuby
         lvar_type = eval(args[2][1].to_s)
 
         @infer_lvar_map[lvar_name] = lvar_type
-        return ""
+        return "Qnil"
       elsif mname == :block_given?
         return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
       end
