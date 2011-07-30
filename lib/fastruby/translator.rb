@@ -386,12 +386,11 @@ module FastRuby
         to_c(subtree)
       }.join(";")
 
-
-#      if tree[-1][0] != :return
- #       str = str + ";return (#{to_c(tree[-1])});"
-  #    else
+      if tree[-1][0] != :return
+        str = str + ";last_expression = #{to_c(tree[-1])};"
+      else
         str = str + ";#{to_c(tree[-1])};"
-   #   end
+      end
 
       str
     end
@@ -465,15 +464,7 @@ module FastRuby
       str_impl = ""
       # if impl_tree is a block, implement the last node with a return
       if impl_tree[0] == :block
-        str_impl = impl_tree[1..-2].map{ |subtree|
-          to_c(subtree)
-        }.join(";")
-
-        if impl_tree[-1][0] != :return
-          str_impl = str_impl + ";last_expression = #{to_c(impl_tree[-1])};"
-        else
-          str_impl = str_impl + ";#{to_c(impl_tree[-1])};"
-        end
+        str_impl = to_c impl_tree
       else
         if impl_tree[0] != :return
           str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
