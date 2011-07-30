@@ -276,4 +276,25 @@ describe FastRuby, "fastruby" do
   it "should compile inline C when using inline_c directive" do
     ::A10.new.foo().should be == 143;
   end
+
+  class ::A11
+    fastruby '
+      def foo(b)
+        a = b
+        inline_c " if (plocals->a == Qnil) {
+            plocals->a = INT2FIX(43);
+          } else {
+            plocals->a = INT2FIX(44);
+          }
+          "
+        a
+      end
+    '
+  end
+
+  it "should compile inline C if when using inline_c directive" do
+    ::A11.new.foo(nil).should be == 43;
+    ::A11.new.foo(true).should be == 44;
+  end
+
 end
