@@ -38,14 +38,24 @@ module FastRuby
       @extra_code = ""
       @on_block = false
       @options = {}
+
+      extra_code << '#include "node.h"
+      '
+
+      extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
+        rb_gvar_set((struct global_entry*)ge,value);
+        return value;
+      }
+      "
     end
 
     def on_block
+      old_on_block = @on_block
       begin
         @on_block = true
         yield
       ensure
-        @on_block = false
+        @on_block = old_on_block
       end
     end
 
@@ -261,7 +271,7 @@ module FastRuby
         "
         }
 
-        "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)&locals, #{anonymous_function(block_code)}, (VALUE)&locals)"
+        "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)#{locals_pointer}, #{anonymous_function(block_code)}, (VALUE)#{locals_pointer})"
       elsif convention == :fastruby
 
         str_arg_initialization = ""
@@ -343,7 +353,7 @@ module FastRuby
             }
         end
 
-        "#{anonymous_function(caller_code)}((VALUE)&locals)"
+        "#{anonymous_function(caller_code)}((VALUE)#{locals_pointer})"
       end
     end
 
@@ -454,7 +464,7 @@ module FastRuby
         }
       " }
 
-      anonymous_function(wrapper_func) + "((VALUE)&locals)"
+      anonymous_function(wrapper_func) + "((VALUE)#{locals_pointer})"
     end
 
     def to_c_array(tree)
@@ -533,7 +543,7 @@ module FastRuby
     end
 
     def to_c_gasgn(tree)
-      "rb_gvar_set((struct global_entry*)0x#{global_entry(tree[1]).to_s(16)}, #{to_c tree[2]})"
+      "_rb_gvar_set((void*)0x#{global_entry(tree[1]).to_s(16)}, #{to_c tree[2]})"
     end
 
     def to_c_ivar(tree)
