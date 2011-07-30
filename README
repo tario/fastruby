@@ -52,7 +52,6 @@ I will stabilize the API and document it for next releases. I promise
 * does not support singleton methods (both define & call)
 * does not support methods with variable number of arguments
 * does not support exception handling (rescue, ensure, etc...)
-* Inline expression does not work. Example: print( if condition; 0; else; 1 )
 
 == Usage
 
