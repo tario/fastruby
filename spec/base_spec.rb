@@ -146,4 +146,120 @@ describe FastRuby, "fastruby" do
     ::A4.new.foo("40").should be == 40
   end
 
+  class ::A5
+    fastruby "
+      def bar(x)
+        x
+      end
+     "
+
+    fastruby "
+      def foo(x,a,b)
+        bar(
+          if (x)
+            a
+          else
+            b
+          end
+        )
+      end
+    "
+  end
+
+  it "should compile inline if when passed as argument in a method call" do
+    ::A5.new.foo(true,11,12).should be == 11
+  end
+
+  class ::A6
+    fastruby "
+      def bar(x)
+        x
+      end
+     "
+
+    fastruby "
+      def foo(x,a,b)
+        bar(
+          if (x)
+            print 'ho'
+            a
+          else
+            print 'ha'
+            b
+          end
+        )
+      end
+    "
+  end
+
+  it "should compile inline if when passed as argument in a method call. if as many lines" do
+    ::A6.new.foo(true,11,12).should be == 11
+  end
+
+  class ::A7
+    fastruby "
+      def bar(x)
+        x
+      end
+     "
+
+    fastruby "
+      def foo(x,a,b)
+        bar(
+          if (x)
+            print 'ho'
+            a
+          else
+            print 'ha'
+            b
+          end
+        ) {
+        }
+      end
+    "
+  end
+
+  it "should compile inline if when passed as argument in a method call with block. if has many lines" do
+    ::A7.new.foo(true,11,12).should be == 11
+  end
+
+  class ::A8
+    fastruby "
+      def foo(x)
+          a = if (x)
+                print 'ho'
+                1
+              else
+                print 'ha'
+                2
+              end
+
+          a
+      end
+    "
+  end
+
+  it "should compile inline if at lvar assignment" do
+    ::A8.new.foo(true).should be == 1
+    ::A8.new.foo(false).should be == 2
+  end
+
+  class ::A9
+    fastruby "
+      def foo(x)
+            if (x)
+              print 'ho'
+              1
+            else
+              print 'ha'
+              2
+            end
+      end
+    "
+  end
+
+  it "should compile inline if at end of method" do
+    ::A9.new.foo(true).should be == 1
+    ::A9.new.foo(false).should be == 2
+  end
 end
