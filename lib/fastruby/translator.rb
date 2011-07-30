@@ -802,10 +802,21 @@ module FastRuby
     end
 
     def to_c_while(tree)
-      "while (#{to_c tree[1]}) {
-        #{to_c tree[2]};
+      caller_code = proc { |name| "
+        static VALUE #{name}(VALUE param) {
+          #{@locals_struct} *plocals = (void*)param;
+          VALUE last_expression;
+
+          while (#{to_c tree[1]}) {
+            #{to_c tree[2]};
+          }
+
+          return Qnil;
+          }
+        "
       }
-      "
+
+      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
     end
 
     def to_c_false(tree)
