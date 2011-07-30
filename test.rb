@@ -1,18 +1,37 @@
 require "rubygems"
 require "fastruby"
 
+
 class X
-	fastruby "
+	fastruby '
 		def foo(a,b)
-			a[0..3] = b[0..3]
-			return nil
+			10.times do
+				print "ao\n"
+			end
 		end
-	"
+	'
+end
+
+$array = Array
+
+class Array
+	fastruby '
+		def fast_map
+			s = self.size
+			ary = $array.new(size)
+			
+			(0..s-1).each do |i|
+				print i,"\n"
+			end
+			
+			ary
+		end
+	'
 end
 
 a = "test"
 b = "ruby"
 
-X.new.foo(a,b)
+#X.new.foo(a,b)
 
-print a,"\n"
+p [1,2,3].fast_map,"\n"

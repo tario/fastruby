@@ -73,4 +73,23 @@ describe FastRuby, "fastruby" do
     ::Z6.new.foo.should be == nil
   end
 
+  class ::Z7
+    fastruby "
+      def foo(a,b)
+        (a..b)
+      end
+    "
+  end
+
+  def self.test_range(a,b)
+    it "should compile range (#{a}..#{b})" do
+      ::Z7.new.foo(a,b).should be == (a..b)
+    end
+  end
+
+  test_range 0,0
+  test_range 3,54
+  test_range 'a', 'f'
+  test_range 0.54,066
+
 end
