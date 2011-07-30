@@ -597,13 +597,13 @@ module FastRuby
       impl_tree = tree[2]
       else_tree = tree[3]
       code = "if (RTEST(#{to_c condition_tree})) {
-        #{to_c impl_tree};
+        last_expression = #{to_c impl_tree};
       }
       "
 
       if (else_tree)
         code = code + " else {
-          #{to_c else_tree};
+          last_expression = #{to_c else_tree};
         }
         "
       end
@@ -611,7 +611,7 @@ module FastRuby
       caller_code = proc { |name| "
         static VALUE #{name}(VALUE param) {
           #{@locals_struct} *plocals = (void*)param;
-          VALUE last_expression;
+          VALUE last_expression = Qnil;
 
           #{code};
 
