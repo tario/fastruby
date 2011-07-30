@@ -411,7 +411,7 @@
             onclick="toggleCode('M000022-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000022-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 438</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 443</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_array</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">tree</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">1</span>
         <span class="ruby-identifier">strargs</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>].<span class="ruby-identifier">map</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">subtree</span><span class="ruby-operator">|</span> <span class="ruby-identifier">to_c</span> <span class="ruby-identifier">subtree</span>}.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;,&quot;</span>)
@@ -439,18 +439,17 @@
             onclick="toggleCode('M000016-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000016-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 384</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 390</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_block</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">str</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-2</span>].<span class="ruby-identifier">map</span>{ <span class="ruby-operator">|</span><span class="ruby-identifier">subtree</span><span class="ruby-operator">|</span>
         <span class="ruby-identifier">to_c</span>(<span class="ruby-identifier">subtree</span>)
       }.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;;&quot;</span>)
 
-
-<span class="ruby-comment cmt">#      if tree[-1][0] != :return</span>
- <span class="ruby-comment cmt">#       str = str + &quot;;return (#{to_c(tree[-1])});&quot;</span>
-  <span class="ruby-comment cmt">#    else</span>
+      <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">tree</span>[<span class="ruby-value">-1</span>][<span class="ruby-value">0</span>] <span class="ruby-operator">!=</span> <span class="ruby-identifier">:return</span>
+        <span class="ruby-identifier">str</span> = <span class="ruby-identifier">str</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;last_expression = #{to_c(tree[-1])};&quot;</span>
+      <span class="ruby-keyword kw">else</span>
         <span class="ruby-identifier">str</span> = <span class="ruby-identifier">str</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;#{to_c(tree[-1])};&quot;</span>
-   <span class="ruby-comment cmt">#   end</span>
+      <span class="ruby-keyword kw">end</span>
 
       <span class="ruby-identifier">str</span>
     <span class="ruby-keyword kw">end</span>
@@ -644,7 +643,7 @@
             onclick="toggleCode('M000023-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000023-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 447</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 452</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_defn</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">method_name</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]
       <span class="ruby-identifier">args_tree</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">2</span>]
@@ -666,18 +665,10 @@
       <span class="ruby-identifier">str_impl</span> = <span class="ruby-value str">&quot;&quot;</span>
       <span class="ruby-comment cmt"># if impl_tree is a block, implement the last node with a return</span>
       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">impl_tree</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">:block</span>
-        <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">impl_tree</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-2</span>].<span class="ruby-identifier">map</span>{ <span class="ruby-operator">|</span><span class="ruby-identifier">subtree</span><span class="ruby-operator">|</span>
-          <span class="ruby-identifier">to_c</span>(<span class="ruby-identifier">subtree</span>)
-        }.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;;&quot;</span>)
-
-        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">impl_tree</span>[<span class="ruby-value">-1</span>][<span class="ruby-value">0</span>] <span class="ruby-operator">!=</span> <span class="ruby-identifier">:return</span>
-          <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;return (#{to_c(impl_tree[-1])});&quot;</span>
-        <span class="ruby-keyword kw">else</span>
-          <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;#{to_c(impl_tree[-1])};&quot;</span>
-        <span class="ruby-keyword kw">end</span>
+        <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">to_c</span> <span class="ruby-identifier">impl_tree</span>
       <span class="ruby-keyword kw">else</span>
         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">impl_tree</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">!=</span> <span class="ruby-identifier">:return</span>
-          <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;return (#{to_c(impl_tree)});&quot;</span>
+          <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;last_expression = #{to_c(impl_tree)};&quot;</span>
         <span class="ruby-keyword kw">else</span>
           <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;#{to_c(impl_tree)};&quot;</span>
         <span class="ruby-keyword kw">end</span>
@@ -686,6 +677,7 @@
       <span class="ruby-node">&quot;VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| &quot;VALUE #{arg}&quot; }.join(&quot;,&quot;) }  ) {
         #{@locals_struct} locals;
         #{@block_struct} *pblock;
+        VALUE last_expression;
 
         #{args_tree[1..-1].map { |arg|
           &quot;locals.#{arg} = #{arg};\n&quot;
@@ -703,6 +695,8 @@
         }
 
         #{str_impl}
+
+        return last_expression;
       }&quot;</span>
     <span class="ruby-keyword kw">end</span>
 </pre>
@@ -816,7 +810,7 @@
             onclick="toggleCode('M000021-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000021-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 415</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 420</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_hash</span>(<span class="ruby-identifier">tree</span>)
 
       <span class="ruby-identifier">hash_aset_code</span> = <span class="ruby-value str">&quot;&quot;</span>
@@ -1033,19 +1027,19 @@
               }.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;;&quot;</span>)
 
               <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">anonymous_impl</span>[<span class="ruby-value">-1</span>][<span class="ruby-value">0</span>] <span class="ruby-operator">!=</span> <span class="ruby-identifier">:return</span>
-                <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;return (#{to_c(anonymous_impl[-1])});&quot;</span>
+                <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;last_expression = (#{to_c(anonymous_impl[-1])});&quot;</span>
               <span class="ruby-keyword kw">else</span>
                 <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;#{to_c(anonymous_impl[-1])};&quot;</span>
               <span class="ruby-keyword kw">end</span>
             <span class="ruby-keyword kw">else</span>
               <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">anonymous_impl</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">!=</span> <span class="ruby-identifier">:return</span>
-                <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;return (#{to_c(anonymous_impl)});&quot;</span>
+                <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;last_expression = (#{to_c(anonymous_impl)});&quot;</span>
               <span class="ruby-keyword kw">else</span>
                 <span class="ruby-identifier">str_impl</span> = <span class="ruby-identifier">str_impl</span> <span class="ruby-operator">+</span> <span class="ruby-node">&quot;;#{to_c(anonymous_impl)};&quot;</span>
               <span class="ruby-keyword kw">end</span>
             <span class="ruby-keyword kw">end</span>
           <span class="ruby-keyword kw">else</span>
-            <span class="ruby-identifier">str_impl</span> = <span class="ruby-value str">&quot;return Qnil;&quot;</span>
+            <span class="ruby-identifier">str_impl</span> = <span class="ruby-value str">&quot;last_expression = Qnil;&quot;</span>
           <span class="ruby-keyword kw">end</span>
 
         <span class="ruby-keyword kw">end</span>
@@ -1109,10 +1103,13 @@
         <span class="ruby-identifier">block_code</span> = <span class="ruby-identifier">proc</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;
           static VALUE #{name}(VALUE arg, VALUE param) {
             // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
 
             #{str_lvar_initialization};
             #{str_arg_initialization}
             #{str_impl}
+
+            return last_expression;
           }
         &quot;</span>
         }
@@ -1137,10 +1134,13 @@
         <span class="ruby-identifier">block_code</span> = <span class="ruby-identifier">proc</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;
           static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
             // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
 
             #{str_lvar_initialization};
             #{str_arg_initialization}
             #{str_impl}
+
+            return last_expression;
           }
         &quot;</span>
         }
@@ -1282,7 +1282,7 @@
             onclick="toggleCode('M000018-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000018-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 403</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 408</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_lit</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;(VALUE)#{tree[1].internal_value}&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -1328,7 +1328,7 @@
             onclick="toggleCode('M000019-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000019-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 407</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 412</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_nil</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-value str">&quot;Qnil&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -1397,7 +1397,7 @@
             onclick="toggleCode('M000017-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000017-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 399</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 404</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_return</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;return #{to_c(tree[1])};\n&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -1443,7 +1443,7 @@
             onclick="toggleCode('M000020-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000020-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 411</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 416</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_str</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;(VALUE)#{tree[1].internal_value}&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -1515,7 +1515,7 @@
             onclick="toggleCode('M000015-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000015-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 344</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 350</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_yield</span>(<span class="ruby-identifier">tree</span>)
 
       <span class="ruby-identifier">block_code</span> = <span class="ruby-identifier">proc</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;
