@@ -262,4 +262,18 @@ describe FastRuby, "fastruby" do
     ::A9.new.foo(true).should be == 1
     ::A9.new.foo(false).should be == 2
   end
+
+  class ::A10
+    fastruby '
+      def foo
+        a = nil
+        inline_c "plocals->a = INT2FIX(143)"
+        a
+      end
+    '
+  end
+
+  it "should compile inline C when using inline_c directive" do
+    ::A10.new.foo().should be == 143;
+  end
 end
