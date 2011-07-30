@@ -17,7 +17,7 @@ spec = Gem::Specification.new do |s|
   s.add_dependency "ruby_parser", "= 2.0.6"
   s.has_rdoc = true
   s.extra_rdoc_files = [ 'README' ]
-  s.rdoc_options << '--main' << 'README'
+#  s.rdoc_options << '--main' << 'README'
   s.files = Dir.glob("{examples,lib,spec}/**/*") +
     [ 'LICENSE', 'AUTHORS', 'README', 'Rakefile', 'TODO' ]
 end
