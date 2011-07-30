@@ -47,6 +47,13 @@ module FastRuby
         return value;
       }
       "
+
+      extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
+        rb_ivar_set(recv,idvar,value);
+        return value;
+      }
+      "
+
     end
 
     def on_block
@@ -551,7 +558,7 @@ module FastRuby
     end
 
     def to_c_iasgn(tree)
-      "rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
+      "_rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
     end
 
     def to_c_lasgn(tree)
