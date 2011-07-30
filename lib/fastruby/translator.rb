@@ -634,8 +634,19 @@ module FastRuby
         "
       end
 
+      caller_code = proc { |name| "
+        static VALUE #{name}(VALUE param) {
+          #{@locals_struct} *plocals = (void*)param;
+          VALUE last_expression;
 
-      code
+          #{code};
+
+          return last_expression;
+          }
+        "
+      }
+
+      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
     end
 
     def to_c_call(tree)
