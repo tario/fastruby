@@ -89,38 +89,41 @@
 
       <div class="name-list">
       <a href="#M000013">anonymous_function</a>&nbsp;&nbsp;
-      <a href="#M000041">infer_type</a>&nbsp;&nbsp;
-      <a href="#M000024">locals_accessor</a>&nbsp;&nbsp;
-      <a href="#M000025">locals_pointer</a>&nbsp;&nbsp;
+      <a href="#M000045">directive</a>&nbsp;&nbsp;
+      <a href="#M000043">infer_type</a>&nbsp;&nbsp;
+      <a href="#M000026">locals_accessor</a>&nbsp;&nbsp;
+      <a href="#M000027">locals_pointer</a>&nbsp;&nbsp;
       <a href="#M000010">new</a>&nbsp;&nbsp;
       <a href="#M000011">on_block</a>&nbsp;&nbsp;
       <a href="#M000012">to_c</a>&nbsp;&nbsp;
-      <a href="#M000035">to_c_and</a>&nbsp;&nbsp;
-      <a href="#M000022">to_c_array</a>&nbsp;&nbsp;
-      <a href="#M000016">to_c_block</a>&nbsp;&nbsp;
-      <a href="#M000039">to_c_call</a>&nbsp;&nbsp;
-      <a href="#M000023">to_c_defn</a>&nbsp;&nbsp;
-      <a href="#M000033">to_c_false</a>&nbsp;&nbsp;
-      <a href="#M000027">to_c_gasgn</a>&nbsp;&nbsp;
-      <a href="#M000026">to_c_gvar</a>&nbsp;&nbsp;
-      <a href="#M000021">to_c_hash</a>&nbsp;&nbsp;
-      <a href="#M000029">to_c_iasgn</a>&nbsp;&nbsp;
-      <a href="#M000038">to_c_if</a>&nbsp;&nbsp;
-      <a href="#M000014">to_c_iter</a>&nbsp;&nbsp;
-      <a href="#M000028">to_c_ivar</a>&nbsp;&nbsp;
-      <a href="#M000030">to_c_lasgn</a>&nbsp;&nbsp;
-      <a href="#M000018">to_c_lit</a>&nbsp;&nbsp;
-      <a href="#M000031">to_c_lvar</a>&nbsp;&nbsp;
-      <a href="#M000019">to_c_nil</a>&nbsp;&nbsp;
-      <a href="#M000037">to_c_not</a>&nbsp;&nbsp;
-      <a href="#M000036">to_c_or</a>&nbsp;&nbsp;
-      <a href="#M000017">to_c_return</a>&nbsp;&nbsp;
-      <a href="#M000032">to_c_self</a>&nbsp;&nbsp;
-      <a href="#M000020">to_c_str</a>&nbsp;&nbsp;
-      <a href="#M000034">to_c_true</a>&nbsp;&nbsp;
-      <a href="#M000040">to_c_while</a>&nbsp;&nbsp;
-      <a href="#M000015">to_c_yield</a>&nbsp;&nbsp;
-      <a href="#M000042">with_extra_inference</a>&nbsp;&nbsp;
+      <a href="#M000037">to_c_and</a>&nbsp;&nbsp;
+      <a href="#M000024">to_c_array</a>&nbsp;&nbsp;
+      <a href="#M000015">to_c_attrasgn</a>&nbsp;&nbsp;
+      <a href="#M000018">to_c_block</a>&nbsp;&nbsp;
+      <a href="#M000041">to_c_call</a>&nbsp;&nbsp;
+      <a href="#M000025">to_c_defn</a>&nbsp;&nbsp;
+      <a href="#M000014">to_c_dot2</a>&nbsp;&nbsp;
+      <a href="#M000035">to_c_false</a>&nbsp;&nbsp;
+      <a href="#M000029">to_c_gasgn</a>&nbsp;&nbsp;
+      <a href="#M000028">to_c_gvar</a>&nbsp;&nbsp;
+      <a href="#M000023">to_c_hash</a>&nbsp;&nbsp;
+      <a href="#M000031">to_c_iasgn</a>&nbsp;&nbsp;
+      <a href="#M000040">to_c_if</a>&nbsp;&nbsp;
+      <a href="#M000016">to_c_iter</a>&nbsp;&nbsp;
+      <a href="#M000030">to_c_ivar</a>&nbsp;&nbsp;
+      <a href="#M000032">to_c_lasgn</a>&nbsp;&nbsp;
+      <a href="#M000020">to_c_lit</a>&nbsp;&nbsp;
+      <a href="#M000033">to_c_lvar</a>&nbsp;&nbsp;
+      <a href="#M000021">to_c_nil</a>&nbsp;&nbsp;
+      <a href="#M000039">to_c_not</a>&nbsp;&nbsp;
+      <a href="#M000038">to_c_or</a>&nbsp;&nbsp;
+      <a href="#M000019">to_c_return</a>&nbsp;&nbsp;
+      <a href="#M000034">to_c_self</a>&nbsp;&nbsp;
+      <a href="#M000022">to_c_str</a>&nbsp;&nbsp;
+      <a href="#M000036">to_c_true</a>&nbsp;&nbsp;
+      <a href="#M000042">to_c_while</a>&nbsp;&nbsp;
+      <a href="#M000017">to_c_yield</a>&nbsp;&nbsp;
+      <a href="#M000044">with_extra_inference</a>&nbsp;&nbsp;
       </div>
     </div>
 
@@ -261,21 +264,73 @@
         </div>
       </div>
 
-      <div id="method-M000041" class="method-detail">
-        <a name="M000041"></a>
+      <div id="method-M000045" class="method-detail">
+        <a name="M000045"></a>
 
         <div class="method-heading">
-          <a href="#M000041" class="method-signature">
+          <a href="#M000045" class="method-signature">
+          <span class="method-name">directive</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000045-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000045-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 820</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">directive</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-identifier">recv</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]
+      <span class="ruby-identifier">mname</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">2</span>]
+      <span class="ruby-identifier">args</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">3</span>]
+
+      <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:infer</span>
+        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">to_c</span>(<span class="ruby-identifier">recv</span>)
+      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:lvar_type</span>
+        <span class="ruby-identifier">lvar_name</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>][<span class="ruby-value">1</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>][<span class="ruby-value">2</span>]
+        <span class="ruby-identifier">lvar_type</span> = <span class="ruby-identifier">eval</span>(<span class="ruby-identifier">args</span>[<span class="ruby-value">2</span>][<span class="ruby-value">1</span>].<span class="ruby-identifier">to_s</span>)
+
+        <span class="ruby-ivar">@infer_lvar_map</span>[<span class="ruby-identifier">lvar_name</span>] = <span class="ruby-identifier">lvar_type</span>
+        <span class="ruby-keyword kw">return</span> <span class="ruby-value str">&quot;&quot;</span>
+      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:block_given?</span>
+        <span class="ruby-keyword kw">return</span> <span class="ruby-node">&quot;#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue&quot;</span>
+      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:inline_c</span>
+        <span class="ruby-identifier">code</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>][<span class="ruby-value">1</span>]
+
+        <span class="ruby-identifier">caller_code</span> = <span class="ruby-identifier">proc</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;
+           static VALUE #{name}(VALUE param) {
+            #{@locals_struct} *plocals = (void*)param;
+            #{code};
+            return Qnil;
+          }
+         &quot;</span>
+        }
+
+        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">anonymous_function</span>(<span class="ruby-identifier">caller_code</span>)<span class="ruby-operator">+</span><span class="ruby-value str">&quot;((VALUE)plocals)&quot;</span>
+      <span class="ruby-keyword kw">else</span>
+        <span class="ruby-keyword kw">nil</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000043" class="method-detail">
+        <a name="M000043"></a>
+
+        <div class="method-heading">
+          <a href="#M000043" class="method-signature">
           <span class="method-name">infer_type</span><span class="method-args">(recv)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000041-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000041-source">
+            onclick="toggleCode('M000043-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000043-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 796</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 794</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">infer_type</span>(<span class="ruby-identifier">recv</span>)
       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">recv</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">:call</span>
         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">recv</span>[<span class="ruby-value">2</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">:infer</span>
@@ -296,21 +351,21 @@
         </div>
       </div>
 
-      <div id="method-M000024" class="method-detail">
-        <a name="M000024"></a>
+      <div id="method-M000026" class="method-detail">
+        <a name="M000026"></a>
 
         <div class="method-heading">
-          <a href="#M000024" class="method-signature">
+          <a href="#M000026" class="method-signature">
           <span class="method-name">locals_accessor</span><span class="method-args">()</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000024-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000024-source">
+            onclick="toggleCode('M000026-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000026-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 520</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 525</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">locals_accessor</span>
       <span class="ruby-value str">&quot;plocals-&gt;&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -319,21 +374,21 @@
         </div>
       </div>
 
-      <div id="method-M000025" class="method-detail">
-        <a name="M000025"></a>
+      <div id="method-M000027" class="method-detail">
+        <a name="M000027"></a>
 
         <div class="method-heading">
-          <a href="#M000025" class="method-signature">
+          <a href="#M000027" class="method-signature">
           <span class="method-name">locals_pointer</span><span class="method-args">()</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000025-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000025-source">
+            onclick="toggleCode('M000027-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000027-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 524</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 529</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">locals_pointer</span>
       <span class="ruby-value str">&quot;plocals&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -389,21 +444,21 @@
         </div>
       </div>
 
-      <div id="method-M000035" class="method-detail">
-        <a name="M000035"></a>
+      <div id="method-M000037" class="method-detail">
+        <a name="M000037"></a>
 
         <div class="method-heading">
-          <a href="#M000035" class="method-signature">
+          <a href="#M000037" class="method-signature">
           <span class="method-name">to_c_and</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000035-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000035-source">
+            onclick="toggleCode('M000037-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000037-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 583</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 588</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_and</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;(RTEST(#{to_c tree[1]}) &amp;&amp; RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -412,21 +467,21 @@
         </div>
       </div>
 
-      <div id="method-M000022" class="method-detail">
-        <a name="M000022"></a>
+      <div id="method-M000024" class="method-detail">
+        <a name="M000024"></a>
 
         <div class="method-heading">
-          <a href="#M000022" class="method-signature">
+          <a href="#M000024" class="method-signature">
           <span class="method-name">to_c_array</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000022-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000022-source">
+            onclick="toggleCode('M000024-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000024-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 456</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 455</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_array</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">tree</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">1</span>
         <span class="ruby-identifier">strargs</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>].<span class="ruby-identifier">map</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">subtree</span><span class="ruby-operator">|</span> <span class="ruby-identifier">to_c</span> <span class="ruby-identifier">subtree</span>}.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;,&quot;</span>)
@@ -440,21 +495,44 @@
         </div>
       </div>
 
-      <div id="method-M000016" class="method-detail">
-        <a name="M000016"></a>
+      <div id="method-M000015" class="method-detail">
+        <a name="M000015"></a>
 
         <div class="method-heading">
-          <a href="#M000016" class="method-signature">
+          <a href="#M000015" class="method-signature">
+          <span class="method-name">to_c_attrasgn</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000015-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000015-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 85</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_attrasgn</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-identifier">to_c_call</span>(<span class="ruby-identifier">tree</span>)
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000018" class="method-detail">
+        <a name="M000018"></a>
+
+        <div class="method-heading">
+          <a href="#M000018" class="method-signature">
           <span class="method-name">to_c_block</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000016-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000016-source">
+            onclick="toggleCode('M000018-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000018-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 391</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 390</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_block</span>(<span class="ruby-identifier">tree</span>)
 
       <span class="ruby-identifier">str</span> = <span class="ruby-value str">&quot;&quot;</span>
@@ -487,36 +565,29 @@
         </div>
       </div>
 
-      <div id="method-M000039" class="method-detail">
-        <a name="M000039"></a>
+      <div id="method-M000041" class="method-detail">
+        <a name="M000041"></a>
 
         <div class="method-heading">
-          <a href="#M000039" class="method-signature">
+          <a href="#M000041" class="method-signature">
           <span class="method-name">to_c_call</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000039-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000039-source">
+            onclick="toggleCode('M000041-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000041-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 626</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 631</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_call</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">recv</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]
       <span class="ruby-identifier">mname</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">2</span>]
       <span class="ruby-identifier">args</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">3</span>]
 
-      <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:infer</span>
-        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">to_c</span>(<span class="ruby-identifier">recv</span>)
-      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:lvar_type</span>
-        <span class="ruby-identifier">lvar_name</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>][<span class="ruby-value">1</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>][<span class="ruby-value">2</span>]
-        <span class="ruby-identifier">lvar_type</span> = <span class="ruby-identifier">eval</span>(<span class="ruby-identifier">args</span>[<span class="ruby-value">2</span>][<span class="ruby-value">1</span>].<span class="ruby-identifier">to_s</span>)
-
-        <span class="ruby-ivar">@infer_lvar_map</span>[<span class="ruby-identifier">lvar_name</span>] = <span class="ruby-identifier">lvar_type</span>
-        <span class="ruby-keyword kw">return</span> <span class="ruby-value str">&quot;&quot;</span>
-      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:block_given?</span>
-        <span class="ruby-keyword kw">return</span> <span class="ruby-node">&quot;#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue&quot;</span>
+      <span class="ruby-identifier">directive_code</span> = <span class="ruby-identifier">directive</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">directive_code</span>
+        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">directive_code</span>
       <span class="ruby-keyword kw">end</span>
 
       <span class="ruby-identifier">strargs</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>].<span class="ruby-identifier">map</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span> <span class="ruby-identifier">to_c</span> <span class="ruby-identifier">arg</span>}.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;,&quot;</span>)
@@ -658,21 +729,21 @@
         </div>
       </div>
 
-      <div id="method-M000023" class="method-detail">
-        <a name="M000023"></a>
+      <div id="method-M000025" class="method-detail">
+        <a name="M000025"></a>
 
         <div class="method-heading">
-          <a href="#M000023" class="method-signature">
+          <a href="#M000025" class="method-signature">
           <span class="method-name">to_c_defn</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000023-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000023-source">
+            onclick="toggleCode('M000025-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000025-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 465</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 464</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_defn</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">method_name</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]
       <span class="ruby-identifier">args_tree</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">2</span>]
@@ -703,7 +774,13 @@
         <span class="ruby-keyword kw">end</span>
       <span class="ruby-keyword kw">end</span>
 
-      <span class="ruby-node">&quot;VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| &quot;VALUE #{arg}&quot; }.join(&quot;,&quot;) }  ) {
+      <span class="ruby-identifier">strargs</span> = <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">args_tree</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">1</span>
+        <span class="ruby-node">&quot;VALUE block, #{args_tree[1..-1].map{|arg| &quot;VALUE #{arg}&quot; }.join(&quot;,&quot;) }&quot;</span>
+      <span class="ruby-keyword kw">else</span>
+        <span class="ruby-value str">&quot;VALUE block&quot;</span>
+      <span class="ruby-keyword kw">end</span>
+
+      <span class="ruby-node">&quot;VALUE #{@alt_method_name || method_name}(#{strargs}) {
         #{@locals_struct} locals;
         #{@locals_struct} *plocals = (void*)&amp;locals;
         #{@block_struct} *pblock;
@@ -732,21 +809,44 @@
         </div>
       </div>
 
-      <div id="method-M000033" class="method-detail">
-        <a name="M000033"></a>
+      <div id="method-M000014" class="method-detail">
+        <a name="M000014"></a>
 
         <div class="method-heading">
-          <a href="#M000033" class="method-signature">
+          <a href="#M000014" class="method-signature">
+          <span class="method-name">to_c_dot2</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000014-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000014-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 81</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_dot2</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-node">&quot;rb_range_new(#{to_c tree[1]}, #{to_c tree[2]},0)&quot;</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000035" class="method-detail">
+        <a name="M000035"></a>
+
+        <div class="method-heading">
+          <a href="#M000035" class="method-signature">
           <span class="method-name">to_c_false</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000033-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000033-source">
+            onclick="toggleCode('M000035-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000035-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 575</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 580</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_false</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-value str">&quot;Qfalse&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -755,21 +855,21 @@
         </div>
       </div>
 
-      <div id="method-M000027" class="method-detail">
-        <a name="M000027"></a>
+      <div id="method-M000029" class="method-detail">
+        <a name="M000029"></a>
 
         <div class="method-heading">
-          <a href="#M000027" class="method-signature">
+          <a href="#M000029" class="method-signature">
           <span class="method-name">to_c_gasgn</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000027-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000027-source">
+            onclick="toggleCode('M000029-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000029-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 532</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 537</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_gasgn</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;_rb_gvar_set((void*)0x#{global_entry(tree[1]).to_s(16)}, #{to_c tree[2]})&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -778,21 +878,21 @@
         </div>
       </div>
 
-      <div id="method-M000026" class="method-detail">
-        <a name="M000026"></a>
+      <div id="method-M000028" class="method-detail">
+        <a name="M000028"></a>
 
         <div class="method-heading">
-          <a href="#M000026" class="method-signature">
+          <a href="#M000028" class="method-signature">
           <span class="method-name">to_c_gvar</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000026-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000026-source">
+            onclick="toggleCode('M000028-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000028-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 528</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 533</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_gvar</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;rb_gvar_get((struct global_entry*)0x#{global_entry(tree[1]).to_s(16)})&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -801,21 +901,21 @@
         </div>
       </div>
 
-      <div id="method-M000021" class="method-detail">
-        <a name="M000021"></a>
+      <div id="method-M000023" class="method-detail">
+        <a name="M000023"></a>
 
         <div class="method-heading">
-          <a href="#M000021" class="method-signature">
+          <a href="#M000023" class="method-signature">
           <span class="method-name">to_c_hash</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000021-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000021-source">
+            onclick="toggleCode('M000023-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000023-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 435</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 434</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_hash</span>(<span class="ruby-identifier">tree</span>)
 
       <span class="ruby-identifier">hash_aset_code</span> = <span class="ruby-value str">&quot;&quot;</span>
@@ -841,21 +941,21 @@
         </div>
       </div>
 
-      <div id="method-M000029" class="method-detail">
-        <a name="M000029"></a>
+      <div id="method-M000031" class="method-detail">
+        <a name="M000031"></a>
 
         <div class="method-heading">
-          <a href="#M000029" class="method-signature">
+          <a href="#M000031" class="method-signature">
           <span class="method-name">to_c_iasgn</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000029-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000029-source">
+            onclick="toggleCode('M000031-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000031-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 540</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 545</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_iasgn</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;_rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -864,21 +964,21 @@
         </div>
       </div>
 
-      <div id="method-M000038" class="method-detail">
-        <a name="M000038"></a>
+      <div id="method-M000040" class="method-detail">
+        <a name="M000040"></a>
 
         <div class="method-heading">
-          <a href="#M000038" class="method-signature">
+          <a href="#M000040" class="method-signature">
           <span class="method-name">to_c_if</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000038-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000038-source">
+            onclick="toggleCode('M000040-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000040-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 595</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 600</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_if</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">condition_tree</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]
       <span class="ruby-identifier">impl_tree</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">2</span>]
@@ -914,39 +1014,30 @@
         </div>
       </div>
 
-      <div id="method-M000014" class="method-detail">
-        <a name="M000014"></a>
+      <div id="method-M000016" class="method-detail">
+        <a name="M000016"></a>
 
         <div class="method-heading">
-          <a href="#M000014" class="method-signature">
+          <a href="#M000016" class="method-signature">
           <span class="method-name">to_c_iter</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000014-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000014-source">
+            onclick="toggleCode('M000016-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000016-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 81</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 89</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_iter</span>(<span class="ruby-identifier">tree</span>)
 
       <span class="ruby-identifier">call_tree</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]
       <span class="ruby-identifier">args_tree</span> = <span class="ruby-identifier">tree</span>[<span class="ruby-value">2</span>]
       <span class="ruby-identifier">recv_tree</span> = <span class="ruby-identifier">call_tree</span>[<span class="ruby-value">1</span>]
 
-      <span class="ruby-identifier">mname</span> = <span class="ruby-identifier">call_tree</span>[<span class="ruby-value">2</span>]
-      <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:infer</span>
-        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">to_c</span>(<span class="ruby-identifier">recv</span>)
-      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:lvar_type</span>
-
-        <span class="ruby-identifier">lvar_name</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>][<span class="ruby-value">1</span>]
-        <span class="ruby-identifier">lvar_type</span> = <span class="ruby-identifier">eval</span>(<span class="ruby-identifier">args</span>[<span class="ruby-value">2</span>][<span class="ruby-value">1</span>].<span class="ruby-identifier">to_s</span>)
-
-        <span class="ruby-ivar">@infer_lvar_map</span>[<span class="ruby-identifier">lvar_name</span>] = <span class="ruby-identifier">lvar_type</span>
-        <span class="ruby-keyword kw">return</span> <span class="ruby-value str">&quot;&quot;</span>
-      <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">mname</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">:block_given?</span>
-        <span class="ruby-keyword kw">return</span> <span class="ruby-node">&quot;#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue&quot;</span>
+      <span class="ruby-identifier">directive_code</span> = <span class="ruby-identifier">directive</span>(<span class="ruby-identifier">call_tree</span>)
+      <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">directive_code</span>
+        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">directive_code</span>
       <span class="ruby-keyword kw">end</span>
 
       <span class="ruby-identifier">other_call_tree</span> = <span class="ruby-identifier">call_tree</span>.<span class="ruby-identifier">dup</span>
@@ -1203,35 +1294,12 @@
         </div>
       </div>
 
-      <div id="method-M000028" class="method-detail">
-        <a name="M000028"></a>
-
-        <div class="method-heading">
-          <a href="#M000028" class="method-signature">
-          <span class="method-name">to_c_ivar</span><span class="method-args">(tree)</span>
-          </a>
-        </div>
-      
-        <div class="method-description">
-          <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000028-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000028-source">
-<pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 536</span>
-    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_ivar</span>(<span class="ruby-identifier">tree</span>)
-      <span class="ruby-node">&quot;rb_ivar_get(#{locals_accessor}self,#{tree[1].to_i})&quot;</span>
-    <span class="ruby-keyword kw">end</span>
-</pre>
-          </div>
-        </div>
-      </div>
-
       <div id="method-M000030" class="method-detail">
         <a name="M000030"></a>
 
         <div class="method-heading">
           <a href="#M000030" class="method-signature">
-          <span class="method-name">to_c_lasgn</span><span class="method-args">(tree)</span>
+          <span class="method-name">to_c_ivar</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
@@ -1240,7 +1308,30 @@
             onclick="toggleCode('M000030-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000030-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 544</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 541</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_ivar</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-node">&quot;rb_ivar_get(#{locals_accessor}self,#{tree[1].to_i})&quot;</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000032" class="method-detail">
+        <a name="M000032"></a>
+
+        <div class="method-heading">
+          <a href="#M000032" class="method-signature">
+          <span class="method-name">to_c_lasgn</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000032-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000032-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 549</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_lasgn</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-identifier">:validate_lvar_types</span>]
         <span class="ruby-identifier">klass</span> = <span class="ruby-ivar">@infer_lvar_map</span>[<span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>]]
@@ -1268,21 +1359,21 @@
         </div>
       </div>
 
-      <div id="method-M000018" class="method-detail">
-        <a name="M000018"></a>
+      <div id="method-M000020" class="method-detail">
+        <a name="M000020"></a>
 
         <div class="method-heading">
-          <a href="#M000018" class="method-signature">
+          <a href="#M000020" class="method-signature">
           <span class="method-name">to_c_lit</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000018-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000018-source">
+            onclick="toggleCode('M000020-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000020-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 423</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 422</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_lit</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;(VALUE)#{tree[1].internal_value}&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -1291,23 +1382,92 @@
         </div>
       </div>
 
-      <div id="method-M000031" class="method-detail">
-        <a name="M000031"></a>
+      <div id="method-M000033" class="method-detail">
+        <a name="M000033"></a>
 
         <div class="method-heading">
-          <a href="#M000031" class="method-signature">
+          <a href="#M000033" class="method-signature">
           <span class="method-name">to_c_lvar</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000031-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000031-source">
+            onclick="toggleCode('M000033-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000033-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 567</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 572</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_lvar</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">locals_accessor</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">tree</span>[<span class="ruby-value">1</span>].<span class="ruby-identifier">to_s</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000021" class="method-detail">
+        <a name="M000021"></a>
+
+        <div class="method-heading">
+          <a href="#M000021" class="method-signature">
+          <span class="method-name">to_c_nil</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000021-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000021-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 426</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_nil</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-value str">&quot;Qnil&quot;</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000039" class="method-detail">
+        <a name="M000039"></a>
+
+        <div class="method-heading">
+          <a href="#M000039" class="method-signature">
+          <span class="method-name">to_c_not</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000039-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000039-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 596</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_not</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-node">&quot;RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue&quot;</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000038" class="method-detail">
+        <a name="M000038"></a>
+
+        <div class="method-heading">
+          <a href="#M000038" class="method-signature">
+          <span class="method-name">to_c_or</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000038-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000038-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 592</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_or</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-node">&quot;(RTEST(#{to_c tree[1]}) || RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse&quot;</span>
     <span class="ruby-keyword kw">end</span>
 </pre>
           </div>
@@ -1319,7 +1479,7 @@
 
         <div class="method-heading">
           <a href="#M000019" class="method-signature">
-          <span class="method-name">to_c_nil</span><span class="method-args">(tree)</span>
+          <span class="method-name">to_c_return</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
@@ -1328,124 +1488,9 @@
             onclick="toggleCode('M000019-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000019-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 427</span>
-    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_nil</span>(<span class="ruby-identifier">tree</span>)
-      <span class="ruby-value str">&quot;Qnil&quot;</span>
-    <span class="ruby-keyword kw">end</span>
-</pre>
-          </div>
-        </div>
-      </div>
-
-      <div id="method-M000037" class="method-detail">
-        <a name="M000037"></a>
-
-        <div class="method-heading">
-          <a href="#M000037" class="method-signature">
-          <span class="method-name">to_c_not</span><span class="method-args">(tree)</span>
-          </a>
-        </div>
-      
-        <div class="method-description">
-          <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000037-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000037-source">
-<pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 591</span>
-    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_not</span>(<span class="ruby-identifier">tree</span>)
-      <span class="ruby-node">&quot;RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue&quot;</span>
-    <span class="ruby-keyword kw">end</span>
-</pre>
-          </div>
-        </div>
-      </div>
-
-      <div id="method-M000036" class="method-detail">
-        <a name="M000036"></a>
-
-        <div class="method-heading">
-          <a href="#M000036" class="method-signature">
-          <span class="method-name">to_c_or</span><span class="method-args">(tree)</span>
-          </a>
-        </div>
-      
-        <div class="method-description">
-          <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000036-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000036-source">
-<pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 587</span>
-    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_or</span>(<span class="ruby-identifier">tree</span>)
-      <span class="ruby-node">&quot;(RTEST(#{to_c tree[1]}) || RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse&quot;</span>
-    <span class="ruby-keyword kw">end</span>
-</pre>
-          </div>
-        </div>
-      </div>
-
-      <div id="method-M000017" class="method-detail">
-        <a name="M000017"></a>
-
-        <div class="method-heading">
-          <a href="#M000017" class="method-signature">
-          <span class="method-name">to_c_return</span><span class="method-args">(tree)</span>
-          </a>
-        </div>
-      
-        <div class="method-description">
-          <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000017-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000017-source">
-<pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 419</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 418</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_return</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-node">&quot;return #{to_c(tree[1])};\n&quot;</span>
-    <span class="ruby-keyword kw">end</span>
-</pre>
-          </div>
-        </div>
-      </div>
-
-      <div id="method-M000032" class="method-detail">
-        <a name="M000032"></a>
-
-        <div class="method-heading">
-          <a href="#M000032" class="method-signature">
-          <span class="method-name">to_c_self</span><span class="method-args">(tree)</span>
-          </a>
-        </div>
-      
-        <div class="method-description">
-          <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000032-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000032-source">
-<pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 571</span>
-    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_self</span>(<span class="ruby-identifier">tree</span>)
-      <span class="ruby-identifier">locals_accessor</span> <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;self&quot;</span>
-    <span class="ruby-keyword kw">end</span>
-</pre>
-          </div>
-        </div>
-      </div>
-
-      <div id="method-M000020" class="method-detail">
-        <a name="M000020"></a>
-
-        <div class="method-heading">
-          <a href="#M000020" class="method-signature">
-          <span class="method-name">to_c_str</span><span class="method-args">(tree)</span>
-          </a>
-        </div>
-      
-        <div class="method-description">
-          <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000020-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000020-source">
-<pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 431</span>
-    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_str</span>(<span class="ruby-identifier">tree</span>)
-      <span class="ruby-node">&quot;(VALUE)#{tree[1].internal_value}&quot;</span>
     <span class="ruby-keyword kw">end</span>
 </pre>
           </div>
@@ -1457,7 +1502,7 @@
 
         <div class="method-heading">
           <a href="#M000034" class="method-signature">
-          <span class="method-name">to_c_true</span><span class="method-args">(tree)</span>
+          <span class="method-name">to_c_self</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
@@ -1466,7 +1511,53 @@
             onclick="toggleCode('M000034-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000034-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 579</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 576</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_self</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-identifier">locals_accessor</span> <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;self&quot;</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000022" class="method-detail">
+        <a name="M000022"></a>
+
+        <div class="method-heading">
+          <a href="#M000022" class="method-signature">
+          <span class="method-name">to_c_str</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000022-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000022-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 430</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_str</span>(<span class="ruby-identifier">tree</span>)
+      <span class="ruby-node">&quot;(VALUE)#{tree[1].internal_value}&quot;</span>
+    <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000036" class="method-detail">
+        <a name="M000036"></a>
+
+        <div class="method-heading">
+          <a href="#M000036" class="method-signature">
+          <span class="method-name">to_c_true</span><span class="method-args">(tree)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000036-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000036-source">
+<pre>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 584</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_true</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-value str">&quot;Qtrue&quot;</span>
     <span class="ruby-keyword kw">end</span>
@@ -1475,21 +1566,21 @@
         </div>
       </div>
 
-      <div id="method-M000040" class="method-detail">
-        <a name="M000040"></a>
+      <div id="method-M000042" class="method-detail">
+        <a name="M000042"></a>
 
         <div class="method-heading">
-          <a href="#M000040" class="method-signature">
+          <a href="#M000042" class="method-signature">
           <span class="method-name">to_c_while</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000040-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000040-source">
+            onclick="toggleCode('M000042-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000042-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 778</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 776</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_while</span>(<span class="ruby-identifier">tree</span>)
       <span class="ruby-identifier">caller_code</span> = <span class="ruby-identifier">proc</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;
         static VALUE #{name}(VALUE param) {
@@ -1512,28 +1603,28 @@
         </div>
       </div>
 
-      <div id="method-M000015" class="method-detail">
-        <a name="M000015"></a>
+      <div id="method-M000017" class="method-detail">
+        <a name="M000017"></a>
 
         <div class="method-heading">
-          <a href="#M000015" class="method-signature">
+          <a href="#M000017" class="method-signature">
           <span class="method-name">to_c_yield</span><span class="method-args">(tree)</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000015-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000015-source">
+            onclick="toggleCode('M000017-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000017-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 351</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 350</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_c_yield</span>(<span class="ruby-identifier">tree</span>)
 
       <span class="ruby-identifier">block_code</span> = <span class="ruby-identifier">proc</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;
         static VALUE #{name}(VALUE locals_param, VALUE* block_args) {
 
           #{@locals_struct} *plocals;
-          plocals = (VALUE)locals_param;
+          plocals = (void*)locals_param;
 
           if (plocals-&gt;block_function_address == 0) {
             rb_raise(rb_eLocalJumpError, \&quot;no block given\&quot;);
@@ -1571,21 +1662,21 @@
         </div>
       </div>
 
-      <div id="method-M000042" class="method-detail">
-        <a name="M000042"></a>
+      <div id="method-M000044" class="method-detail">
+        <a name="M000044"></a>
 
         <div class="method-heading">
-          <a href="#M000042" class="method-signature">
+          <a href="#M000044" class="method-signature">
           <span class="method-name">with_extra_inference</span><span class="method-args">(extra_inference) {|| ...}</span>
           </a>
         </div>
       
         <div class="method-description">
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000042-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000042-source">
+            onclick="toggleCode('M000044-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000044-source">
 <pre>
-<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 812</span>
+<span class="ruby-comment cmt"># File lib/fastruby/translator.rb, line 810</span>
     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">with_extra_inference</span>(<span class="ruby-identifier">extra_inference</span>)
       <span class="ruby-identifier">previous_infer_lvar_map</span> = <span class="ruby-ivar">@infer_lvar_map</span>
       <span class="ruby-keyword kw">begin</span>

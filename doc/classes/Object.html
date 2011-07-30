@@ -195,7 +195,7 @@
       <span class="ruby-node">&quot;sprintf(method_name+strlen(method_name), \&quot;%lu\&quot;, CLASS_OF(#{arg}));\n&quot;</span>
     }.<span class="ruby-identifier">join</span>
 
-    <span class="ruby-identifier">c_code</span> = <span class="ruby-node">&quot;VALUE #{method_name}( #{args_tree[1..-1].map{|arg| &quot;VALUE #{arg}&quot; }.join(&quot;,&quot;) }  ) {
+    <span class="ruby-identifier">c_code</span> = <span class="ruby-node">&quot;VALUE #{method_name}(#{args_tree[1..-1].map{|arg| &quot;VALUE #{arg}&quot; }.join(&quot;,&quot;)}) {
       VALUE method_hash = (VALUE)#{hash.internal_value};
       VALUE klass = (VALUE)#{self.internal_value};
 
