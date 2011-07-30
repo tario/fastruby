@@ -500,7 +500,13 @@ module FastRuby
         end
       end
 
-      "VALUE #{@alt_method_name || method_name}( VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
+      strargs = if args_tree.size > 1
+        "VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+      else
+        "VALUE block"
+      end
+
+      "VALUE #{@alt_method_name || method_name}(#{strargs}) {
         #{@locals_struct} locals;
         #{@locals_struct} *plocals = (void*)&locals;
         #{@block_struct} *pblock;

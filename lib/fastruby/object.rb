@@ -91,7 +91,7 @@ class Object
       "sprintf(method_name+strlen(method_name), \"%lu\", CLASS_OF(#{arg}));\n"
     }.join
 
-    c_code = "VALUE #{method_name}( #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }  ) {
+    c_code = "VALUE #{method_name}(#{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",")}) {
       VALUE method_hash = (VALUE)#{hash.internal_value};
       VALUE klass = (VALUE)#{self.internal_value};
 
