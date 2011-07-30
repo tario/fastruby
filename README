@@ -3,7 +3,14 @@
 Fastruby is a gem which allows to execute ruby code faster than normal (about 100X of the MRI1.8)
 
 Fastruby IS NOT a separated ruby interpreter. Then, the design is simple
+
 Fastruby IS NOT a DSL to generate C code using ruby or a Ruby to C translator, the goal of fastruby is to execute RUBY code
+
+*************************************************************************************************************
+
+The current version of fastruby is a Proof of Concept and it's not ready to go to production
+
+*************************************************************************************************************
 
 == Core Concepts
 
