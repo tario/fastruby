@@ -78,6 +78,10 @@ module FastRuby
       name
     end
 
+    def to_c_dot2(tree)
+      "rb_range_new(#{to_c tree[1]}, #{to_c tree[2]},0)"
+    end
+
     def to_c_iter(tree)
 
       call_tree = tree[1]
