@@ -25,14 +25,21 @@ require "fastruby/logging"
 module FastRuby
   module BuilderModule
     def build(signature, method_name)
-      FastRuby.logger.info "Building #{self}::#{method_name} for signature #{signature.inspect}"
-
       tree = self.method_tree[method_name]
       locals = self.method_locals[method_name]
       options = self.method_options[method_name]
       mname = "_" + method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
 
       FastRuby.logger.info mname.to_s
+
+      begin
+        if (self.instance_method(mname))
+          FastRuby.logger.info "NOT Building #{self}::#{method_name} for signature #{signature.inspect}, it's already done"
+          return
+        end
+      rescue NameError
+        FastRuby.logger.info "Building #{self}::#{method_name} for signature #{signature.inspect}"
+      end
 
       context = FastRuby::Context.new
       context.locals = locals
