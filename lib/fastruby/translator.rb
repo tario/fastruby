@@ -388,17 +388,34 @@ module FastRuby
     end
 
     def to_c_block(tree)
-      str = tree[1..-2].map{ |subtree|
-        to_c(subtree)
-      }.join(";")
 
-      if tree[-1][0] != :return
-        str = str + ";last_expression = #{to_c(tree[-1])};"
-      else
-        str = str + ";#{to_c(tree[-1])};"
+      str = ""
+      on_block do
+
+        str = tree[1..-2].map{ |subtree|
+          to_c(subtree)
+        }.join(";")
+
+        if tree[-1][0] != :return
+          str = str + ";last_expression = #{to_c(tree[-1])};"
+        else
+          str = str + ";#{to_c(tree[-1])};"
+        end
       end
 
-      str
+      caller_code = proc { |name| "
+        static VALUE #{name}(VALUE param) {
+          #{@locals_struct} *plocals = (void*)param;
+          VALUE last_expression;
+
+          #{str}
+
+          return last_expression;
+          }
+        "
+      }
+
+      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
     end
 
     def to_c_return(tree)
@@ -499,9 +516,7 @@ module FastRuby
           locals.block_function_param = Qnil;
         }
 
-        #{str_impl}
-
-        return last_expression;
+        return #{str_impl};
       }"
     end
 
