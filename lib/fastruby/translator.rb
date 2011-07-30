@@ -646,6 +646,9 @@ module FastRuby
         return ""
       elsif mname == :block_given?
         return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
+      elsif mname == :inline_c
+        code = args[1][1]
+        return code
       end
 
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
