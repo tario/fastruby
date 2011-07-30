@@ -54,6 +54,12 @@ module FastRuby
       }
       "
 
+      extra_code << "static VALUE _lvar_assing(VALUE* destination,VALUE value) {
+        *destination = value;
+        return value;
+      }
+      "
+
     end
 
     def on_block
@@ -574,12 +580,13 @@ module FastRuby
           "
           }
 
-          "#{locals_accessor}#{tree[1]} = #{anonymous_function(verify_type_function)}(#{to_c tree[2]})"
+
+          "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(verify_type_function)}(#{to_c tree[2]}))"
         else
-          "#{locals_accessor}#{tree[1]} = #{to_c tree[2]}"
+          "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
         end
       else
-        "#{locals_accessor}#{tree[1]} = #{to_c tree[2]}"
+        "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
       end
     end
 
