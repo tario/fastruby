@@ -819,10 +819,6 @@ module FastRuby
       anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
     end
 
-    def to_c_false(tree)
-      "Qfalse"
-    end
-
     def infer_type(recv)
       if recv[0] == :call
         if recv[2] == :infer
