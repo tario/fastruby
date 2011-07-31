@@ -29,27 +29,24 @@ module FastRuby
     attr_accessor :tree
     attr_accessor :locals
     attr_accessor :options
-  end
 
-  module BuilderModule
-    def build(signature, method_name)
+    def initialize(method_name, owner)
+      @method_name = method_name
+      @owner = owner
+    end
 
-      fastrubym = self.fastruby_method(method_name)
-
-      tree = fastrubym.tree
-      locals = fastrubym.locals
-      options = fastrubym.options
-      mname = "_" + method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
+    def build(signature)
+      mname = "_" + @method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
 
       FastRuby.logger.info mname.to_s
 
       begin
-        if (self.instance_method(mname))
-          FastRuby.logger.info "NOT Building #{self}::#{method_name} for signature #{signature.inspect}, it's already done"
+        if (@owner.instance_method(mname))
+          FastRuby.logger.info "NOT Building #{self}::#{@method_name} for signature #{signature.inspect}, it's already done"
           return
         end
       rescue NameError
-        FastRuby.logger.info "Building #{self}::#{method_name} for signature #{signature.inspect}"
+        FastRuby.logger.info "Building #{self}::#{@method_name} for signature #{signature.inspect}"
       end
 
       context = FastRuby::Context.new
@@ -70,28 +67,37 @@ module FastRuby
 
       c_code = context.to_c(tree)
 
-      inline :C  do |builder|
-        builder.inc << context.extra_code
-        builder.include "<node.h>"
-        builder.c c_code
+      @owner.class_eval do
+        inline :C  do |builder|
+          builder.inc << context.extra_code
+          builder.include "<node.h>"
+          builder.c c_code
+        end
       end
 
-
-      ret = instance_method(mname)
+      ret = @owner.instance_method(mname)
 
       ret.extend MethodExtent
       ret.yield_signature = context.yield_signature
 
       ret
+
     end
 
     module MethodExtent
       attr_accessor :yield_signature
     end
+  end
 
-    def fastruby_method(mname)
+  module BuilderModule
+    def build(signature, method_name)
+      fastruby_method(method_name.to_sym).build(signature)
+    end
+
+    def fastruby_method(mname_)
+      mname = mname_.to_sym
       @fastruby_method = Hash.new unless @fastruby_method
-      @fastruby_method[mname] = FastRuby::Method.new unless @fastruby_method[mname]
+      @fastruby_method[mname] = FastRuby::Method.new(mname,self) unless @fastruby_method[mname]
       @fastruby_method[mname]
     end
   end
