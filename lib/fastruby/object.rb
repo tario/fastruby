@@ -33,8 +33,18 @@ $top_level_binding = binding
 class Object
 
   def fastruby(argument, *options_hashes)
-    tree = RubyParser.new.parse(argument)
-    alt_tree = RubyParser.new.parse(argument)
+    tree = nil
+    alt_tree = nil
+
+    if argument.instance_of? Sexp
+      tree = argument
+    elsif argument.instance_of? String
+      tree = RubyParser.new.parse(argument)
+      alt_tree = RubyParser.new.parse(argument)
+    elsif argument.instance_of? Array
+      tree = argument.first
+      alt_tree = argument.last
+    end
 
     if tree[0] == :class
       classname = Object.to_class_name tree[1]
@@ -47,8 +57,10 @@ class Object
       eval(classname).class_eval do
         fastruby([tree[3][1], alt_tree[3][1]], *options_hashes)
       end
-    elsif
-      raise ArgumentError, "Only definition of classes are accepted"
+    elsif tree[0] == :block
+      (1..tree.size-1).each do |i|
+        fastruby([tree[i],alt_tree[i]], *options_hashes)
+      end
     end
   end
 
