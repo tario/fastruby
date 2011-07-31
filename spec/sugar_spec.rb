@@ -82,4 +82,18 @@ describe FastRuby, "fastruby" do
     e5.bar.should be == 15
   end
 
+  class ::E5
+    attr_reader :called
+    def foo
+      @called = true
+    end
+  end
+  it "should execute standalone code" do
+    $e5 = ::E5.new
+    fastruby "
+      $e5.foo
+    "
+    $e5.called.should be == true
+  end
+
 end
