@@ -400,19 +400,9 @@ module FastRuby
         str = str + ";#{to_c(tree[-1])};"
       end
 
-      caller_code = proc { |name| "
-        static VALUE #{name}(VALUE param) {
-          #{@locals_struct} *plocals = (void*)param;
-          VALUE last_expression = Qnil;
+      str << "return last_expression;"
 
-          #{str}
-
-          return last_expression;
-          }
-        "
-      }
-
-      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
+      inline_block str
     end
 
     def to_c_return(tree)
@@ -777,6 +767,7 @@ module FastRuby
           while (#{to_c tree[1]}) {
             #{to_c tree[2]};
           }
+          return Qnil;
       ")
     end
 
@@ -846,8 +837,6 @@ module FastRuby
           VALUE last_expression = Qnil;
 
           #{code}
-
-          return Qnil;
           }
         "
       }
