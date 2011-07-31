@@ -773,21 +773,11 @@ module FastRuby
     end
 
     def to_c_while(tree)
-      caller_code = proc { |name| "
-        static VALUE #{name}(VALUE param) {
-          #{@locals_struct} *plocals = (void*)param;
-          VALUE last_expression = Qnil;
-
+      inline_block("
           while (#{to_c tree[1]}) {
             #{to_c tree[2]};
           }
-
-          return Qnil;
-          }
-        "
-      }
-
-      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
+      ")
     end
 
     def infer_type(recv)
@@ -847,6 +837,22 @@ module FastRuby
       else
         nil
       end
+    end
+
+    def inline_block(code)
+      caller_code = proc { |name| "
+        static VALUE #{name}(VALUE param) {
+          #{@locals_struct} *plocals = (void*)param;
+          VALUE last_expression = Qnil;
+
+          #{code}
+
+          return Qnil;
+          }
+        "
+      }
+
+      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
     end
 
     inline :C  do |builder|
