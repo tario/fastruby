@@ -20,7 +20,6 @@ To improve:
 
 Refactor:
 
-* hashes of methods on builder refactored into an only hash
 * refactor anonoymous methods (tip: use ruby format string for names)
 * Clean of duplicated code
 * Remove ruby inline explicit dependency
