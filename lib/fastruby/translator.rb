@@ -591,20 +591,17 @@ module FastRuby
       condition_tree = tree[1]
       impl_tree = tree[2]
       else_tree = tree[3]
-      code = "if (RTEST(#{to_c condition_tree})) {
-        last_expression = #{to_c impl_tree};
-      }
-      "
-
-      if (else_tree)
-        code = code + " else {
-          last_expression = #{to_c else_tree};
-        }
-        "
-      end
 
       inline_block "
-          #{code};
+          if (RTEST(#{to_c condition_tree})) {
+            last_expression = #{to_c impl_tree};
+          }#{else_tree ?
+            " else {
+            last_expression = #{to_c else_tree};
+            }
+            " : ""
+          }
+
           return last_expression;
       "
     end
