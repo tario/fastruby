@@ -29,15 +29,34 @@ require "inline"
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 
 class Object
-  def self.fastruby(rubycode, *options_hashes)
-    tree = RubyParser.new.parse rubycode
+
+  def self.fastruby(argument, *options_hashes)
+
+    tree = nil
+    alt_tree = nil
+
+    if argument.instance_of? Sexp
+      tree = argument
+    elsif argument.instance_of? String
+      tree = RubyParser.new.parse(argument)
+      alt_tree = RubyParser.new.parse(argument)
+    elsif argument.instance_of? Array
+      tree = argument.first
+      alt_tree = argument.last
+    end
 
     options_hash = {:validate_lvar_types => true}
     options_hashes.each do |opt|
       options_hash.merge!(opt)
     end
 
-    if tree[0] != :defn
+    if tree[0] == :block
+      (1..tree.size-1).each do |i|
+        fastruby([tree[i],alt_tree[i]], *options_hashes)
+      end
+
+      return
+    elsif tree[0] != :defn
       raise ArgumentError, "Only definition of methods are accepted"
     end
 
@@ -51,7 +70,7 @@ class Object
     locals = Set.new
     locals << :self
 
-    FastRuby::GetLocalsProcessor.get_locals(RubyParser.new.parse(rubycode)).each do |local|
+    FastRuby::GetLocalsProcessor.get_locals(alt_tree).each do |local|
       locals << local
     end
 
