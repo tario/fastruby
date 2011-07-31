@@ -20,14 +20,25 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 require "fastruby/translator"
 require "fastruby/inline_extension"
+require "fastruby/method_extension"
 require "fastruby/logging"
 
 module FastRuby
+
+  class Method
+    attr_accessor :tree
+    attr_accessor :locals
+    attr_accessor :options
+  end
+
   module BuilderModule
     def build(signature, method_name)
-      tree = self.method_tree[method_name]
-      locals = self.method_locals[method_name]
-      options = self.method_options[method_name]
+
+      fastrubym = self.fastruby_method(method_name)
+
+      tree = fastrubym.tree
+      locals = fastrubym.locals
+      options = fastrubym.options
       mname = "_" + method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
 
       FastRuby.logger.info mname.to_s
@@ -78,20 +89,10 @@ module FastRuby
       attr_accessor :yield_signature
     end
 
-    def method_tree
-      @method_tree = Hash.new unless @method_tree
-      @method_tree
+    def fastruby_method(mname)
+      @fastruby_method = Hash.new unless @fastruby_method
+      @fastruby_method[mname] = FastRuby::Method.new unless @fastruby_method[mname]
+      @fastruby_method[mname]
     end
-
-    def method_locals
-      @method_locals = Hash.new unless @method_locals
-      @method_locals
-    end
-
-    def method_options
-      @method_options = Hash.new unless @method_options
-      @method_options
-    end
-
   end
 end

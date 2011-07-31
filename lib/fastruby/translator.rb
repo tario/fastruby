@@ -21,6 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "rubygems"
 require "inline"
 require "set"
+require "fastruby/method_extension"
 
 module FastRuby
   class Context
@@ -133,9 +134,8 @@ module FastRuby
 
         convention = nil
 
-        if recvtype.respond_to? :method_tree and inference_complete
-
-          if recvtype.method_tree[call_tree[2]]
+        if recvtype.respond_to? :fastruby_method and inference_complete
+          if recvtype.instance_method(call_tree[2]).fastruby.tree
             mobject = recvtype.build(signature, call_tree[2])
             yield_signature = mobject.yield_signature
 
@@ -665,9 +665,8 @@ module FastRuby
 
         convention = nil
 
-        if recvtype.respond_to? :method_tree and inference_complete
-
-          if recvtype.method_tree[tree[2]]
+        if recvtype.respond_to? :fastruby_method and inference_complete
+          if recvtype.instance_method(tree[2]).fastruby.tree
             mobject = recvtype.build(signature, tree[2])
             convention = :fastruby
           else

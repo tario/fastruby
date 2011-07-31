@@ -21,6 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/translator"
 require "fastruby/builder"
 require "fastruby/getlocals"
+require "fastruby/method_extension"
 require "ruby_parser"
 require "inline"
 
@@ -64,9 +65,10 @@ class Object
       end
     end
 
-    self_.method_tree[method_name] = tree
-    self_.method_locals[method_name] = locals
-    self_.method_options[method_name] = options_hash
+    fastrubym = self_.fastruby_method(method_name)
+    fastrubym.tree = tree
+    fastrubym.locals = locals
+    fastrubym.options = options_hash
 
     def hash.build(key)
       @klass.build(key, @method_name)
