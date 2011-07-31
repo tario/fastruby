@@ -403,7 +403,7 @@ module FastRuby
       caller_code = proc { |name| "
         static VALUE #{name}(VALUE param) {
           #{@locals_struct} *plocals = (void*)param;
-          VALUE last_expression;
+          VALUE last_expression = Qnil;
 
           #{str}
 
@@ -501,7 +501,7 @@ module FastRuby
         #{@locals_struct} locals;
         #{@locals_struct} *plocals = (void*)&locals;
         #{@block_struct} *pblock;
-        VALUE last_expression;
+        VALUE last_expression = Qnil;
 
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
@@ -776,7 +776,7 @@ module FastRuby
       caller_code = proc { |name| "
         static VALUE #{name}(VALUE param) {
           #{@locals_struct} *plocals = (void*)param;
-          VALUE last_expression;
+          VALUE last_expression = Qnil;
 
           while (#{to_c tree[1]}) {
             #{to_c tree[2]};
