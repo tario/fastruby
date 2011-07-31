@@ -49,4 +49,37 @@ describe FastRuby, "fastruby" do
     e3.bar.should be == 15
   end
 
+  class ::E4
+    def foo
+    end
+  end
+
+  it "should compile standalone code and execute it inmediatly" do
+    fastruby "
+      require 'fastruby'
+      ::E4.new.foo
+    "
+  end
+
+  it "should compile standalone code togheter with classes and execute it inmediatly" do
+    fastruby "
+      require 'fastruby'
+      ::E4.new.foo
+
+      class ::E5
+        def foo
+          12
+        end
+        def bar
+          15
+        end
+      end
+
+    "
+
+    e5 = ::E5.new
+    e5.foo.should be == 12
+    e5.bar.should be == 15
+  end
+
 end
