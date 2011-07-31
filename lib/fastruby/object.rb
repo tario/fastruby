@@ -28,7 +28,29 @@ require "inline"
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 
+$top_level_binding = binding
+
 class Object
+
+  def fastruby(argument, *options_hashes)
+    tree = RubyParser.new.parse(argument)
+    alt_tree = RubyParser.new.parse(argument)
+
+    if tree[0] == :class
+      classname = Object.to_class_name tree[1]
+
+      eval("
+      class #{classname}
+      end
+      ", $top_level_binding)
+
+      eval(classname).class_eval do
+        fastruby([tree[3][1], alt_tree[3][1]], *options_hashes)
+      end
+    elsif
+      raise ArgumentError, "Only definition of classes are accepted"
+    end
+  end
 
   def self.fastruby(argument, *options_hashes)
 
@@ -185,5 +207,21 @@ class Object
       return INT2FIX(self);
     }"
   end
+
+  private
+      def self.to_class_name(argument)
+        if argument.instance_of? Symbol
+          argument.to_s
+        elsif argument.instance_of? Sexp
+          if argument[0] == :colon3
+            "::" + to_class_name(argument[1])
+          elsif argument[0] == :colon2
+            to_class_name(argument[1]) + "::" + to_class_name(argument[2])
+          elsif argument[0] == :const
+            to_class_name(argument[1])
+          end
+        end
+      end
+
 end
 
