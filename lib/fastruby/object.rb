@@ -57,10 +57,28 @@ class Object
       eval(classname).class_eval do
         fastruby([tree[3][1], alt_tree[3][1]], *options_hashes)
       end
-    elsif tree[0] == :block
-      (1..tree.size-1).each do |i|
-        fastruby([tree[i],alt_tree[i]], *options_hashes)
+    else
+
+      generated_tree = tree
+      alt_generated_tree = alt_tree
+
+      method_name = "_anonymous_" + rand(100000000000).to_s
+
+      if generated_tree[0] == :block
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                s(:scope, generated_tree))
+        alt_generated_tree = s(:defn, method_name.to_sym, s(:args),
+                s(:scope, alt_generated_tree))
+      elsif generated_tree[0] == :scope
+      else
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, s(:block, generated_tree)))
+        alt_generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, s(:block, alt_generated_tree)))
       end
+
+      Object.fastruby([generated_tree,alt_generated_tree], *options_hashes)
+      send(method_name)
     end
   end
 

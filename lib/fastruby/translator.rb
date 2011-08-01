@@ -135,7 +135,14 @@ module FastRuby
         convention = nil
 
         if recvtype.respond_to? :fastruby_method and inference_complete
-          if recvtype.instance_method(call_tree[2]).fastruby.tree
+
+          method_tree = nil
+          begin
+            method_tree = recvtype.instance_method(call_tree[2]).fastruby.tree
+          rescue NoMethodError
+          end
+
+          if method_tree
             mobject = recvtype.build(signature, call_tree[2])
             yield_signature = mobject.yield_signature
 
@@ -644,7 +651,14 @@ module FastRuby
         convention = nil
 
         if recvtype.respond_to? :fastruby_method and inference_complete
-          if recvtype.instance_method(tree[2]).fastruby.tree
+
+          method_tree = nil
+          begin
+            method_tree = recvtype.instance_method(tree[2]).fastruby.tree
+          rescue NoMethodError
+          end
+
+          if method_tree
             mobject = recvtype.build(signature, tree[2])
             convention = :fastruby
           else
