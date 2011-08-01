@@ -55,16 +55,18 @@ describe FastRuby, "fastruby" do
   end
 
   it "should compile standalone code and execute it inmediatly" do
+    $e4 = ::E4
     fastruby "
       require 'fastruby'
-      ::E4.new.foo
+      $e4.new.foo
     "
   end
 
   it "should compile standalone code togheter with classes and execute it inmediatly" do
+    $e4 = ::E4
     fastruby "
       require 'fastruby'
-      ::E4.new.foo
+      $e4.new.foo
 
       class ::E5
         def foo
@@ -82,18 +84,18 @@ describe FastRuby, "fastruby" do
     e5.bar.should be == 15
   end
 
-  class ::E5
+  class ::E6
     attr_reader :called
     def foo
       @called = true
     end
   end
   it "should execute standalone code" do
-    $e5 = ::E5.new
+    $e6 = ::E6.new
     fastruby "
-      $e5.foo
+      $e6.foo
     "
-    $e5.called.should be == true
+    $e6.called.should be == true
   end
 
 end
