@@ -19,23 +19,25 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "rubygems"
-require "sexp_processor"
 require "set"
 
 module FastRuby
-  class GetLocalsProcessor < SexpProcessor
+  class GetLocalsProcessor
 
     attr_reader :locals
 
     def initialize
-      super()
-      self.require_empty = false
       @locals = Set.new
     end
 
-    def process_lasgn(tree)
+    def process(tree)
+      if tree.node_type == :lasgn
        @locals << tree[1]
-       tree.dup
+      end
+
+      tree.select{|subtree| subtree.instance_of? Sexp}.each do |subtree|
+        process(subtree)
+      end
     end
 
     def self.get_locals(tree)
