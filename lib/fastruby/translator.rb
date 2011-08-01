@@ -764,6 +764,14 @@ module FastRuby
       end
     end
 
+    def to_c_class(tree)
+      inline_block("
+        rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value});
+        return Qnil;
+      ")
+
+    end
+
     def to_c_while(tree)
       inline_block("
           while (#{to_c tree[1]}) {
