@@ -65,7 +65,7 @@ module FastRuby
 
       context.infer_self = signature[0]
 
-      c_code = context.to_c(tree)
+      c_code = context.to_c_method(tree)
 
       @owner.class_eval do
         inline :C  do |builder|

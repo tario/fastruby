@@ -51,18 +51,44 @@ class Object
       end
       ", $top_level_binding)
 
-      eval(classname).class_eval do
-        fastruby(tree[3][1], *options_hashes)
+      generated_tree = tree[3]
+
+      method_name = "_anonymous_" + rand(100000000000).to_s
+
+      if generated_tree[0] == :scope
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                s(:scope, s(:block, generated_tree[1])))
+      elsif generated_tree[0] == :block
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, generated_tree))
+      else
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, s(:block, generated_tree)))
       end
+
+      klass = eval(classname)
+
+      $generated_tree = generated_tree
+      $options_hashes = options_hashes
+
+      klass.class_eval do
+        class << self
+           fastruby $generated_tree, *$options_hashes
+        end
+      end
+
+      klass.send(method_name)
     else
       generated_tree = tree
 
       method_name = "_anonymous_" + rand(100000000000).to_s
 
-      if generated_tree[0] == :block
+      if generated_tree[0] == :scope
         generated_tree = s(:defn, method_name.to_sym, s(:args),
-                s(:scope, generated_tree))
-      elsif generated_tree[0] == :scope
+                generated_tree)
+      elsif generated_tree[0] == :block
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, generated_tree))
       else
         generated_tree = s(:defn, method_name.to_sym, s(:args),
                     s(:scope, s(:block, generated_tree)))

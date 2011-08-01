@@ -458,7 +458,18 @@ module FastRuby
       end
     end
 
+    def to_c_scope(tree)
+      to_c(tree[1])
+    end
+
     def to_c_defn(tree)
+       inline_block("
+        rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value});
+        return Qnil;
+      ")
+    end
+
+    def to_c_method(tree)
       method_name = tree[1]
       args_tree = tree[2]
 
