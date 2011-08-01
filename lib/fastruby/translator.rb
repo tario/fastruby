@@ -401,10 +401,13 @@ module FastRuby
         to_c(subtree)
       }.join(";")
 
-      if tree[-1][0] != :return
-        str = str + ";last_expression = #{to_c(tree[-1])};"
-      else
-        str = str + ";#{to_c(tree[-1])};"
+      if tree[-1]
+
+        if tree[-1][0] != :return
+          str = str + ";last_expression = #{to_c(tree[-1])};"
+        else
+          str = str + ";#{to_c(tree[-1])};"
+        end
       end
 
       str << "return last_expression;"
@@ -459,7 +462,11 @@ module FastRuby
     end
 
     def to_c_scope(tree)
-      to_c(tree[1])
+      if tree[1]
+        to_c(tree[1])
+      else
+        "Qnil"
+      end
     end
 
     def to_c_defn(tree)
