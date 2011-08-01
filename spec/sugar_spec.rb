@@ -98,4 +98,16 @@ describe FastRuby, "fastruby" do
     $e6.called.should be == true
   end
 
+  it "should execute standalone code inside a class definition" do
+    $e6_1 = ::E6.new
+    fastruby "
+      class X
+        $e6_1.foo
+      end
+    "
+    $e6_1.called.should be == true
+  end
+
+
+
 end
