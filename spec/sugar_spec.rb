@@ -116,4 +116,23 @@ describe FastRuby, "fastruby" do
       end
     "
   end
+
+  it "should allow define multiple classes with methods in only one call to fastruby" do
+    fastruby "
+      class E8X
+        def foo
+          123
+        end
+      end
+      class E8Y
+        def bar
+          456
+        end
+      end
+    "
+
+    E8X.new.foo.should be == 123
+    E8Y.new.bar.should be == 456
+  end
+
 end
