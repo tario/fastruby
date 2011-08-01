@@ -108,6 +108,12 @@ describe FastRuby, "fastruby" do
     $e6_1.called.should be == true
   end
 
-
-
+  it "should allow define multiple classes in only one call to fastruby" do
+    fastruby "
+      class E7X
+      end
+      class E7Y
+      end
+    "
+  end
 end
