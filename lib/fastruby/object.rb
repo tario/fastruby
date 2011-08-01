@@ -34,16 +34,13 @@ class Object
 
   def fastruby(argument, *options_hashes)
     tree = nil
-    alt_tree = nil
 
     if argument.instance_of? Sexp
       tree = argument
     elsif argument.instance_of? String
       tree = RubyParser.new.parse(argument)
-      alt_tree = RubyParser.new.parse(argument)
-    elsif argument.instance_of? Array
-      tree = argument.first
-      alt_tree = argument.last
+    else
+      raise ArgumentError
     end
 
     if tree[0] == :class
@@ -55,29 +52,23 @@ class Object
       ", $top_level_binding)
 
       eval(classname).class_eval do
-        fastruby([tree[3][1], alt_tree[3][1]], *options_hashes)
+        fastruby(tree[3][1], *options_hashes)
       end
     else
-
       generated_tree = tree
-      alt_generated_tree = alt_tree
 
       method_name = "_anonymous_" + rand(100000000000).to_s
 
       if generated_tree[0] == :block
         generated_tree = s(:defn, method_name.to_sym, s(:args),
                 s(:scope, generated_tree))
-        alt_generated_tree = s(:defn, method_name.to_sym, s(:args),
-                s(:scope, alt_generated_tree))
       elsif generated_tree[0] == :scope
       else
         generated_tree = s(:defn, method_name.to_sym, s(:args),
                     s(:scope, s(:block, generated_tree)))
-        alt_generated_tree = s(:defn, method_name.to_sym, s(:args),
-                    s(:scope, s(:block, alt_generated_tree)))
       end
 
-      Object.fastruby([generated_tree,alt_generated_tree], *options_hashes)
+      Object.fastruby(generated_tree, *options_hashes)
       send(method_name)
     end
   end
@@ -85,16 +76,13 @@ class Object
   def self.fastruby(argument, *options_hashes)
 
     tree = nil
-    alt_tree = nil
 
     if argument.instance_of? Sexp
       tree = argument
     elsif argument.instance_of? String
       tree = RubyParser.new.parse(argument)
-      alt_tree = RubyParser.new.parse(argument)
-    elsif argument.instance_of? Array
-      tree = argument.first
-      alt_tree = argument.last
+    else
+      raise ArgumentError
     end
 
     options_hash = {:validate_lvar_types => true}
@@ -104,7 +92,7 @@ class Object
 
     if tree[0] == :block
       (1..tree.size-1).each do |i|
-        fastruby([tree[i],alt_tree[i]], *options_hashes)
+        fastruby(tree[i], *options_hashes)
       end
 
       return
@@ -122,7 +110,7 @@ class Object
     locals = Set.new
     locals << :self
 
-    FastRuby::GetLocalsProcessor.get_locals(alt_tree).each do |local|
+    FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
       locals << local
     end
 
