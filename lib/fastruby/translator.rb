@@ -469,6 +469,10 @@ module FastRuby
       end
     end
 
+    def to_c_const(tree)
+      "rb_const_get(rb_cObject, #{tree[1].to_i})"
+    end
+
     def to_c_defn(tree)
       "rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value})"
     end
