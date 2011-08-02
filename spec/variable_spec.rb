@@ -125,4 +125,52 @@ describe FastRuby, "fastruby" do
     ::U8::U81.new.foo.should be == 11
   end
 
+  class ::U9
+    fastruby "
+      def foo
+        ::U9C
+      end
+    "
+  end
+  it "should read constant with colon3" do
+    ::U9C = 21
+    ::U9.new.foo.should be == 21
+  end
+
+  it "should write constant with colon3" do
+    class ::U10
+      fastruby "
+        def foo
+          ::U10C = 51
+        end
+      "
+    end
+    ::U10.new.foo
+    ::U10C.should be == 51
+  end
+
+  class ::U11
+    fastruby "
+      def foo
+        ::U11::U11C
+      end
+    "
+  end
+  it "should read constant with colon3 and colon2" do
+    ::U11::U11C = 21
+    ::U11.new.foo.should be == 21
+  end
+
+  it "should write constant with colon3 and colon2" do
+    class ::U12
+      fastruby "
+        def foo
+          ::U12::U12C = 51
+        end
+      "
+    end
+    ::U12.new.foo
+    ::U12::U12C.should be == 51
+  end
+
 end
