@@ -55,8 +55,6 @@ I will stabilize the API and document it for next releases. I promise
 
 == Known Limitations & Issues
 
-* fastruby only can be called from inside a class scope, and only can be used to define instance methods (no class methods)
-* fastruby invokations can't take more than one method
 * monkey patching does not work with fastruby methods
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call it's pretty fast)
 * does not support singleton methods (both define & call)
