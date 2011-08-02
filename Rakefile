@@ -15,7 +15,6 @@ spec = Gem::Specification.new do |s|
   s.homepage = "http://github.com/tario/fastruby"
   s.add_dependency "RubyInline", "= 3.9.0"
   s.add_dependency "ruby_parser", "= 2.0.6"
-  s.add_dependency "sexp_processor", "= 3.0.5"
   s.has_rdoc = true
   s.extra_rdoc_files = [ 'README' ]
 #  s.rdoc_options << '--main' << 'README'
