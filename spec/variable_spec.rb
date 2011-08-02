@@ -87,4 +87,42 @@ describe FastRuby, "fastruby" do
     ::U6.new.foo.should be == 11
   end
 
+
+  class ::U7
+    class U71
+      fastruby "
+        def foo
+          U7C = 11
+        end
+      "
+    end
+  end
+
+  it "should write nested constants" do
+    ::U7::U71.new.foo
+    ::U7::U71::U7C.should be == 11
+
+    lambda {
+    ::U7::U7C
+    }.should raise_error
+
+    lambda {
+    ::U7C
+    }.should raise_error
+  end
+
+  class ::U8
+    class U81
+      fastruby "
+        def foo
+          U8C
+        end
+      "
+    end
+  end
+  it "should read  nested constants" do
+    ::U8::U81::U8C = 11
+    ::U8::U81.new.foo.should be == 11
+  end
+
 end
