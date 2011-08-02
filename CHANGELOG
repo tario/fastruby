@@ -1,0 +1,9 @@
+0.0.3	Added support to write and read constants
+
+		Added support to execution of complete ruby code (entire clases o any ruby code)
+
+		Refactored code to avoid use sexp_processor
+
+0.0.2	Added missing sexp_processor dependency
+
+0.0.1	First test release
