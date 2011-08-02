@@ -570,6 +570,30 @@ module FastRuby
       "_rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
     end
 
+    def to_c_colon2(tree)
+      inline_block "
+        VALUE klass = #{to_c tree[1]};
+
+      if (rb_is_const_id(node->nd_mid)) {
+        switch (TYPE(klass)) {
+          case T_CLASS:
+          case T_MODULE:
+            return rb_const_get_from(klass, #{tree[2].to_i});
+            break;
+          default:
+            rb_raise(rb_eTypeError, \"%s is not a class/module\",
+               RSTRING(rb_obj_as_string(klass))->ptr);
+            break;
+        }
+      }
+      else {
+        return rb_funcall(klass, #{tree[2].to_i}, 0, 0);
+      }
+
+        return Qnil;
+      "
+    end
+
     def to_c_lasgn(tree)
       if options[:validate_lvar_types]
         klass = @infer_lvar_map[tree[1]]
