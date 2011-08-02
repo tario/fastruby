@@ -60,4 +60,31 @@ describe FastRuby, "fastruby" do
     u4.foo.should be == 88
   end
 
+  class ::U5
+    fastruby "
+      def foo
+        U5C = 11
+      end
+    "
+  end
+
+  it "should write constants" do
+    ::U5.new.foo
+
+    U5C.should be == 11
+  end
+
+  class ::U6
+    fastruby "
+      def foo
+        U6C
+      end
+    "
+  end
+
+  it "should read constants" do
+    ::U6C = 11
+    ::U6.new.foo.should be == 11
+  end
+
 end
