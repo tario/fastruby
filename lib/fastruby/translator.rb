@@ -575,9 +575,9 @@ module FastRuby
     end
     def to_c_colon2(tree)
       inline_block "
-        VALUE klass = #{to_c tree[1]};
+        VALUE klass = #{tree[2].to_i};
 
-      if (rb_is_const_id(node->nd_mid)) {
+      if (rb_is_const_id(#{tree[2].to_i})) {
         switch (TYPE(klass)) {
           case T_CLASS:
           case T_MODULE:
