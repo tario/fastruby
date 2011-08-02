@@ -570,6 +570,9 @@ module FastRuby
       "_rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
     end
 
+    def to_c_colon3(tree)
+      "rb_const_get_from(rb_cObject, #{tree[1].to_i})"
+    end
     def to_c_colon2(tree)
       inline_block "
         VALUE klass = #{to_c tree[1]};
