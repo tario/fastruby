@@ -103,12 +103,8 @@ describe FastRuby, "fastruby" do
     ::U7::U71::U7C.should be == 11
 
     lambda {
-    ::U7::U7C
-    }.should raise_error
-
-    lambda {
-    ::U7C
-    }.should raise_error
+    ::U7::U7C.should be == 11
+    }.should_not raise_error
   end
 
   class ::U8
