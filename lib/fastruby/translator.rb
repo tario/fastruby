@@ -470,12 +470,32 @@ module FastRuby
     end
 
     def to_c_cdecl(tree)
-      inline_block "
-        // set constant #{tree[1].to_s}
-        VALUE val = #{to_c tree[2]};
-        rb_const_set(rb_cObject, #{tree[1].to_i}, val);
-        return val;
-        "
+      if tree[1].instance_of? Symbol
+        inline_block "
+          // set constant #{tree[1].to_s}
+          VALUE val = #{to_c tree[2]};
+          rb_const_set(rb_cObject, #{tree[1].to_i}, val);
+          return val;
+          "
+      elsif tree[1].instance_of? Sexp
+
+        if tree[1].node_type == :colon2
+          inline_block "
+            // set constant #{tree[1].to_s}
+            VALUE val = #{to_c tree[2]};
+            VALUE klass = #{to_c tree[1][1]};
+            rb_const_set(klass, #{tree[1][2].to_i}, val);
+            return val;
+            "
+        elsif tree[1].node_type == :colon3
+          inline_block "
+            // set constant #{tree[1].to_s}
+            VALUE val = #{to_c tree[2]};
+            rb_const_set(rb_cObject, #{tree[1][1].to_i}, val);
+            return val;
+            "
+        end
+      end
     end
 
     def to_c_const(tree)
