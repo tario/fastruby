@@ -136,8 +136,8 @@ describe FastRuby, "fastruby" do
   it "should write constant with colon3" do
     class ::U10
       fastruby "
+        ::U10C = 51
         def foo
-          ::U10C = 51
         end
       "
     end
@@ -160,8 +160,8 @@ describe FastRuby, "fastruby" do
   it "should write constant with colon3 and colon2" do
     class ::U12
       fastruby "
+        ::U12::U12C = 51
         def foo
-          ::U12::U12C = 51
         end
       "
     end
