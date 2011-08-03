@@ -99,7 +99,7 @@ class Object
     end
   end
 
-  def self.fastruby(argument, *options_hashes)
+  def self.fastruby(argument,*options_hashes)
 
     tree = nil
 
@@ -110,6 +110,11 @@ class Object
     else
       raise ArgumentError
     end
+
+    fastruby_defn(tree,*options_hashes)
+  end
+
+  def self.fastruby_defn(tree, *options_hashes)
 
     options_hash = {:validate_lvar_types => true}
     options_hashes.each do |opt|
