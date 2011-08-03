@@ -478,7 +478,7 @@ module FastRuby
     end
 
     def to_c_const(tree)
-      "rb_const_get(rb_cObject, #{tree[1].to_i})"
+      "rb_const_get(CLASS_OF(plocals->self), #{tree[1].to_i})"
     end
 
     def to_c_defn(tree)
