@@ -258,8 +258,15 @@ class Object
     end
   end
 
+  def internal_value
+    $refered_from_code_array = Array.new unless $refered_from_code_array
+    $refered_from_code_array << self
+
+    internal_value_
+  end
+
   inline :C do |builder|
-    builder.c "VALUE internal_value() {
+    builder.c "VALUE internal_value_() {
       return INT2FIX(self);
     }"
   end

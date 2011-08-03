@@ -1,4 +1,6 @@
-0.0.3	Added support to write and read constants
+0.0.3	Implemented global array to make references to literal objects used in code
+
+		Added support to write and read constants
 
 		Added support to execution of complete ruby code (entire clases o any ruby code)
 
