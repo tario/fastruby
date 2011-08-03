@@ -471,6 +471,7 @@ module FastRuby
 
     def to_c_cdecl(tree)
       inline_block "
+        // set constant #{tree[1].to_s}
         VALUE val = #{to_c tree[2]};
         rb_const_set(rb_cObject, #{tree[1].to_i}, val);
         return val;

@@ -111,7 +111,38 @@ class Object
       raise ArgumentError
     end
 
-    fastruby_defn(tree,*options_hashes)
+    if tree.node_type == :defn
+      fastruby_defn(tree,*options_hashes)
+    else
+      generated_tree = tree
+
+      method_name = "_anonymous_" + rand(100000000000).to_s
+
+      if generated_tree[0] == :scope
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                generated_tree)
+      elsif generated_tree[0] == :block
+         generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, generated_tree))
+      else
+        generated_tree = s(:defn, method_name.to_sym, s(:args),
+                    s(:scope, s(:block, generated_tree)))
+      end
+
+
+      $generated_tree = generated_tree
+      $options_hashes = options_hashes
+
+      klass = self
+      klass.class_eval do
+        class << self
+          fastruby_defn($generated_tree,*$options_hashes)
+        end
+      end
+
+      send(method_name)
+    end
+
   end
 
   def self.fastruby_defn(tree, *options_hashes)
