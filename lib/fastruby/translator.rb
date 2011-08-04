@@ -506,6 +506,16 @@ module FastRuby
       "rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value})"
     end
 
+    def to_c_defs(tree)
+      args_tree = tree[3];
+
+      inline_block "
+        VALUE address = rb_funcall(plocals->self,#{:fastruby_defs.to_i},1,(VALUE)#{tree.internal_value});
+        rb_define_singleton_method(#{to_c tree[1]}, \"#{tree[2].to_s}\", (void*)address, #{args_tree.size-1});
+        return Qnil;
+        "
+    end
+
     def to_c_method(tree)
       method_name = tree[1]
       args_tree = tree[2]
