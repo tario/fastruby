@@ -62,6 +62,8 @@ class Object
       raise ArgumentError
     end
 
+    return unless tree
+
     if tree[0] == :class
       classname = Object.to_class_name tree[1]
 
@@ -101,6 +103,8 @@ class Object
     else
       raise ArgumentError
     end
+
+    return unless tree
 
     if tree.node_type == :defn
       fastruby_defn(tree,*options_hashes)
