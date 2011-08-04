@@ -22,3 +22,6 @@ require "fastruby/translator"
 require "fastruby/object"
 require "fastruby/exceptions"
 
+module FastRuby
+  VERSION = "0.0.3"
+end

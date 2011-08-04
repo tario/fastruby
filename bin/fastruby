@@ -1,0 +1,23 @@
+#!/usr/bin/ruby
+require "rubygems"
+require "fastruby"
+
+script_path = nil
+
+ARGV.each do |arg|
+	if arg[0..0] == "-"
+		if arg[1..-1] == "v"
+			print "Fastruby #{FastRuby::VERSION} over Ruby #{RUBY_VERSION}\n"
+		end
+	else
+		script_path = arg
+	end
+end
+
+if script_path
+	source = nil
+	File.open(script_path) do |file|
+		source = file.read
+		fastruby source
+	end
+end
