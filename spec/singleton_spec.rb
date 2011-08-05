@@ -46,4 +46,31 @@ describe FastRuby, "fastruby" do
     r3.bar.should be == 24
   end
 
+  it "should call singleton methods from inside" do
+    fastruby '
+      class R5
+        def bar
+          12
+        end
+      end
+      class R6
+        def foo(x)
+          def x.bar
+            24
+          end
+        end
+      end
+      class R7
+        def foo(x)
+          x.bar+1
+        end
+      end
+    '
+
+    r5 = R5.new
+    R7.new.foo(r5).should be == 13
+    R6.new.foo(r5)
+    R7.new.foo(r5).should be == 25
+  end
+
 end
