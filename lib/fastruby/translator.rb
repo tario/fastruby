@@ -72,10 +72,10 @@ module FastRuby
       send("to_c_" + tree[0].to_s, tree);
     end
 
-    def anonymous_function(method)
+    def anonymous_function
 
       name = "anonymous" + rand(10000000).to_s
-      extra_code << method.call(name)
+      extra_code << yield(name)
 
       name
     end
@@ -274,7 +274,7 @@ module FastRuby
         "
         }
 
-        "rb_iterate(#{anonymous_function(caller_code)}, (VALUE)#{locals_pointer}, #{anonymous_function(block_code)}, (VALUE)#{locals_pointer})"
+        "rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)#{locals_pointer}, #{anonymous_function(&block_code)}, (VALUE)#{locals_pointer})"
       elsif convention == :fastruby
 
         str_arg_initialization = ""
@@ -322,7 +322,7 @@ module FastRuby
               static VALUE #{name}(VALUE param) {
                 #{@block_struct} block;
 
-                block.block_function_address = (void*)#{anonymous_function(block_code)};
+                block.block_function_address = (void*)#{anonymous_function(&block_code)};
                 block.block_function_param = (void*)param;
 
                 // call to #{call_tree[2]}
@@ -339,7 +339,7 @@ module FastRuby
               static VALUE #{name}(VALUE param) {
                 #{@block_struct} block;
 
-                block.block_function_address = (void*)#{anonymous_function(block_code)};
+                block.block_function_address = (void*)#{anonymous_function(&block_code)};
                 block.block_function_param = (void*)param;
 
                 // call to #{call_tree[2]}
@@ -351,7 +351,7 @@ module FastRuby
             }
         end
 
-        "#{anonymous_function(caller_code)}((VALUE)#{locals_pointer})"
+        "#{anonymous_function(&caller_code)}((VALUE)#{locals_pointer})"
       end
     end
 
@@ -389,9 +389,9 @@ module FastRuby
       end
 
       if tree.size > 1
-        anonymous_function(block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
+        anonymous_function(&block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
       else
-        anonymous_function(block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){})"
+        anonymous_function(&block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){})"
       end
     end
 
@@ -441,16 +441,14 @@ module FastRuby
         hash_aset_code << "rb_hash_aset(hash, #{strkey}, #{strvalue});"
       end
 
-      wrapper_func = proc { |name| "
+      anonymous_function{ |name| "
         static VALUE #{name}(VALUE value_params) {
           #{@locals_struct} *plocals = (void*)value_params;
           VALUE hash = rb_hash_new();
           #{hash_aset_code}
           return hash;
         }
-      " }
-
-      anonymous_function(wrapper_func) + "((VALUE)#{locals_pointer})"
+      " } + "((VALUE)#{locals_pointer})"
     end
 
     def to_c_array(tree)
@@ -598,11 +596,11 @@ module FastRuby
 
           if (rb_block_given_p()) {
             block_address = #{
-              anonymous_function(proc do |name|
+              anonymous_function{|name|
               "static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
                 return rb_yield_splat(rb_ary_new4(argc,argv));
               }"
-              end)
+              }
             };
 
             block_param = 0;
@@ -739,7 +737,7 @@ module FastRuby
           }
 
 
-          "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(verify_type_function)}(#{to_c tree[2]}))"
+          "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(&verify_type_function)}(#{to_c tree[2]}))"
         else
           "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
         end
@@ -878,7 +876,7 @@ module FastRuby
                 str_incall_args = "recv"
               end
 
-              wrapper_func = proc { |name| "
+              anonymous_function{ |name| "
                 static VALUE #{name}(VALUE recv) {
                   // call to #{recvtype}##{mname}
                   if (rb_block_given_p()) {
@@ -888,9 +886,7 @@ module FastRuby
                     return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                   }
                 }
-              " }
-
-              anonymous_function(wrapper_func) + "(#{to_c(recv)})"
+              " } + "(#{to_c(recv)})"
 
             end
           else
@@ -913,7 +909,7 @@ module FastRuby
                 str_incall_args = "recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}"
               end
 
-              wrapper_func = proc { |name| "
+              anonymous_function{ |name| "
                 static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
                   // call to #{recvtype}##{mname}
                   if (rb_block_given_p()) {
@@ -923,9 +919,7 @@ module FastRuby
                     return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                   }
                 }
-              " }
-
-              anonymous_function(wrapper_func) + "(#{to_c(recv)}, #{strargs})"
+              " } + "(#{to_c(recv)}, #{strargs})"
             end
           end
         else
@@ -1007,23 +1001,21 @@ module FastRuby
       elsif mname == :inline_c
         code = args[1][1]
 
-        caller_code = proc { |name| "
+        return anonymous_function{ |name| "
            static VALUE #{name}(VALUE param) {
             #{@locals_struct} *plocals = (void*)param;
             #{code};
             return Qnil;
           }
          "
-        }
-
-        return anonymous_function(caller_code)+"((VALUE)plocals)"
+        }+"((VALUE)plocals)"
       else
         nil
       end
     end
 
     def inline_block(code)
-      caller_code = proc { |name| "
+      anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
           #{@locals_struct} *plocals = (void*)param;
           VALUE last_expression = Qnil;
@@ -1031,9 +1023,7 @@ module FastRuby
           #{code}
           }
         "
-      }
-
-      anonymous_function(caller_code) + "((VALUE)#{locals_pointer})"
+      } + "((VALUE)#{locals_pointer})"
     end
 
     inline :C  do |builder|
