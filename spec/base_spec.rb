@@ -354,4 +354,9 @@ describe FastRuby, "fastruby" do
     ::A14.new.foo(55).should be == 44;
   end
 
+  it "should do nothing when execute fastruby with nothing" do
+    lambda {
+    fastruby ""
+    }.should_not raise_error
+  end
 end

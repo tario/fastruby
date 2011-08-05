@@ -62,6 +62,8 @@ class Object
       raise ArgumentError
     end
 
+    return unless tree
+
     if tree[0] == :class
       classname = Object.to_class_name tree[1]
 
@@ -90,6 +92,10 @@ class Object
     end
   end
 
+  def self.fastruby_defs(*args)
+    raise NoMethodError, "not implemented yet"
+  end
+
   def self.fastruby(argument,*options_hashes)
 
     tree = nil
@@ -101,6 +107,8 @@ class Object
     else
       raise ArgumentError
     end
+
+    return unless tree
 
     if tree.node_type == :defn
       fastruby_defn(tree,*options_hashes)
