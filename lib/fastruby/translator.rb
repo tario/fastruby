@@ -552,15 +552,15 @@ module FastRuby
       end
 
       strargs = if args_tree.size > 1
-        "VALUE self, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        "VALUE self, void* block_address, VALUE block_param, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
       else
-        "VALUE self"
+        "VALUE self, void* block_address, VALUE block_param"
       end
 
-      "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+      extra_code << "static VALUE #{@alt_method_name + "_real"}(#{strargs}) {
         #{@locals_struct} locals;
         #{@locals_struct} *plocals = (void*)&locals;
-
+        #{@block_struct} *pblock;
         VALUE last_expression = Qnil;
 
         #{args_tree[1..-1].map { |arg|
@@ -568,7 +568,47 @@ module FastRuby
         }.join("") }
 
         locals.self = self;
+
+        locals.block_function_address = block_address;
+        locals.block_function_param = block_param;
+
         return #{str_impl};
+      }"
+
+      strargs2 = if args_tree.size > 1
+        "VALUE self, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+      else
+        "VALUE self"
+      end
+
+      value_cast = ( ["VALUE"]*(args_tree.size+1) ).join(",")
+      strmethodargs = ""
+
+      if args_tree.size > 1
+        strmethodargs = "self,block_address,block_param,#{args_tree[1..-1].map(&:to_s).join(",") }"
+      else
+        strmethodargs = "self,block_address,block_param"
+      end
+
+      "
+      VALUE #{@alt_method_name}(#{strargs2}) {
+          int argc = #{args_tree.size};
+          void* block_address = 0;
+          VALUE block_param = Qnil;
+
+          if (rb_block_given_p()) {
+            block_address = #{
+              anonymous_function(proc do |name|
+              "static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
+                return rb_yield_splat(rb_ary_new4(argc,argv));
+              }"
+              end)
+            };
+
+            block_param = 0;
+          }
+
+          return #{@alt_method_name + "_real"}(#{strmethodargs});
       }
       "
     end
