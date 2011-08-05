@@ -34,7 +34,7 @@ module FastRuby
     attr_reader :extra_code
     attr_reader :yield_signature
 
-    def initialize
+    def initialize(common_func = true)
       @infer_lvar_map = Hash.new
       @extra_code = ""
       @options = {}
@@ -42,24 +42,25 @@ module FastRuby
       extra_code << '#include "node.h"
       '
 
-      extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
-        rb_gvar_set((struct global_entry*)ge,value);
-        return value;
-      }
-      "
+      if common_func
+        extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
+          rb_gvar_set((struct global_entry*)ge,value);
+          return value;
+        }
+        "
 
-      extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
-        rb_ivar_set(recv,idvar,value);
-        return value;
-      }
-      "
+        extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
+          rb_ivar_set(recv,idvar,value);
+          return value;
+        }
+        "
 
-      extra_code << "static VALUE _lvar_assing(VALUE* destination,VALUE value) {
-        *destination = value;
-        return value;
-      }
-      "
-
+        extra_code << "static VALUE _lvar_assing(VALUE* destination,VALUE value) {
+          *destination = value;
+          return value;
+        }
+        "
+      end
     end
 
     def on_block
@@ -509,11 +510,67 @@ module FastRuby
     def to_c_defs(tree)
       args_tree = tree[3];
 
+      tmp = FastRuby.build_defs(tree)
+
+      extra_code << tmp[0]
+
       inline_block "
-        VALUE address = rb_funcall(plocals->self,#{:fastruby_defs.to_i},1,(VALUE)#{tree.internal_value});
-        rb_define_singleton_method(#{to_c tree[1]}, \"#{tree[2].to_s}\", (void*)address, #{args_tree.size-1});
+        rb_define_singleton_method(#{to_c tree[1]}, \"#{tree[2].to_s}\", (void*)#{tmp[1]}, #{args_tree.size-1});
         return Qnil;
         "
+    end
+
+    def to_c_method_defs(tree)
+
+      method_name = tree[2]
+      args_tree = tree[3]
+
+      impl_tree = tree[4][1]
+
+      @locals_struct = "struct {
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
+        void* block_function_address;
+        VALUE block_function_param;
+        }"
+
+      @block_struct = "struct {
+        void* block_function_address;
+        void* block_function_param;
+      }"
+
+      str_impl = ""
+      # if impl_tree is a block, implement the last node with a return
+      if impl_tree[0] == :block
+        str_impl = to_c impl_tree
+      else
+        if impl_tree[0] != :return
+          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
+        else
+          str_impl = str_impl + ";#{to_c(impl_tree)};"
+        end
+      end
+
+      strargs = if args_tree.size > 1
+        "VALUE self, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+      else
+        "VALUE self"
+      end
+
+      "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+        #{@locals_struct} locals;
+        #{@locals_struct} *plocals = (void*)&locals;
+
+        VALUE last_expression = Qnil;
+
+        #{args_tree[1..-1].map { |arg|
+          "locals.#{arg} = #{arg};\n"
+        }.join("") }
+
+        locals.self = self;
+        return #{str_impl};
+      }
+      "
     end
 
     def to_c_method(tree)
