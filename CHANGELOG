@@ -1,3 +1,9 @@
+0.0.4	Support for defined?
+
+		Support for modules
+
+		Support for singleton methods
+
 0.0.3	Implemented global array to make references to literal objects used in code
 
 		Added support to write and read constants
