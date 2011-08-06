@@ -220,7 +220,7 @@ describe FastRuby, "fastruby" do
   $a = 9
   test_defined "defined? $a", "global variable", "global-variable"
   test_defined "a = 17; defined? a", "local variable", "local-variable"
-  test_defined "defined? Fixnum", "constant", "const"
+  test_defined "defined? Fixnum", "constant", "constant"
   test_defined_block "defined? yield", "yield", "yield"
   test_defined "defined? true", "true", "true"
   test_defined "defined? false", "false", "false"

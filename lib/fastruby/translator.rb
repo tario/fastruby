@@ -533,6 +533,8 @@ module FastRuby
       'rb_str_new2("local-variable")'
       elsif nt == :gvar
       "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? rb_str_new2(\"global-variable\") : Qnil"
+      elsif nt == :const
+      "rb_const_defined(rb_cObject, #{tree[1][1].to_i}) ? rb_str_new2(\"constant\") : Qnil"
       elsif nt == :call
         inline_block "
           VALUE klass = CLASS_OF(#{to_c tree[1][1]});
