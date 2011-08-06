@@ -536,14 +536,7 @@ module FastRuby
       elsif nt == :const
       "rb_const_defined(rb_cObject, #{tree[1][1].to_i}) ? #{"constant".internal_value} : Qnil"
       elsif nt == :call
-        inline_block "
-          VALUE klass = CLASS_OF(#{to_c tree[1][1]});
-          if (rb_method_node(klass, #{tree[1][2].to_i})) {
-            return #{"method".internal_value};
-          } else {
-            return Qnil;
-          }
-        "
+      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{tree[1][2].to_i}) ? #{"method".internal_value} : Qnil"
       elsif nt == :yield
         "rb_block_given_p() ? #{"yield".internal_value} : Qnil"
       elsif nt == :ivar
