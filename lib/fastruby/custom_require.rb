@@ -23,14 +23,22 @@ module Kernel
     if path =~ /\.so$/
       require(path)
     else
+
+      complete_path = path + (path =~ /\.rb$/ ? "" : ".rb")
+
       $LOAD_PATH.each do |load_path|
-        source = nil
-        File.open(load_path + "/" + path) do |file|
-          source = file.read
+        begin
+          source = nil
+          File.open(load_path + "/" + complete_path) do |file|
+            source = file.read
+          end
+          fastruby source
+          return true
+        rescue Errno::ENOENT
         end
-        fastruby source
-        return true
       end
+
+      raise LoadError
     end
   end
 end
