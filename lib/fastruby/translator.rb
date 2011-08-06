@@ -803,6 +803,8 @@ module FastRuby
         return directive_code
       end
 
+      mname = :require_fastruby if mname == :require
+
       strargs = args[1..-1].map{|arg| to_c arg}.join(",")
 
       argnum = args.size - 1

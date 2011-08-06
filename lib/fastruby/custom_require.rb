@@ -18,11 +18,19 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
-require "fastruby/object"
-require "fastruby/exceptions"
-require "fastruby/custom_require"
-
-module FastRuby
-  VERSION = "0.0.3"
+module Kernel
+  def fastruby_require(path)
+    if path =~ /\.so$/
+      require(path)
+    else
+      $LOAD_PATH.each do |load_path|
+        source = nil
+        File.open(load_path + "/" + path) do |file|
+          source = file.read
+        end
+        fastruby source
+        return true
+      end
+    end
+  end
 end
