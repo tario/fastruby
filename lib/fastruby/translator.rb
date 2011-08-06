@@ -519,7 +519,19 @@ module FastRuby
     end
 
     def to_c_defined(tree)
+      nt = tree[1].node_type
+
+      if nt == :self
       'rb_str_new2("self")'
+      elsif nt == :true
+      'rb_str_new2("true")'
+      elsif nt == :false
+      'rb_str_new2("false")'
+      elsif nt == :nil
+      'rb_str_new2("nil")'
+      else
+      'rb_str_new2("")'
+      end
     end
 
     def to_c_method_defs(tree)
