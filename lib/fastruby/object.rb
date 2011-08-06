@@ -106,6 +106,8 @@ class Object
       end
 
       klass.send(method_name)
+    elsif tree[0] == :defn
+      Object.fastruby_defn(tree, *options_hashes)
     else
       method_name = "_anonymous_" + rand(100000000000).to_s
       Object.fastruby(FastRuby.encapsulate_tree(tree,method_name), *options_hashes)
