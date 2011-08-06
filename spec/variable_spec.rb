@@ -180,29 +180,6 @@ describe FastRuby, "fastruby" do
     ::U13.new.foo.should be == nil
   end
 
-  it "should call defined? to defined local and return 'local-variable" do
-    class ::U14
-      fastruby "
-        def foo
-          a = 9
-          defined? a
-        end
-      "
-    end
-    ::U14.new.foo.should be == "local-variable"
-  end
-
-  it "should call defined? to defined constant and return 'constant" do
-    class ::U15
-      fastruby "
-        def foo
-          defined? Fixnum
-        end
-      "
-    end
-    ::U15.new.foo.should be == "constant"
-  end
-
   it "should call defined? to undefined constant and return nil" do
     class ::U16
       fastruby "
@@ -213,5 +190,46 @@ describe FastRuby, "fastruby" do
     end
     ::U16.new.foo.should be == nil
   end
+
+  def self.test_defined(code,title,defined_name)
+    it "should call defined? to defined #{title} and return '#{defined_name}" do
+      classname = "::U"+rand(1000000).to_s
+
+      code = "def foo; #{code}; end"
+      eval("class #{classname}
+        fastruby #{code.inspect}
+      end")
+      eval(classname).new.foo.should be == defined_name
+    end
+  end
+
+  def self.test_defined_block(code,title,defined_name)
+    it "should call defined? to defined #{title} and return '#{defined_name}" do
+      classname = "::U"+rand(1000000).to_s
+
+      code = "def foo; #{code}; end"
+      eval("class #{classname}
+        fastruby #{code.inspect}
+      end")
+      eval(classname).new.foo{}.should be == defined_name
+    end
+  end
+
+  test_defined "@a =17; defined? @a", "instance variable", "instance-variable"
+
+  $a = 9
+  test_defined "defined? $a", "global variable", "global-variable"
+  test_defined "a = 17; defined? a", "local variable", "local-variable"
+  test_defined "defined? Fixnum", "constant", "const"
+  test_defined_block "defined? yield", "yield", "yield"
+  test_defined "defined? true", "true", "true"
+  test_defined "defined? false", "false", "false"
+  test_defined "defined? nil", "nil", "nil"
+  test_defined "defined? self", "self", "self"
+  test_defined "defined? print", "method", "method"
+
+  ["a", "$a", "@a", "@@a", "A"].each do |var|
+     test_defined "defined? #{var}=0", "#{var} assignment", "assignment"
+   end
 
 end
