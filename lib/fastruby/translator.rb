@@ -530,7 +530,7 @@ module FastRuby
       elsif nt == :nil
       'rb_str_new2("nil")'
       else
-      'rb_str_new2("")'
+      'rb_str_new2("assignment")'
       end
     end
 
