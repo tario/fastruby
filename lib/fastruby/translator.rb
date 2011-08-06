@@ -531,6 +531,10 @@ module FastRuby
       'rb_str_new2("nil")'
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
+      elsif nt == :call
+      'rb_str_new2("local-variable")'
+      elsif nt == :ivar
+      "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? rb_str_new2(\"instance-variable\") : Qnil"
       else
       'rb_str_new2("assignment")'
       end
