@@ -540,6 +540,8 @@ module FastRuby
             return Qnil;
           }
         "
+      elsif nt == :yield
+        'rb_block_given_p() ? rb_str_new2("yield") : Qnil'
       elsif nt == :ivar
       "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? rb_str_new2(\"instance-variable\") : Qnil"
       else
