@@ -57,7 +57,7 @@ describe FastRuby, "fastruby" do
   it "should compile standalone code and execute it inmediatly" do
     $e4 = ::E4
     fastruby "
-      require 'fastruby'
+      print 'fastruby'
       $e4.new.foo
     "
   end
@@ -65,7 +65,7 @@ describe FastRuby, "fastruby" do
   it "should compile standalone code togheter with classes and execute it inmediatly" do
     $e4 = ::E4
     fastruby "
-      require 'fastruby'
+      print 'fastruby'
       $e4.new.foo
 
       class ::E5
