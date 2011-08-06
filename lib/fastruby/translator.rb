@@ -794,6 +794,10 @@ module FastRuby
     end
 
     def to_c_call(tree)
+      if tree[2] == :require
+        tree[2] = :fastruby_require
+      end
+
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
