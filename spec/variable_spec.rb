@@ -169,4 +169,49 @@ describe FastRuby, "fastruby" do
     ::U12::U12C.should be == 51
   end
 
+  it "should call defined? to undefined local variable and return nil" do
+    class ::U13
+      fastruby "
+        def foo
+          defined? wowowowo
+        end
+      "
+    end
+    ::U13.new.foo.should be == nil
+  end
+
+  it "should call defined? to defined local and return 'local-variable" do
+    class ::U14
+      fastruby "
+        def foo
+          a = 9
+          defined? a
+        end
+      "
+    end
+    ::U14.new.foo.should be == "local-variable"
+  end
+
+  it "should call defined? to defined constant and return 'constant" do
+    class ::U15
+      fastruby "
+        def foo
+          defined? Fixnum
+        end
+      "
+    end
+    ::U15.new.foo.should be == "constant"
+  end
+
+  it "should call defined? to undefined constant and return nil" do
+    class ::U16
+      fastruby "
+        def foo
+          defined? Wowowowow
+        end
+      "
+    end
+    ::U16.new.foo.should be == nil
+  end
+
 end
