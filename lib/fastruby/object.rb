@@ -85,6 +85,27 @@ class Object
       end
 
       klass.send(method_name)
+    elsif tree[0] == :module
+      modulename = Object.to_class_name tree[1]
+
+      eval("
+      module #{modulename}
+      end
+      ", $top_level_binding)
+
+      klass = eval(modulename)
+
+      method_name = "_anonymous_" + rand(100000000000).to_s
+      $generated_tree = FastRuby.encapsulate_tree(tree[2],method_name)
+      $options_hashes = options_hashes
+
+      klass.class_eval do
+        class << self
+           fastruby $generated_tree, *$options_hashes
+        end
+      end
+
+      klass.send(method_name)
     else
       method_name = "_anonymous_" + rand(100000000000).to_s
       Object.fastruby(FastRuby.encapsulate_tree(tree,method_name), *options_hashes)
