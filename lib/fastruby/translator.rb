@@ -532,24 +532,24 @@ module FastRuby
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
       elsif nt == :gvar
-      "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? rb_str_new2(\"global-variable\") : Qnil"
+      "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? #{"global-variable".internal_value} : Qnil"
       elsif nt == :const
-      "rb_const_defined(rb_cObject, #{tree[1][1].to_i}) ? rb_str_new2(\"constant\") : Qnil"
+      "rb_const_defined(rb_cObject, #{tree[1][1].to_i}) ? #{"constant".internal_value} : Qnil"
       elsif nt == :call
         inline_block "
           VALUE klass = CLASS_OF(#{to_c tree[1][1]});
           if (rb_method_node(klass, #{tree[1][2].to_i})) {
-            return rb_str_new2(\"method\");
+            return #{"method".internal_value};
           } else {
             return Qnil;
           }
         "
       elsif nt == :yield
-        'rb_block_given_p() ? rb_str_new2("yield") : Qnil'
+        "rb_block_given_p() ? #{"yield".internal_value} : Qnil"
       elsif nt == :ivar
-      "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? rb_str_new2(\"instance-variable\") : Qnil"
+      "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? #{"instance-variable".internal_value} : Qnil"
       else
-      'rb_str_new2("assignment")'
+        "assignment".internal_value
       end
     end
 
