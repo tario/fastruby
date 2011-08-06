@@ -532,7 +532,14 @@ module FastRuby
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
       elsif nt == :call
-      'rb_str_new2("local-variable")'
+        inline_block "
+          VALUE klass = CLASS_OF(#{to_c tree[1][1]});
+          if (rb_method_node(klass, #{tree[1][2].to_i})) {
+            return rb_str_new2(\"method\");
+          } else {
+            return Qnil;
+          }
+        "
       elsif nt == :ivar
       "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? rb_str_new2(\"instance-variable\") : Qnil"
       else
