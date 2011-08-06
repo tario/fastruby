@@ -529,6 +529,8 @@ module FastRuby
       'rb_str_new2("false")'
       elsif nt == :nil
       'rb_str_new2("nil")'
+      elsif nt == :lvar
+      'rb_str_new2("local-variable")'
       else
       'rb_str_new2("assignment")'
       end
