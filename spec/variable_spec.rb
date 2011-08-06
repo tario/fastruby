@@ -204,7 +204,7 @@ describe FastRuby, "fastruby" do
   end
 
   def self.test_defined_block(code,title,defined_name)
-    it "should call defined? to defined #{title} and return '#{defined_name}" do
+    it "should call defined? to defined #{title} and return '#{defined_name}'" do
       classname = "::U"+rand(1000000).to_s
 
       code = "def foo; #{code}; end"

@@ -518,6 +518,10 @@ module FastRuby
         "
     end
 
+    def to_c_defined(tree)
+      'rb_str_new2("self")'
+    end
+
     def to_c_method_defs(tree)
 
       method_name = tree[2]
