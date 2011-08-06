@@ -23,6 +23,7 @@ module Kernel
     if path =~ /\.so$/
       require(path)
     else
+      FastRuby.logger.info "trying to load '#{path}'"
 
       complete_path = path + (path =~ /\.rb$/ ? "" : ".rb")
 
@@ -32,6 +33,9 @@ module Kernel
           File.open(load_path + "/" + complete_path) do |file|
             source = file.read
           end
+
+          FastRuby.logger.info "loading '#{load_path + "/" + complete_path}'"
+
           fastruby source
           return true
         rescue Errno::ENOENT
