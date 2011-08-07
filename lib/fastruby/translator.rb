@@ -541,8 +541,24 @@ module FastRuby
         "rb_block_given_p() ? #{"yield".internal_value} : Qnil"
       elsif nt == :ivar
       "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? #{"instance-variable".internal_value} : Qnil"
-      else
+      elsif nt == :attrset or
+            nt == :op_asgn1 or
+            nt == :op_asgn2 or
+            nt == :op_asgn_or or
+            nt == :op_asgn_and or
+            nt == :op_asgn_masgn or
+            nt == :masgn or
+            nt == :lasgn or
+            nt == :dasgn or
+            nt == :dasgn_curr or
+            nt == :gasgn or
+            nt == :iasgn or
+            nt == :cdecl or
+            nt == :cvdecl or
+            nt == :cvasgn
         "assignment".internal_value
+      else
+        "expression".internal_value
       end
     end
 
