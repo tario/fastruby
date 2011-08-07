@@ -850,6 +850,18 @@ module FastRuby
       end
     end
 
+    def to_c_ensure(tree)
+      if tree.size == 2
+        to_c tree[1]
+      else
+        "rb_ensure(#{
+          inline_block_reference(tree[1])
+        }, (VALUE)plocals, #{
+          inline_block_reference(tree[2])
+          }, (VALUE)plocals)"
+      end
+    end
+
     def to_c_call(tree)
       if tree[2] == :require
         tree[2] = :fastruby_require
