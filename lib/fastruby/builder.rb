@@ -61,7 +61,7 @@ module FastRuby
       begin
         if (@owner.instance_method(mname))
           FastRuby.logger.info "NOT Building #{self}::#{@method_name} for signature #{signature.inspect}, it's already done"
-          return
+          return @owner.instance_method(mname)
         end
       rescue NameError
         FastRuby.logger.info "Building #{self}::#{@method_name} for signature #{signature.inspect}"
