@@ -375,4 +375,20 @@ describe FastRuby, "fastruby" do
     ::K56.new.foo.should be == 43
   end
 
+  it "should allow call to self method" do
+    fastruby "
+      class J57
+        def foo
+          43
+        end
+        def bar
+          foo
+        end
+      end
+    "
+
+    ::J57.new.foo.should be == 43
+    ::J57.new.bar.should be == 43
+  end
+
 end
