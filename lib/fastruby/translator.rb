@@ -900,8 +900,12 @@ module FastRuby
           convention = :cruby
         end
 
-        address = getaddress(mobject)
-        len = getlen(mobject)
+        address = nil
+        len = 0
+        if mobject
+          address = getaddress(mobject)
+          len = getlen(mobject)
+        end
 
         extraargs = ""
         extraargs = ", Qfalse" if convention == :fastruby
