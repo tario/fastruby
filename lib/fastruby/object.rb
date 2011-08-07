@@ -67,10 +67,20 @@ class Object
     if tree[0] == :class
       classname = Object.to_class_name tree[1]
 
-      eval("
-      class #{classname}
+      if tree[2]
+        superclassname = Object.to_class_name tree[2]
+
+        eval("
+        class #{classname} < #{superclassname}
+        end
+        ", $top_level_binding)
+
+      else
+        eval("
+        class #{classname}
+        end
+        ", $top_level_binding)
       end
-      ", $top_level_binding)
 
       klass = eval(classname)
 
