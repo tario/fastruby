@@ -562,13 +562,7 @@ module FastRuby
       end
     end
 
-    def to_c_method_defs(tree)
-
-      method_name = tree[2]
-      args_tree = tree[3]
-
-      impl_tree = tree[4][1]
-
+    def initialize_structs(args_tree)
       @locals_struct = "struct {
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
@@ -582,6 +576,15 @@ module FastRuby
         void* block_function_address;
         void* block_function_param;
       }"
+    end
+
+    def to_c_method_defs(tree)
+
+      method_name = tree[2]
+      args_tree = tree[3]
+      impl_tree = tree[4][1]
+
+      initialize_structs(args_tree)
 
       str_impl = ""
       # if impl_tree is a block, implement the last node with a return
@@ -668,19 +671,7 @@ module FastRuby
 
       impl_tree = tree[3][1]
 
-      @locals_struct = "struct {
-        #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
-        void* block_function_address;
-        VALUE block_function_param;
-        jmp_buf jmp;
-        VALUE return_value;
-        }"
-
-      @block_struct = "struct {
-        void* block_function_address;
-        void* block_function_param;
-      }"
+      initialize_structs(args_tree)
 
       str_impl = ""
       # if impl_tree is a block, implement the last node with a return
