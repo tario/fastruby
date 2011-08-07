@@ -359,4 +359,20 @@ describe FastRuby, "fastruby" do
     fastruby ""
     }.should_not raise_error
   end
+
+  it "should allow basic inheritance" do
+    fastruby "
+      class J56
+        def foo
+          43
+        end
+      end
+
+      class ::K56 < J56
+      end
+    "
+
+    ::K56.new.foo.should be == 43
+  end
+
 end
