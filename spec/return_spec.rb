@@ -74,4 +74,26 @@ describe FastRuby, "fastruby" do
     p4.foo.should be == 8
   end
 
+  it "should execute ensure when ensure impl has a return" do
+   fastruby "
+      class ::P5
+        def a
+          @a
+        end
+
+        def foo
+          begin
+            return 16
+          ensure
+            @a = 9
+          end
+
+          return 32
+        end
+      end
+    "
+    p5 = ::P5.new
+    p5.foo.should be == 16
+    p5.a.should be ==9
+  end
 end
