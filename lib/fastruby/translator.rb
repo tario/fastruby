@@ -837,6 +837,19 @@ module FastRuby
       "
     end
 
+    def to_c_rescue(tree)
+      if tree[1][0] == :resbody
+        "Qnil"
+      else
+        resbody_tree = tree[2]
+        "rb_rescue(#{
+          inline_block_reference(tree[1])
+          }, (VALUE)plocals, #{
+          inline_block_reference(resbody_tree[2])
+          } ,(VALUE)plocals)"
+      end
+    end
+
     def to_c_call(tree)
       if tree[2] == :require
         tree[2] = :fastruby_require
@@ -1073,6 +1086,21 @@ module FastRuby
       else
         nil
       end
+    end
+
+    def inline_block_reference(tree)
+      code = to_c(tree);
+
+      anonymous_function{ |name| "
+        static VALUE #{name}(VALUE param) {
+          #{@locals_struct} *plocals = (void*)param;
+          VALUE last_expression = Qnil;
+
+          #{code};
+          return last_expression;
+          }
+        "
+      }
     end
 
     def inline_block(code)
