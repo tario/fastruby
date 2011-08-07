@@ -21,8 +21,8 @@ describe FastRuby, "fastruby" do
       class ::L2
         def foo
           begin
-            raise Exception
-          rescue
+            raise RuntimeError
+          rescue RuntimeError
             return 1
           end
 
@@ -44,8 +44,8 @@ describe FastRuby, "fastruby" do
           a = 0
 
           begin
-            raise Exception
-          rescue
+            raise RuntimeError
+          rescue RuntimeError
           ensure
             a = 2
           end
@@ -67,7 +67,7 @@ describe FastRuby, "fastruby" do
         fastruby "
           def foo
             begin
-              raise Exception
+              raise RuntimeError
             ensure
               @a = 2
             end
