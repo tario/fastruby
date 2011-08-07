@@ -227,6 +227,7 @@ describe FastRuby, "fastruby" do
   test_defined "defined? nil", "nil", "nil"
   test_defined "defined? self", "self", "self"
   test_defined "defined? print", "method", "method"
+  test_defined "defined?(if 0; 4; end)", "expression", "expression"
 
   ["a", "$a", "@a", "@@a", "A"].each do |var|
      test_defined "defined? #{var}=0", "#{var} assignment", "assignment"
