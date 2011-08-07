@@ -586,17 +586,7 @@ module FastRuby
 
       initialize_structs(args_tree)
 
-      str_impl = ""
-      # if impl_tree is a block, implement the last node with a return
-      if impl_tree[0] == :block
-        str_impl = to_c impl_tree
-      else
-        if impl_tree[0] != :return
-          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
-        else
-          str_impl = str_impl + ";#{to_c(impl_tree)};"
-        end
-      end
+      str_impl = to_c impl_tree
 
       strargs = if args_tree.size > 1
         "VALUE self, void* block_address, VALUE block_param, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
@@ -673,17 +663,7 @@ module FastRuby
 
       initialize_structs(args_tree)
 
-      str_impl = ""
-      # if impl_tree is a block, implement the last node with a return
-      if impl_tree[0] == :block
-        str_impl = to_c impl_tree
-      else
-        if impl_tree[0] != :return
-          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
-        else
-          str_impl = str_impl + ";#{to_c(impl_tree)};"
-        end
-      end
+      str_impl = to_c impl_tree
 
       strargs = if args_tree.size > 1
         "VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
