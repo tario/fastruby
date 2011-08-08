@@ -417,7 +417,7 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "plocals->return_value = #{to_c(tree[1])}; longjmp(plocals->jmp, 1);\n"
+      "return #{to_c(tree[1])};\n"
     end
 
     def to_c_lit(tree)
@@ -562,31 +562,36 @@ module FastRuby
       end
     end
 
-    def initialize_structs(args_tree)
+    def to_c_method_defs(tree)
+
+      method_name = tree[2]
+      args_tree = tree[3]
+
+      impl_tree = tree[4][1]
+
       @locals_struct = "struct {
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         void* block_function_address;
         VALUE block_function_param;
-        jmp_buf jmp;
-        VALUE return_value;
         }"
 
       @block_struct = "struct {
         void* block_function_address;
         void* block_function_param;
       }"
-    end
 
-    def to_c_method_defs(tree)
-
-      method_name = tree[2]
-      args_tree = tree[3]
-      impl_tree = tree[4][1]
-
-      initialize_structs(args_tree)
-
-      str_impl = to_c impl_tree
+      str_impl = ""
+      # if impl_tree is a block, implement the last node with a return
+      if impl_tree[0] == :block
+        str_impl = to_c impl_tree
+      else
+        if impl_tree[0] != :return
+          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
+        else
+          str_impl = str_impl + ";#{to_c(impl_tree)};"
+        end
+      end
 
       strargs = if args_tree.size > 1
         "VALUE self, void* block_address, VALUE block_param, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
@@ -603,11 +608,6 @@ module FastRuby
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
-
-        int aux = setjmp(plocals->jmp);
-        if (aux != 0) {
-          return plocals->return_value;
-        }
 
         locals.self = self;
 
@@ -661,9 +661,29 @@ module FastRuby
 
       impl_tree = tree[3][1]
 
-      initialize_structs(args_tree)
+      @locals_struct = "struct {
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
+        void* block_function_address;
+        VALUE block_function_param;
+        }"
 
-      str_impl = to_c impl_tree
+      @block_struct = "struct {
+        void* block_function_address;
+        void* block_function_param;
+      }"
+
+      str_impl = ""
+      # if impl_tree is a block, implement the last node with a return
+      if impl_tree[0] == :block
+        str_impl = to_c impl_tree
+      else
+        if impl_tree[0] != :return
+          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
+        else
+          str_impl = str_impl + ";#{to_c(impl_tree)};"
+        end
+      end
 
       strargs = if args_tree.size > 1
         "VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
@@ -680,11 +700,6 @@ module FastRuby
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
-
-        int aux = setjmp(plocals->jmp);
-        if (aux != 0) {
-          return plocals->return_value;
-        }
 
         locals.self = self;
 

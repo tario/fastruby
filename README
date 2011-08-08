@@ -57,7 +57,9 @@ I will stabilize the API and document it for next releases. I promise
 
 * monkey patching does not work with fastruby methods
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call it's pretty fast)
+* does not support singleton methods (both define & call)
 * does not support methods with variable number of arguments
+* does not support exception handling (rescue, ensure, etc...)
 
 == Usage
 
