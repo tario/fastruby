@@ -38,6 +38,9 @@ module FastRuby
       @infer_lvar_map = Hash.new
       @extra_code = ""
       @options = {}
+      @frame_struct = "struct {
+        void* plocals;
+      }"
 
       extra_code << '#include "node.h"
       '
@@ -106,8 +109,11 @@ module FastRuby
 
       caller_code = nil
 
-      str_lvar_initialization = @locals_struct + " *plocals;
-                                plocals = (void*)param;"
+      str_lvar_initialization = "#{@frame_struct} *pframe;
+                                 #{@locals_struct} *plocals;
+                                pframe = (void*)param;
+                                plocals = (void*)pframe->plocals;
+                                "
 
       recvtype = infer_type(recv_tree || s(:self))
 
@@ -180,8 +186,11 @@ module FastRuby
 
       anonymous_impl = tree[3]
 
-      str_lvar_initialization = @locals_struct + " *plocals;
-                                  plocals = (void*)param;"
+      str_lvar_initialization = "#{@frame_struct} *pframe;
+                                 #{@locals_struct} *plocals;
+                                pframe = (void*)param;
+                                plocals = (void*)pframe->plocals;
+                                "
 
       str_arg_initialization = ""
 
@@ -274,7 +283,7 @@ module FastRuby
         "
         }
 
-        "rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)#{locals_pointer}, #{anonymous_function(&block_code)}, (VALUE)#{locals_pointer})"
+        "rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)pframe)"
       elsif convention == :fastruby
 
         str_arg_initialization = ""
@@ -351,17 +360,19 @@ module FastRuby
             }
         end
 
-        "#{anonymous_function(&caller_code)}((VALUE)#{locals_pointer})"
+        "#{anonymous_function(&caller_code)}((VALUE)pframe)"
       end
     end
 
     def to_c_yield(tree)
 
       block_code = proc { |name| "
-        static VALUE #{name}(VALUE locals_param, VALUE* block_args) {
+        static VALUE #{name}(VALUE frame_param, VALUE* block_args) {
 
           #{@locals_struct} *plocals;
-          plocals = (void*)locals_param;
+          #{@frame_struct} *pframe;
+          pframe = (void*)frame_param;
+          plocals = (void*)pframe->plocals;
 
           if (plocals->block_function_address == 0) {
             rb_raise(rb_eLocalJumpError, \"no block given\");
@@ -389,9 +400,9 @@ module FastRuby
       end
 
       if tree.size > 1
-        anonymous_function(&block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
+        anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
       else
-        anonymous_function(&block_code)+"((VALUE)#{locals_pointer}, (VALUE[]){})"
+        anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
       end
     end
 
@@ -443,12 +454,16 @@ module FastRuby
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE value_params) {
-          #{@locals_struct} *plocals = (void*)value_params;
+          #{@frame_struct} *pframe;
+          #{@locals_struct} *plocals
+          pframe = (void*)value_params;
+          plocals = (void*)pframe->plocals;
+
           VALUE hash = rb_hash_new();
           #{hash_aset_code}
           return hash;
         }
-      " } + "((VALUE)#{locals_pointer})"
+      " } + "((VALUE)pframe)"
     end
 
     def to_c_array(tree)
@@ -605,6 +620,12 @@ module FastRuby
       extra_code << "static VALUE #{@alt_method_name + "_real"}(#{strargs}) {
         #{@locals_struct} locals;
         #{@locals_struct} *plocals = (void*)&locals;
+        #{@frame_struct} frame;
+        #{@frame_struct} *pframe;
+
+        frame.plocals = plocals;
+        pframe = (void*)&frame;
+
         #{@block_struct} *pblock;
         VALUE last_expression = Qnil;
 
@@ -704,6 +725,12 @@ module FastRuby
       "VALUE #{@alt_method_name || method_name}(#{strargs}) {
         #{@locals_struct} locals;
         #{@locals_struct} *plocals = (void*)&locals;
+        #{@frame_struct} frame;
+        #{@frame_struct} *pframe;
+
+        frame.plocals = plocals;
+        pframe = (void*)&frame;
+
         #{@block_struct} *pblock;
         VALUE last_expression = Qnil;
 
@@ -733,10 +760,6 @@ module FastRuby
 
     def locals_accessor
       "plocals->"
-    end
-
-    def locals_pointer
-      "plocals"
     end
 
     def to_c_gvar(tree)
@@ -1120,7 +1143,8 @@ module FastRuby
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
-          #{@locals_struct} *plocals = (void*)param;
+          #{@frame_struct} *pframe = (void*)param;
+          #{@locals_struct} *plocals = (void*)pframe->plocals;
           VALUE last_expression = Qnil;
 
           #{code};
@@ -1133,13 +1157,14 @@ module FastRuby
     def inline_block(code)
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
-          #{@locals_struct} *plocals = (void*)param;
+          #{@frame_struct} *pframe = (void*)param;
+          #{@locals_struct} *plocals = (void*)pframe->plocals;
           VALUE last_expression = Qnil;
 
           #{code}
           }
         "
-      } + "((VALUE)#{locals_pointer})"
+      } + "((VALUE)pframe)"
     end
 
     inline :C  do |builder|
