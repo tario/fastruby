@@ -574,6 +574,9 @@ module FastRuby
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         void* block_function_address;
         VALUE block_function_param;
+        jmp_buf jmp;
+        VALUE return_value;
+
         }"
 
       @block_struct = "struct {
@@ -608,6 +611,11 @@ module FastRuby
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
+
+        int aux = setjmp(plocals->jmp);
+        if (aux != 0) {
+          return plocals->return_value;
+        }
 
         locals.self = self;
 
