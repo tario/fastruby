@@ -39,7 +39,9 @@ module FastRuby
       @extra_code = ""
       @options = {}
       @frame_struct = "struct {
+        void* parent_frame;
         void* plocals;
+        jmp_buf jmp;
       }"
 
       extra_code << '#include "node.h"
