@@ -111,4 +111,5 @@ describe FastRuby, "fastruby" do
   basic_unhandled_exception("Exception")
   basic_unhandled_exception("RuntimeError")
   basic_unhandled_exception("StandardError")
+  basic_unhandled_exception("Errno::ENOENT")
 end
