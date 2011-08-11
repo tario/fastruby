@@ -912,18 +912,27 @@ module FastRuby
     end
 
     def to_c_call(tree)
+      directive_code = directive(tree)
+      if directive_code
+        return directive_code
+      end
+
       if tree[2] == :require
         tree[2] = :fastruby_require
+      elsif tree[2] == :raise
+        # raise code
+        return inline_block("
+            pframe->target_frame = ((typeof(pframe))plocals->pframe)->parent_frame;
+            plocals->return_value = Qnil;
+            longjmp(pframe->jmp, 1);
+            return Qnil;
+            ")
       end
 
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
 
-      directive_code = directive(tree)
-      if directive_code
-        return directive_code
-      end
 
       mname = :require_fastruby if mname == :require
 
@@ -1179,6 +1188,7 @@ module FastRuby
     end
 
     def frame(code, jmp_code)
+
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
           VALUE last_expression;
@@ -1196,13 +1206,16 @@ module FastRuby
 
           int aux = setjmp(frame.jmp);
           if (aux != 0) {
-
             last_expression = pframe->return_value;
+
+            // restore previous frame
+            typeof(pframe) original_frame = pframe;
+            pframe = parent_frame;
 
             #{jmp_code};
 
-            if (pframe->target_frame != pframe) {
-              longjmp(parent_frame->jmp,1);
+            if (original_frame->target_frame != pframe) {
+              longjmp(pframe->jmp,1);
             }
 
             return last_expression;
