@@ -84,4 +84,20 @@ describe FastRuby, "fastruby" do
     l4.a.should be == 2
   end
 
+  it "should raise basic exception RuntimeError" do
+      class ::L5
+        fastruby "
+          def foo
+            raise RuntimeError
+          end
+       "
+      end
+
+    l5 = ::L5.new
+
+    lambda {
+      l5.foo
+    }.should raise_exception(RuntimeError)
+  end
+
 end
