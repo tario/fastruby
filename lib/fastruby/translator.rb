@@ -907,7 +907,10 @@ module FastRuby
       if tree.size == 2
         to_c tree[1]
       else
-          frame(to_c(tree[1]),to_c(tree[2]));
+        inline_block "
+          #{frame(to_c(tree[1]),"")};
+          return #{to_c(tree[2])};
+        "
       end
     end
 
@@ -922,8 +925,6 @@ module FastRuby
       elsif tree[2] == :raise
         # raise code
         return inline_block("
-            pframe->target_frame = ((typeof(pframe))plocals->pframe)->parent_frame;
-            plocals->return_value = Qnil;
             longjmp(pframe->jmp, 1);
             return Qnil;
             ")
@@ -1214,7 +1215,7 @@ module FastRuby
 
             #{jmp_code};
 
-            if (original_frame->target_frame != pframe) {
+            if (original_frame->target_frame != original_frame) {
               longjmp(pframe->jmp,1);
             }
 
