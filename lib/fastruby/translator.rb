@@ -40,6 +40,7 @@ module FastRuby
       @options = {}
       @frame_struct = "struct {
         void* parent_frame;
+        void* target_frame;
         void* plocals;
         jmp_buf jmp;
         VALUE return_value;
@@ -431,7 +432,7 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "plocals->return_value = #{to_c(tree[1])}; longjmp(plocals->jmp, 1);\n"
+      "pframe->target_frame = ((typeof(pframe))plocals->pframe)->parent_frame; plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1);\n"
     end
 
     def to_c_lit(tree)
@@ -594,6 +595,7 @@ module FastRuby
         VALUE block_function_param;
         jmp_buf jmp;
         VALUE return_value;
+        void* pframe;
 
         }"
 
@@ -700,6 +702,8 @@ module FastRuby
         VALUE block_function_param;
         jmp_buf jmp;
         VALUE return_value;
+
+        void* pframe;
         }"
 
       @block_struct = "struct {
@@ -732,6 +736,12 @@ module FastRuby
         #{@frame_struct} *pframe;
 
         frame.plocals = plocals;
+        frame.parent_frame = 0;
+        frame.return_value = Qnil;
+        frame.target_frame = &frame;
+
+        locals.pframe = &frame;
+
         pframe = (void*)&frame;
 
         #{@block_struct} *pblock;
@@ -741,7 +751,7 @@ module FastRuby
           "locals.#{arg} = #{arg};\n"
         }.join("") }
 
-        int aux = setjmp(plocals->jmp);
+        int aux = setjmp(pframe->jmp);
         if (aux != 0) {
           return plocals->return_value;
         }
@@ -890,10 +900,7 @@ module FastRuby
       if tree.size == 2
         to_c tree[1]
       else
-        inline_block "
-          #{frame(to_c(tree[1]),"")};
-          return #{to_c(tree[2])};
-        "
+          frame(to_c(tree[1]),to_c(tree[2]));
       end
     end
 
@@ -1175,6 +1182,7 @@ module FastRuby
 
           frame.parent_frame = (VALUE)parent_frame;
           frame.plocals = parent_frame->plocals;
+          frame.target_frame = &frame;
 
           plocals = frame.plocals;
           pframe = &frame;
@@ -1185,6 +1193,11 @@ module FastRuby
             last_expression = pframe->return_value;
 
             #{jmp_code};
+
+            if (pframe->target_frame != pframe) {
+              longjmp(parent_frame->jmp,1);
+            }
+
             return last_expression;
           }
 
