@@ -87,7 +87,7 @@ describe FastRuby, "fastruby" do
   def self.basic_unhandled_exception(*exception_names)
 
     exception_names.each do |exception_name|
-      it "should raise basic exception RuntimeError" do
+      it "should raise basic exception #{exception_name}" do
 
         random_name = "::L5_" + rand(10000).to_s
 
