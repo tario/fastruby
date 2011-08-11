@@ -762,7 +762,7 @@ module FastRuby
 
           if (pframe->target_frame == (void*)-1) {
             // raise exception
-            rb_raise(rb_eException, \"\");
+            rb_raise(rb_eRuntimeError, \"\");
           }
 
           return plocals->return_value;
