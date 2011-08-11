@@ -84,20 +84,31 @@ describe FastRuby, "fastruby" do
     l4.a.should be == 2
   end
 
-  it "should raise basic exception RuntimeError" do
-      class ::L5
+  def self.basic_unhandled_exception(*exception_names)
+
+    exception_names.each do |exception_name|
+      it "should raise basic exception RuntimeError" do
+
+        random_name = "::L5_" + rand(10000).to_s
+
         fastruby "
-          def foo
-            raise RuntimeError
+          class #{random_name}
+              def foo
+                raise #{exception_name}
+              end
           end
-       "
+           "
+
+        l = eval(random_name).new
+
+        lambda {
+          l.foo
+        }.should raise_exception(eval(exception_name))
       end
-
-    l5 = ::L5.new
-
-    lambda {
-      l5.foo
-    }.should raise_exception(RuntimeError)
+    end
   end
 
+  basic_unhandled_exception("Exception")
+  basic_unhandled_exception("RuntimeError")
+  basic_unhandled_exception("StandardError")
 end
