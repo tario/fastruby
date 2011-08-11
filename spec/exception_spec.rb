@@ -84,6 +84,9 @@ describe FastRuby, "fastruby" do
     l4.a.should be == 2
   end
 
+  class BahException < Exception
+  end
+
   def self.basic_unhandled_exception(*exception_names)
 
     exception_names.each do |exception_name|
@@ -126,6 +129,28 @@ describe FastRuby, "fastruby" do
         lambda {
           l.foo
         }.should_not raise_exception
+      end
+
+      it "should raise basic exception #{exception_name} even if rescued when the rescue is for another exception" do
+
+        random_name = "::L7_" + rand(10000).to_s
+
+        fastruby "
+          class #{random_name}
+              def foo
+                begin
+                  raise #{exception_name}
+                rescue BahException
+                end
+              end
+          end
+           "
+
+        l = eval(random_name).new
+
+        lambda {
+          l.foo
+        }.should raise_exception(eval(exception_name))
       end
     end
   end
