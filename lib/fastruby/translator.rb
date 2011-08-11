@@ -42,6 +42,7 @@ module FastRuby
         void* parent_frame;
         void* plocals;
         jmp_buf jmp;
+        VALUE return_value;
       }"
 
       extra_code << '#include "node.h"
@@ -881,12 +882,7 @@ module FastRuby
       if tree[1][0] == :resbody
         "Qnil"
       else
-        resbody_tree = tree[2]
-        "rb_rescue(#{
-          inline_block_reference(tree[1])
-          }, (VALUE)plocals, #{
-          inline_block_reference(resbody_tree[2])
-          } ,(VALUE)plocals)"
+        frame(to_c(tree[1])+";", to_c(resbody_tree[2])+";")
       end
     end
 
@@ -894,11 +890,10 @@ module FastRuby
       if tree.size == 2
         to_c tree[1]
       else
-        "rb_ensure(#{
-          inline_block_reference(tree[1])
-        }, (VALUE)plocals, #{
-          inline_block_reference(tree[2])
-          }, (VALUE)plocals)"
+        inline_block "
+          #{frame(to_c(tree[1]),"")};
+          return #{to_c(tree[2])};
+        "
       end
     end
 
@@ -1164,6 +1159,38 @@ module FastRuby
           VALUE last_expression = Qnil;
 
           #{code}
+          }
+        "
+      } + "((VALUE)pframe)"
+    end
+
+    def frame(code, jmp_code)
+      anonymous_function{ |name| "
+        static VALUE #{name}(VALUE param) {
+          VALUE last_expression;
+          #{@frame_struct} frame, *pframe, *parent_frame;
+          #{@locals_struct} *plocals;
+
+          parent_frame = (void*)param;
+
+          frame.parent_frame = (VALUE)parent_frame;
+          frame.plocals = parent_frame->plocals;
+
+          plocals = frame.plocals;
+          pframe = &frame;
+
+          int aux = setjmp(frame.jmp);
+          if (aux != 0) {
+
+            last_expression = pframe->return_value;
+
+            #{jmp_code};
+            return last_expression;
+          }
+
+          #{code};
+          return last_expression;
+
           }
         "
       } + "((VALUE)pframe)"
