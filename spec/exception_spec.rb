@@ -155,8 +155,8 @@ describe FastRuby, "fastruby" do
 
       it "should rescue basic exception #{exception_name} when raised from rubycode called from fastruby code" do
 
-        random_name = "::L7_" + rand(10000).to_s
-        random_name_2 = "::L7_" + rand(10000).to_s
+        random_name = "::L8_" + rand(10000).to_s
+        random_name_2 = "::L8_" + rand(10000).to_s
 
         eval "
           class #{random_name_2}
@@ -179,6 +179,37 @@ describe FastRuby, "fastruby" do
         lambda {
           l2.foo(l1)
         }.should raise_exception(eval(exception_name))
+      end
+
+      it "should rescue basic exception #{exception_name} from fastruby code when raised from rubycode" do
+
+        random_name = "::L9_" + rand(10000).to_s
+        random_name_2 = "::L9_" + rand(10000).to_s
+
+        eval "
+          class #{random_name_2}
+            def bar
+              raise #{exception_name}
+            end
+          end
+        "
+
+        fastruby "
+          class #{random_name}
+              def foo(x)
+                begin
+                  x.bar
+                rescue #{exception_name}
+                end
+              end
+          end
+           "
+
+        l1 = eval(random_name_2).new
+        l2 = eval(random_name).new
+        lambda {
+          l2.foo(l1)
+        }.should_not raise_exception
       end
 
     end
