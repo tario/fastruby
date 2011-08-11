@@ -759,6 +759,12 @@ module FastRuby
 
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
+
+          if (pframe->target_frame == (void*)-1) {
+            // raise exception
+            rb_raise(rb_eException, \"\");
+          }
+
           return plocals->return_value;
         }
 
@@ -899,7 +905,8 @@ module FastRuby
         "Qnil"
       else
         resbody_tree = tree[2]
-        frame(to_c(tree[1])+";", to_c(resbody_tree[2])+";")
+        frame(to_c(tree[1])+";", to_c(resbody_tree[2])+
+          ";original_frame->target_frame = &frame;")
       end
     end
 
@@ -925,6 +932,7 @@ module FastRuby
       elsif tree[2] == :raise
         # raise code
         return inline_block("
+            pframe->target_frame = (void*)-1;
             longjmp(pframe->jmp, 1);
             return Qnil;
             ")
@@ -1216,6 +1224,7 @@ module FastRuby
             #{jmp_code};
 
             if (original_frame->target_frame != original_frame) {
+              pframe->target_frame = original_frame->target_frame;
               longjmp(pframe->jmp,1);
             }
 
