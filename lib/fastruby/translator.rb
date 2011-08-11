@@ -907,9 +907,9 @@ module FastRuby
       if tree.size == 2
         to_c tree[1]
       else
+        ensured_code = to_c tree[2]
         inline_block "
-          #{frame(to_c(tree[1]),"")};
-          return #{to_c(tree[2])};
+          #{frame(to_c(tree[1]),ensured_code,ensured_code)};
         "
       end
     end
@@ -1188,7 +1188,7 @@ module FastRuby
       } + "((VALUE)pframe)"
     end
 
-    def frame(code, jmp_code)
+    def frame(code, jmp_code, not_jmp_code = "")
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
@@ -1223,6 +1223,12 @@ module FastRuby
           }
 
           #{code};
+
+          // restore previous frame
+          typeof(pframe) original_frame = pframe;
+          pframe = parent_frame;
+          #{not_jmp_code};
+
           return last_expression;
 
           }
