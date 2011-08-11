@@ -459,7 +459,7 @@ module FastRuby
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE value_params) {
           #{@frame_struct} *pframe;
-          #{@locals_struct} *plocals
+          #{@locals_struct} *plocals;
           pframe = (void*)value_params;
           plocals = (void*)pframe->plocals;
 
