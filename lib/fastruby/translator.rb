@@ -629,6 +629,12 @@ module FastRuby
         #{@frame_struct} *pframe;
 
         frame.plocals = plocals;
+        frame.parent_frame = 0;
+        frame.return_value = Qnil;
+        frame.target_frame = &frame;
+
+        locals.pframe = &frame;
+
         pframe = (void*)&frame;
 
         #{@block_struct} *pblock;
@@ -638,7 +644,7 @@ module FastRuby
           "locals.#{arg} = #{arg};\n"
         }.join("") }
 
-        int aux = setjmp(plocals->jmp);
+        int aux = setjmp(pframe->jmp);
         if (aux != 0) {
           return plocals->return_value;
         }
