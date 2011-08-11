@@ -105,6 +105,28 @@ describe FastRuby, "fastruby" do
           l.foo
         }.should raise_exception(eval(exception_name))
       end
+
+      it "should not raise basic exception #{exception_name} if rescued" do
+
+        random_name = "::L6_" + rand(10000).to_s
+
+        fastruby "
+          class #{random_name}
+              def foo
+                begin
+                raise #{exception_name}
+                rescue #{exception_name}
+                end
+              end
+          end
+           "
+
+        l = eval(random_name).new
+
+        lambda {
+          l.foo
+        }.should_not raise_exception
+      end
     end
   end
 
