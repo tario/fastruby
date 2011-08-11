@@ -1206,7 +1206,7 @@ module FastRuby
 
           parent_frame = (void*)param;
 
-          frame.parent_frame = (VALUE)parent_frame;
+          frame.parent_frame = (void*)param;
           frame.plocals = parent_frame->plocals;
           frame.target_frame = &frame;
 
