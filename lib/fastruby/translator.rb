@@ -898,6 +898,7 @@ module FastRuby
       if tree[1][0] == :resbody
         "Qnil"
       else
+        resbody_tree = tree[2]
         frame(to_c(tree[1])+";", to_c(resbody_tree[2])+";")
       end
     end
