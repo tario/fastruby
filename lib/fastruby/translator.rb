@@ -746,6 +746,7 @@ module FastRuby
         frame.parent_frame = 0;
         frame.return_value = Qnil;
         frame.target_frame = &frame;
+        frame.exception = Qnil;
 
         locals.pframe = &frame;
 
@@ -763,7 +764,7 @@ module FastRuby
 
           if (pframe->target_frame == (void*)-1) {
             // raise exception
-            rb_raise(rb_eRuntimeError, \"\");
+            rb_funcall(self, #{:raise.to_i}, 1, pframe->exception);
           }
 
           return plocals->return_value;
@@ -955,7 +956,7 @@ module FastRuby
 
         return inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = rb_funcall(#{to_c args[1]}, #{:new.to_i},0);
+            pframe->exception = rb_funcall(#{to_c args[1]}, #{:exception.to_i},0);
             longjmp(pframe->jmp, 1);
             return Qnil;
             ")
