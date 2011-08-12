@@ -902,11 +902,19 @@ module FastRuby
 
     def to_c_rescue(tree)
       if tree[1][0] == :resbody
-        "Qnil"
+        else_tree = tree[2]
+
+        if else_tree
+          to_c else_tree
+        else
+          "Qnil"
+        end
       else
         resbody_tree = tree[2]
+        else_tree = tree[3]
+
         frame(to_c(tree[1])+";", to_c(resbody_tree[2])+
-          ";original_frame->target_frame = &frame;")
+          ";original_frame->target_frame = &frame;", else_tree ? to_c(else_tree) : nil)
       end
     end
 
