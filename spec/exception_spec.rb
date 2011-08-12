@@ -219,4 +219,46 @@ describe FastRuby, "fastruby" do
   basic_unhandled_exception("RuntimeError")
   basic_unhandled_exception("StandardError")
   basic_unhandled_exception("Errno::ENOENT")
+
+  it "should accept else with rescue" do
+
+    random_name = "::L11_" + rand(10000).to_s
+    fastruby "
+          class #{random_name}
+              def foo
+                begin
+                  raise Exception
+                rescue Exception
+                  return 111
+                else
+                  return 222
+                end
+              end
+          end
+           "
+
+    l = eval(random_name).new
+    l.foo.should be == 111
+   end
+
+  it "should accept else with rescue, when no exception is raised" do
+
+    random_name = "::L12_" + rand(10000).to_s
+    fastruby "
+          class #{random_name}
+              def foo
+                begin
+                rescue Exception
+                  return 111
+                else
+                  return 222
+                end
+              end
+          end
+           "
+
+    l = eval(random_name).new
+    l.foo.should be == 222
+   end
+
 end
