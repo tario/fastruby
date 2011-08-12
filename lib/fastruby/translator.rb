@@ -922,11 +922,6 @@ module FastRuby
             ;original_frame->target_frame = &frame;
              #{to_c(resbody_tree[2])};
           }
-          else
-          {
-            //release exception
-             original_frame->exception = frame.exception;
-          }
           ", else_tree ? to_c(else_tree) : nil)
       end
     end
@@ -1251,6 +1246,7 @@ module FastRuby
             #{jmp_code};
 
             if (original_frame->target_frame != original_frame) {
+              pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
               longjmp(pframe->jmp,1);
             }
