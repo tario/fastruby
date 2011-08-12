@@ -1219,6 +1219,10 @@ module FastRuby
       } + "((VALUE)pframe)"
     end
 
+    def inline_ruby(proced, parameter)
+      "rb_funcall(#{proced.internal_value}, #{:call.to_i}, 1, #{parameter})"
+    end
+
     def frame(code, jmp_code, not_jmp_code = "")
 
       anonymous_function{ |name| "
