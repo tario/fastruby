@@ -261,4 +261,25 @@ describe FastRuby, "fastruby" do
     l.foo.should be == 222
    end
 
+  it "should accept else with rescue, when no exception is raised and begin has body" do
+
+    random_name = "::L13_" + rand(10000).to_s
+    fastruby "
+          class #{random_name}
+              def foo
+                begin
+                  a = 77
+                rescue Exception
+                  return 111
+                else
+                  return 222
+                end
+              end
+          end
+           "
+
+    l = eval(random_name).new
+    l.foo.should be == 222
+   end
+
 end
