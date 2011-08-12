@@ -44,6 +44,7 @@ module FastRuby
         void* plocals;
         jmp_buf jmp;
         VALUE return_value;
+        VALUE exception;
       }"
 
       extra_code << '#include "node.h"
@@ -913,8 +914,19 @@ module FastRuby
         resbody_tree = tree[2]
         else_tree = tree[3]
 
-        frame(to_c(tree[1])+";", to_c(resbody_tree[2])+
-          ";original_frame->target_frame = &frame;", else_tree ? to_c(else_tree) : nil)
+        frame(to_c(tree[1])+";","
+          if (CLASS_OF(frame.exception) == #{to_c(resbody_tree[1][1])})
+          {
+            // trap exception
+            ;original_frame->target_frame = &frame;
+             #{to_c(resbody_tree[2])};
+          }
+          else
+          {
+            //release exception
+             original_frame->exception = frame.exception;
+          }
+          ", else_tree ? to_c(else_tree) : nil)
       end
     end
 
@@ -939,8 +951,11 @@ module FastRuby
         tree[2] = :fastruby_require
       elsif tree[2] == :raise
         # raise code
+        args = tree[3]
+
         return inline_block("
             pframe->target_frame = (void*)-1;
+            pframe->exception = rb_funcall(#{to_c args[1]}, #{:new.to_i},0);
             longjmp(pframe->jmp, 1);
             return Qnil;
             ")
@@ -949,7 +964,6 @@ module FastRuby
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
-
 
       mname = :require_fastruby if mname == :require
 
