@@ -1040,18 +1040,20 @@ module FastRuby
                 str_incall_args = "recv"
               end
 
-              anonymous_function{ |name| "
-                static VALUE #{name}(VALUE recv) {
-                  // call to #{recvtype}##{mname}
-                  if (rb_block_given_p()) {
-                    // no passing block, recall
-                    return rb_funcall(recv, #{tree[2].to_i}, 0);
-                  } else {
-                    return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
-                  }
-                }
-              " } + "(#{to_c(recv)})"
+              protected_block(
 
+                anonymous_function{ |name| "
+                  static VALUE #{name}(VALUE recv) {
+                    // call to #{recvtype}##{mname}
+                    if (rb_block_given_p()) {
+                      // no passing block, recall
+                      return rb_funcall(recv, #{tree[2].to_i}, 0);
+                    } else {
+                      return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
+                    }
+                  }
+                " } + "(#{to_c(recv)})"
+              )
             end
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",")
@@ -1073,33 +1075,36 @@ module FastRuby
                 str_incall_args = "recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}"
               end
 
-              anonymous_function{ |name| "
-                static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
-                  // call to #{recvtype}##{mname}
-                  if (rb_block_given_p()) {
-                    // no passing block, recall
-                    return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
-                  } else {
-                    return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
+              protected_block(
+
+                anonymous_function{ |name| "
+                  static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
+                    // call to #{recvtype}##{mname}
+                    if (rb_block_given_p()) {
+                      // no passing block, recall
+                      return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                    } else {
+                      return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
+                    }
                   }
-                }
-              " } + "(#{to_c(recv)}, #{strargs})"
+                " } + "(#{to_c(recv)}, #{strargs})"
+              )
             end
           end
         else
 
           if argnum == 0
-            "rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)"
+            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)")
           else
-            "rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
+            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )")
           end
         end
 
       else
         if argnum == 0
-          "rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)"
+          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)")
         else
-          "rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )"
+          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )")
         end
       end
     end
@@ -1185,8 +1190,14 @@ module FastRuby
       end
     end
 
-    def inline_block_reference(tree)
-      code = to_c(tree);
+    def inline_block_reference(arg)
+      code = nil
+
+      if arg.instance_of? Sexp
+        code = to_c(arg);
+      else
+        code = arg
+      end
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
@@ -1216,6 +1227,23 @@ module FastRuby
 
     def inline_ruby(proced, parameter)
       "rb_funcall(#{proced.internal_value}, #{:call.to_i}, 1, #{parameter})"
+    end
+
+    def protected_block(inner_code)
+      "rb_rescue(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
+        static VALUE #{name}(VALUE param, VALUE error) {
+            // raise emulation
+            #{@frame_struct} *pframe = (void*)param;
+              pframe->target_frame = (void*)-1;
+              pframe->exception = error;
+              longjmp(pframe->jmp, 1);
+              return Qnil;
+
+          }
+
+      "}}
+      ,(VALUE)pframe)"
+
     end
 
     def frame(code, jmp_code, not_jmp_code = "")
