@@ -305,6 +305,9 @@ module FastRuby
 
             if (setjmp(frame.jmp) != 0) {
               if (pframe->target_frame != pframe) {
+                if (pframe->target_frame == (void*)-3) {
+                   return pframe->return_value;
+                }
 
                 VALUE ex = rb_funcall(
                         (VALUE)#{UnwindFastrubyFrame.internal_value},
@@ -315,7 +318,7 @@ module FastRuby
                         );
                 rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
               }
-              return Qnil;
+              return frame.return_value;
             }
 
 
@@ -346,11 +349,36 @@ module FastRuby
         end
 
         block_code = proc { |name| "
-          static VALUE #{name}(int argc, VALUE* argv, VALUE param) {
+          static VALUE #{name}(int argc, VALUE* argv, VALUE _parent_frame) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@frame_struct} *parent_frame = (void*)_parent_frame;
+            #{@locals_struct} *plocals;
 
-            #{str_lvar_initialization};
+            frame.plocals = parent_frame->plocals;
+            frame.parent_frame = parent_frame;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
+            plocals = frame.plocals;
+
+            if (setjmp(frame.jmp) != 0) {
+                if (pframe->target_frame != pframe) {
+                  if (pframe->target_frame == (void*)-3) {
+                     return pframe->return_value;
+                  }
+                  // raise exception
+                  ((typeof(pframe))_parent_frame)->exception = pframe->exception;
+                  ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+                  longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+                }
+
+            }
+
             #{str_arg_initialization}
             #{str_impl}
 
@@ -497,7 +525,7 @@ module FastRuby
 
     def to_c_next(tree)
       if @on_block
-       "Qnil; longjmp(pframe->jmp,1)"
+       "Qnil; pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"}; longjmp(pframe->jmp,1)"
       else
         inline_block("
             pframe->target_frame = (void*)-1;
