@@ -26,6 +26,13 @@ require "fastruby/method_extension"
 module FastRuby
   class Context
 
+    class UnwindFastrubyFrame < Exception
+      def initialize(ex,target_frame)
+        @ex = ex
+        @target_frame = target_frame
+      end
+    end
+
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
     attr_accessor :locals
@@ -119,12 +126,6 @@ module FastRuby
       call_args_tree = call_tree[3]
 
       caller_code = nil
-
-      str_lvar_initialization = "#{@frame_struct} *pframe;
-                                 #{@locals_struct} *plocals;
-                                pframe = (void*)param;
-                                plocals = (void*)pframe->plocals;
-                                "
 
       recvtype = infer_type(recv_tree || s(:self))
 
@@ -281,11 +282,41 @@ module FastRuby
         str_arg_initialization
 
         block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE param) {
+          static VALUE #{name}(VALUE arg, VALUE _parent_frame) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
 
-            #{str_lvar_initialization};
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@frame_struct} *parent_frame = (void*)_parent_frame;
+            #{@locals_struct} *plocals;
+
+            frame.plocals = parent_frame->plocals;
+            frame.parent_frame = parent_frame;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
+            plocals = frame.plocals;
+
+            if (setjmp(frame.jmp) != 0) {
+
+              if (pframe->target_frame != pframe) {
+
+                VALUE ex = rb_funcall(
+                      (VALUE)#{UnwindFastrubyFrame.internal_value},
+                      #{:new.to_i},
+                      2,
+                      pframe->exception,
+                      LONG2FIX(pframe->target_frame)
+                      );
+                rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
+              }
+              return Qnil;
+            }
+
+
             #{str_arg_initialization}
             #{str_impl}
 
@@ -294,7 +325,8 @@ module FastRuby
         "
         }
 
-        "rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)pframe)"
+        protected_block("rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)pframe)", true)
+
       elsif convention == :fastruby
 
         str_arg_initialization = ""
@@ -1161,20 +1193,37 @@ module FastRuby
       "rb_funcall(#{proced.internal_value}, #{:call.to_i}, 1, #{parameter})"
     end
 
-    def protected_block(inner_code)
-      "pframe->rescue ? rb_rescue2(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
+    def protected_block(inner_code, always_rescue = false)
+
+      rescue_code = "rb_rescue2(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
         static VALUE #{name}(VALUE param, VALUE error) {
+            if (CLASS_OF(error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
+            #{@frame_struct} *pframe = (void*)param;
+
+              pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(error, #{:@target_frame.to_i}));
+              pframe->exception = rb_ivar_get(error, #{:@ex.to_i});
+              longjmp(pframe->jmp, 1);
+              return Qnil;
+
+            } else {
             // raise emulation
+
             #{@frame_struct} *pframe = (void*)param;
               pframe->target_frame = (void*)-1;
               pframe->exception = error;
               longjmp(pframe->jmp, 1);
               return Qnil;
-
+            }
           }
 
       "}}
-      ,(VALUE)pframe, rb_eException,(VALUE)0) : #{inner_code}"
+      ,(VALUE)pframe, rb_eException,(VALUE)0)"
+
+      if always_rescue
+        rescue_code
+      else
+        "pframe->rescue ? #{rescue_code} : #{inner_code}"
+      end
 
     end
 
