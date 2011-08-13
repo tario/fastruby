@@ -1233,7 +1233,7 @@ module FastRuby
     end
 
     def protected_block(inner_code)
-      "rb_rescue2(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
+      "pframe->rescue ? rb_rescue2(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
         static VALUE #{name}(VALUE param, VALUE error) {
             // raise emulation
             #{@frame_struct} *pframe = (void*)param;
@@ -1245,7 +1245,7 @@ module FastRuby
           }
 
       "}}
-      ,(VALUE)pframe, rb_eException,(VALUE)0)"
+      ,(VALUE)pframe, rb_eException,(VALUE)0) : #{inner_code}"
 
     end
 
