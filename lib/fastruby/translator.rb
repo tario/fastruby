@@ -45,6 +45,7 @@ module FastRuby
         jmp_buf jmp;
         VALUE return_value;
         VALUE exception;
+        int rescue;
       }"
 
       extra_code << '#include "node.h"
@@ -633,6 +634,7 @@ module FastRuby
         frame.parent_frame = 0;
         frame.return_value = Qnil;
         frame.target_frame = &frame;
+        frame.rescue = 0;
 
         locals.pframe = &frame;
 
@@ -747,6 +749,7 @@ module FastRuby
         frame.return_value = Qnil;
         frame.target_frame = &frame;
         frame.exception = Qnil;
+        frame.rescue = 0;
 
         locals.pframe = &frame;
 
@@ -922,7 +925,7 @@ module FastRuby
             ;original_frame->target_frame = &frame;
              #{to_c(resbody_tree[2])};
           }
-          ", else_tree ? to_c(else_tree) : nil)
+          ", else_tree ? to_c(else_tree) : nil, 1)
       end
     end
 
@@ -932,7 +935,7 @@ module FastRuby
       else
         ensured_code = to_c tree[2]
         inline_block "
-          #{frame(to_c(tree[1]),ensured_code,ensured_code)};
+          #{frame(to_c(tree[1]),ensured_code,ensured_code,1)};
         "
       end
     end
@@ -1246,7 +1249,7 @@ module FastRuby
 
     end
 
-    def frame(code, jmp_code, not_jmp_code = "")
+    def frame(code, jmp_code, not_jmp_code = "", rescued = nil)
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
@@ -1259,6 +1262,7 @@ module FastRuby
           frame.parent_frame = (void*)param;
           frame.plocals = parent_frame->plocals;
           frame.target_frame = &frame;
+          frame.rescue = #{rescued ? rescued : "parent_frame->rescue"};
 
           plocals = frame.plocals;
           pframe = &frame;
