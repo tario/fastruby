@@ -588,13 +588,7 @@ module FastRuby
       end
     end
 
-    def to_c_method_defs(tree)
-
-      method_name = tree[2]
-      args_tree = tree[3]
-
-      impl_tree = tree[4][1]
-
+    def initialize_method_structs(args_tree)
       @locals_struct = "struct {
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
@@ -602,9 +596,19 @@ module FastRuby
         VALUE block_function_param;
         jmp_buf jmp;
         VALUE return_value;
-        void* pframe;
 
+        void* pframe;
         }"
+    end
+
+    def to_c_method_defs(tree)
+
+      method_name = tree[2]
+      args_tree = tree[3]
+
+      impl_tree = tree[4][1]
+
+      initialize_method_structs(args_tree)
 
       strargs = if args_tree.size > 1
         "VALUE self, void* block_address, VALUE block_param, void* _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
@@ -684,16 +688,7 @@ module FastRuby
 
       impl_tree = tree[3][1]
 
-      @locals_struct = "struct {
-        #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
-        void* block_function_address;
-        VALUE block_function_param;
-        jmp_buf jmp;
-        VALUE return_value;
-
-        void* pframe;
-        }"
+      initialize_method_structs(args_tree)
 
       strargs = if args_tree.size > 1
         "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
