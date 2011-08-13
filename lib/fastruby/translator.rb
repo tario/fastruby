@@ -439,7 +439,7 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "pframe->target_frame = ((typeof(pframe))plocals->pframe)->parent_frame; plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1);\n"
+      "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1);\n"
     end
 
     def to_c_lit(tree)
@@ -1203,7 +1203,7 @@ module FastRuby
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
 
-          if (pframe->target_frame == (void*)-1) {
+          if (pframe->target_frame != pframe) {
             // raise exception
             ((typeof(pframe))_parent_frame)->exception = pframe->exception;
             ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;

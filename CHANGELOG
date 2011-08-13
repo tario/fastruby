@@ -1,4 +1,6 @@
-0.0.4	Support for defined?
+0.0.4	Support for exceptions
+
+		Support for defined?
 
 		Support for modules
 
