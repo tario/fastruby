@@ -767,8 +767,9 @@ module FastRuby
 
           if (pframe->target_frame == (void*)-1) {
             // raise exception
-            rb_funcall(self, #{:raise.to_i}, 1, pframe->exception);
-
+            ((typeof(pframe))_parent_frame)->exception = pframe->exception;
+            ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+            longjmp(((typeof(pframe))_parent_frame)->jmp,1);
           }
 
           return plocals->return_value;
