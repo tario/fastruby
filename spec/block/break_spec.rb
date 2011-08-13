@@ -93,4 +93,47 @@ describe FastRuby, "fastruby" do
     ::V5.new.foo.should be == 3
   end
 
+  class ::V6
+    fastruby "
+      def foo(ary)
+        ary.each do |a|
+          break 85 if a == 2
+        end
+      end
+    "
+  end
+
+  it "should allow return value on parent method using break" do
+    ::V6.new.foo([1,2,3]).should be == 85
+  end
+
+  class ::V7
+
+    attr_reader :a
+
+    fastruby "
+
+      def each
+        yield(1)
+        yield(2)
+        yield(3)
+      ensure
+        @a = 87
+      end
+
+      def foo
+        each do |a|
+          break if a == 2
+        end
+      end
+    "
+  end
+
+  it "should execute ensure on parent frame when using break" do
+    x = ::V7.new
+
+    x.foo
+    x.a.should be == 87
+  end
+
 end
