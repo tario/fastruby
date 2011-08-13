@@ -768,6 +768,7 @@ module FastRuby
           if (pframe->target_frame == (void*)-1) {
             // raise exception
             rb_funcall(self, #{:raise.to_i}, 1, pframe->exception);
+
           }
 
           return plocals->return_value;

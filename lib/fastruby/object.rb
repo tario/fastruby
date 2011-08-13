@@ -222,9 +222,9 @@ class Object
     strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
     if args_tree.size > 1
-      strmethodargs = "self,block,0,#{args_tree[1..-1].map(&:to_s).join(",") }"
+      strmethodargs = "self,block,(VALUE)&frame,#{args_tree[1..-1].map(&:to_s).join(",") }"
     else
-      strmethodargs = "self,block,0"
+      strmethodargs = "self,block,(VALUE)&frame"
     end
 
     strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
@@ -258,6 +258,22 @@ class Object
       }
 
         if (nd_type(body) == NODE_CFUNC) {
+          struct {
+            void* parent_frame;
+            void* target_frame;
+            void* plocals;
+            jmp_buf jmp;
+            VALUE return_value;
+            VALUE exception;
+            int rescue;
+          } frame;
+
+          frame.target_frame = 0;
+          frame.parent_frame = 0;
+          frame.rescue = 0;
+          frame.exception = Qnil;
+          frame.return_value = Qnil;
+
           int argc = body->nd_argc;
 
           VALUE block = Qfalse;
@@ -274,13 +290,18 @@ class Object
             block = (VALUE)&block_struct;
           }
 
+          int aux = setjmp(frame.jmp);
+          if (aux != 0) {
+            rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+          }
+
           if (argc == #{args_tree.size+1}) {
             return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
           } else if (argc == -1) {
-            VALUE argv[] = {#{(["block,0"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+            VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
             return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
           } else if (argc == -2) {
-            VALUE argv[] = {#{(["block,0"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+            VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
             return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
           } else {
             rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
