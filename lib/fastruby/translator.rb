@@ -606,18 +606,6 @@ module FastRuby
         void* block_function_param;
       }"
 
-      str_impl = ""
-      # if impl_tree is a block, implement the last node with a return
-      if impl_tree[0] == :block
-        str_impl = to_c impl_tree
-      else
-        if impl_tree[0] != :return
-          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
-        else
-          str_impl = str_impl + ";#{to_c(impl_tree)};"
-        end
-      end
-
       strargs = if args_tree.size > 1
         "VALUE self, void* block_address, VALUE block_param, void* _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
       else
@@ -634,7 +622,7 @@ module FastRuby
         locals.block_function_address = block_address;
         locals.block_function_param = block_param;
 
-        return #{str_impl};
+        return #{to_c impl_tree};
       }"
 
       strargs2 = if args_tree.size > 1
@@ -712,18 +700,6 @@ module FastRuby
         void* block_function_param;
       }"
 
-      str_impl = ""
-      # if impl_tree is a block, implement the last node with a return
-      if impl_tree[0] == :block
-        str_impl = to_c impl_tree
-      else
-        if impl_tree[0] != :return
-          str_impl = str_impl + ";last_expression = #{to_c(impl_tree)};"
-        else
-          str_impl = str_impl + ";#{to_c(impl_tree)};"
-        end
-      end
-
       strargs = if args_tree.size > 1
         "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
       else
@@ -747,7 +723,7 @@ module FastRuby
           locals.block_function_param = Qnil;
         }
 
-        return #{str_impl};
+        return #{to_c impl_tree};
       }"
     end
 
