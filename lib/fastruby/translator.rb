@@ -625,41 +625,11 @@ module FastRuby
       end
 
       extra_code << "static VALUE #{@alt_method_name + "_real"}(#{strargs}) {
-        #{@locals_struct} locals;
-        #{@locals_struct} *plocals = (void*)&locals;
-        #{@frame_struct} frame;
-        #{@frame_struct} *pframe;
-
-        frame.plocals = plocals;
-        frame.parent_frame = _parent_frame;
-        frame.return_value = Qnil;
-        frame.target_frame = &frame;
-        frame.rescue = 0;
-
-        locals.pframe = &frame;
-
-        pframe = (void*)&frame;
-
-        #{@block_struct} *pblock;
-        VALUE last_expression = Qnil;
+        #{func_frame}
 
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
-
-        int aux = setjmp(pframe->jmp);
-        if (aux != 0) {
-
-          if (pframe->target_frame == (void*)-1) {
-            ((typeof(pframe))_parent_frame)->exception = pframe->exception;
-            ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
-            longjmp(((typeof(pframe))_parent_frame)->jmp,1);
-          }
-
-          return plocals->return_value;
-        }
-
-        locals.self = self;
 
         locals.block_function_address = block_address;
         locals.block_function_param = block_param;
@@ -761,43 +731,12 @@ module FastRuby
       end
 
       "VALUE #{@alt_method_name || method_name}(#{strargs}) {
-        #{@locals_struct} locals;
-        #{@locals_struct} *plocals = (void*)&locals;
-        #{@frame_struct} frame;
-        #{@frame_struct} *pframe;
 
-        frame.plocals = plocals;
-        frame.parent_frame = (void*)_parent_frame;
-        frame.return_value = Qnil;
-        frame.target_frame = &frame;
-        frame.exception = Qnil;
-        frame.rescue = 0;
-
-        locals.pframe = &frame;
-
-        pframe = (void*)&frame;
-
-        #{@block_struct} *pblock;
-        VALUE last_expression = Qnil;
+        #{func_frame}
 
         #{args_tree[1..-1].map { |arg|
           "locals.#{arg} = #{arg};\n"
         }.join("") }
-
-        int aux = setjmp(pframe->jmp);
-        if (aux != 0) {
-
-          if (pframe->target_frame == (void*)-1) {
-            // raise exception
-            ((typeof(pframe))_parent_frame)->exception = pframe->exception;
-            ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
-            longjmp(((typeof(pframe))_parent_frame)->jmp,1);
-          }
-
-          return plocals->return_value;
-        }
-
-        locals.self = self;
 
         pblock = (void*)block;
         if (pblock) {
@@ -1271,6 +1210,45 @@ module FastRuby
       "}}
       ,(VALUE)pframe, rb_eException,(VALUE)0) : #{inner_code}"
 
+    end
+
+
+    def func_frame
+      "
+        #{@locals_struct} locals;
+        #{@locals_struct} *plocals = (void*)&locals;
+        #{@frame_struct} frame;
+        #{@frame_struct} *pframe;
+
+        frame.plocals = plocals;
+        frame.parent_frame = (void*)_parent_frame;
+        frame.return_value = Qnil;
+        frame.target_frame = &frame;
+        frame.exception = Qnil;
+        frame.rescue = 0;
+
+        locals.pframe = &frame;
+
+        pframe = (void*)&frame;
+
+        #{@block_struct} *pblock;
+        VALUE last_expression = Qnil;
+
+        int aux = setjmp(pframe->jmp);
+        if (aux != 0) {
+
+          if (pframe->target_frame == (void*)-1) {
+            // raise exception
+            ((typeof(pframe))_parent_frame)->exception = pframe->exception;
+            ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+            longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+          }
+
+          return plocals->return_value;
+        }
+
+        locals.self = self;
+      "
     end
 
     def frame(code, jmp_code, not_jmp_code = "", rescued = nil)
