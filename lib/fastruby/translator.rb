@@ -53,6 +53,7 @@ module FastRuby
         VALUE return_value;
         VALUE exception;
         int rescue;
+        VALUE last_error;
       }"
 
       @block_struct = "struct {
@@ -1213,34 +1214,59 @@ module FastRuby
 
     def protected_block(inner_code, always_rescue = false)
 
+      wrapper_code = "if (pframe->last_error != Qnil) {
+              if (CLASS_OF(pframe->last_error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
+              #{@frame_struct} *pframe = (void*)param;
+
+                pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{:@target_frame.to_i}));
+                pframe->exception = rb_ivar_get(pframe->last_error, #{:@ex.to_i});
+                longjmp(pframe->jmp, 1);
+                return Qnil;
+
+              } else {
+              // raise emulation
+
+              #{@frame_struct} *pframe = (void*)param;
+                pframe->target_frame = (void*)-1;
+                pframe->exception = pframe->last_error;
+                longjmp(pframe->jmp, 1);
+                return Qnil;
+              }
+
+          }
+      "
       rescue_code = "rb_rescue2(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
         static VALUE #{name}(VALUE param, VALUE error) {
-            if (CLASS_OF(error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
             #{@frame_struct} *pframe = (void*)param;
-
-              pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(error, #{:@target_frame.to_i}));
-              pframe->exception = rb_ivar_get(error, #{:@ex.to_i});
-              longjmp(pframe->jmp, 1);
-              return Qnil;
-
-            } else {
-            // raise emulation
-
-            #{@frame_struct} *pframe = (void*)param;
-              pframe->target_frame = (void*)-1;
-              pframe->exception = error;
-              longjmp(pframe->jmp, 1);
-              return Qnil;
-            }
+            pframe->last_error = error;
           }
-
       "}}
       ,(VALUE)pframe, rb_eException,(VALUE)0)"
 
       if always_rescue
-        rescue_code
+        inline_block "
+          pframe->last_error = Qnil;
+          VALUE result = #{rescue_code};
+
+          #{wrapper_code}
+
+          return result;
+        "
       else
-        "pframe->rescue ? #{rescue_code} : #{inner_code}"
+        inline_block "
+          VALUE result;
+          pframe->last_error = Qnil;
+
+          if (pframe->rescue) {
+            result = #{rescue_code};
+          } else {
+            return #{inner_code};
+          }
+
+          #{wrapper_code}
+
+          return result;
+        "
       end
 
     end
