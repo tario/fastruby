@@ -212,6 +212,161 @@ describe FastRuby, "fastruby" do
         }.should_not raise_exception
       end
 
+
+
+
+      it "should raise basic exception #{exception_name} from singleton method" do
+
+        random_name = "::L5_" + rand(10000).to_s
+
+        fastruby "
+          class #{random_name}
+              def foo(x)
+                def x.foo
+                  raise #{exception_name}
+                end
+
+                x
+              end
+          end
+           "
+
+        l = eval(random_name).new
+
+        lambda {
+          l.foo("").foo
+        }.should raise_exception(eval(exception_name))
+      end
+
+      it "should not raise basic exception #{exception_name} if rescued from singleton method" do
+
+        random_name = "::L6_" + rand(10000).to_s
+
+        fastruby "
+          class #{random_name}
+              def foo(x)
+                def x.foo
+                  begin
+                    raise #{exception_name}
+                  rescue #{exception_name}
+                  end
+                end
+
+                x
+              end
+          end
+           "
+
+        l = eval(random_name).new
+
+        lambda {
+          l.foo("").foo
+        }.should_not raise_exception
+      end
+
+      it "should raise basic exception #{exception_name} even if rescued when the rescue is for another exception from singleton method" do
+
+        random_name = "::L7_" + rand(10000).to_s
+
+        fastruby "
+          class #{random_name}
+              def foo(x)
+                def x.foo
+                  begin
+                    raise #{exception_name}
+                  rescue BahException
+                  end
+                end
+
+                x
+              end
+          end
+           "
+
+        l = eval(random_name).new
+
+        lambda {
+          l.foo("").foo
+        }.should raise_exception(eval(exception_name))
+      end
+
+      it "should rescue basic exception #{exception_name} when raised from rubycode called from fastruby code from singleton method" do
+
+        random_name = "::L8_" + rand(10000).to_s
+        random_name_2 = "::L8_" + rand(10000).to_s
+
+        eval "
+          class #{random_name_2}
+            def bar
+              raise #{exception_name}
+            end
+          end
+        "
+
+        fastruby "
+          class #{random_name}
+              def foo(x)
+                def x.foo(y)
+                  y.bar
+                end
+
+                x
+              end
+          end
+           "
+
+        l1 = eval(random_name_2).new
+        l2 = eval(random_name).new
+        lambda {
+          l2.foo("").foo(l1)
+        }.should raise_exception(eval(exception_name))
+      end
+
+      it "should rescue basic exception #{exception_name} from fastruby code when raised from rubycode from singleton methods" do
+
+        random_name = "::L9_" + rand(10000).to_s
+        random_name_2 = "::L9_" + rand(10000).to_s
+
+        eval "
+          class #{random_name_2}
+            def bar
+              raise #{exception_name}
+            end
+          end
+        "
+
+        fastruby "
+          class #{random_name}
+              def foo(x)
+                def x.foo(y)
+                  begin
+                    y.bar
+                  rescue #{exception_name}
+                  end
+                end
+
+                x
+              end
+          end
+           "
+
+        l1 = eval(random_name_2).new
+        l2 = eval(random_name).new
+        lambda {
+          l2.foo("").foo(l1)
+        }.should_not raise_exception
+      end
+
+
+
+
+
+
+
+
+
+
+
     end
   end
 
