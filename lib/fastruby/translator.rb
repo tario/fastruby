@@ -303,15 +303,19 @@ module FastRuby
             if (setjmp(frame.jmp) != 0) {
 
               if (pframe->target_frame != pframe) {
-
-                VALUE ex = rb_funcall(
-                      (VALUE)#{UnwindFastrubyFrame.internal_value},
-                      #{:new.to_i},
-                      2,
-                      pframe->exception,
-                      LONG2FIX(pframe->target_frame)
-                      );
-                rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
+                if (pframe->target_frame == (void*)-1) {
+                }
+                else
+                {
+                  VALUE ex = rb_funcall(
+                        (VALUE)#{UnwindFastrubyFrame.internal_value},
+                        #{:new.to_i},
+                        2,
+                        pframe->exception,
+                        LONG2FIX(pframe->target_frame)
+                        );
+                  rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
+                }
               }
               return Qnil;
             }
@@ -475,7 +479,17 @@ module FastRuby
     end
 
     def to_c_next(tree)
-      "Qnil; longjmp(pframe->jmp,1)"
+      if @on_block
+       "Qnil; longjmp(pframe->jmp,1)"
+      else
+        inline_block("
+            pframe->target_frame = (void*)-1;
+            pframe->exception = (VALUE)#{LocalJumpError.exception.internal_value};
+            longjmp(pframe->jmp,1);
+            return Qnil;
+            ")
+
+      end
     end
 
     def to_c_lit(tree)

@@ -293,6 +293,7 @@ class Object
           int aux = setjmp(frame.jmp);
           if (aux != 0) {
             rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+            return Qnil;
           }
 
           if (argc == #{args_tree.size+1}) {
