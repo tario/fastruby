@@ -210,6 +210,8 @@ module FastRuby
       str_impl = ""
 
       with_extra_inference(extra_inference) do
+
+        on_block do
           # if impl_tree is a block, implement the last node with a return
           if anonymous_impl
             if anonymous_impl[0] == :block
@@ -232,7 +234,7 @@ module FastRuby
           else
             str_impl = "last_expression = Qnil;"
           end
-
+        end
       end
 
       if convention == :ruby or convention == :cruby
@@ -304,19 +306,14 @@ module FastRuby
             if (setjmp(frame.jmp) != 0) {
 
               if (pframe->target_frame != pframe) {
-                if (pframe->target_frame == (void*)-1) {
-                }
-                else
-                {
-                  VALUE ex = rb_funcall(
+                VALUE ex = rb_funcall(
                         (VALUE)#{UnwindFastrubyFrame.internal_value},
                         #{:new.to_i},
                         2,
                         pframe->exception,
                         LONG2FIX(pframe->target_frame)
                         );
-                  rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
-                }
+                rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
               }
               return Qnil;
             }
@@ -1130,6 +1127,14 @@ module FastRuby
       else
         nil
       end
+    end
+
+    def on_block
+      old_on_block = @on_block
+      @on_block = true
+      return yield
+    ensure
+      @on_block = old_on_block
     end
 
     def with_extra_inference(extra_inference)
