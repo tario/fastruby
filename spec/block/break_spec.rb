@@ -54,4 +54,17 @@ describe FastRuby, "fastruby" do
     ::V3.new.foo([1,2,3]).should be == 3
   end
 
+  class ::V4
+    fastruby "
+      def foo
+        break
+      end
+    "
+  end
+
+  it "should raise LocalJumpError with illegal break" do
+    lambda {
+    ::V4.new.foo
+    }.should raise_error(LocalJumpError)
+  end
 end
