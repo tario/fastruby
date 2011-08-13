@@ -649,6 +649,13 @@ module FastRuby
 
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
+
+          if (pframe->target_frame == (void*)-1) {
+            ((typeof(pframe))_parent_frame)->exception = pframe->exception;
+            ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+            longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+          }
+
           return plocals->return_value;
         }
 
@@ -670,16 +677,25 @@ module FastRuby
       strmethodargs = ""
 
       if args_tree.size > 1
-        strmethodargs = "self,block_address,block_param,0,#{args_tree[1..-1].map(&:to_s).join(",") }"
+        strmethodargs = "self,block_address,block_param,&frame,#{args_tree[1..-1].map(&:to_s).join(",") }"
       else
-        strmethodargs = "self,block_address,block_param,0"
+        strmethodargs = "self,block_address,block_param,&frame"
       end
 
       "
       VALUE #{@alt_method_name}(#{strargs2}) {
+          #{@frame_struct} frame;
           int argc = #{args_tree.size};
           void* block_address = 0;
           VALUE block_param = Qnil;
+
+
+          frame.plocals = 0;
+          frame.parent_frame = 0;
+          frame.return_value = Qnil;
+          frame.target_frame = &frame;
+          frame.exception = Qnil;
+          frame.rescue = 0;
 
           if (rb_block_given_p()) {
             block_address = #{
@@ -692,6 +708,12 @@ module FastRuby
 
             block_param = 0;
           }
+
+          int aux = setjmp(frame.jmp);
+          if (aux != 0) {
+            rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+          }
+
 
           return #{@alt_method_name + "_real"}(#{strmethodargs});
       }
