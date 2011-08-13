@@ -474,6 +474,10 @@ module FastRuby
       "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1);\n"
     end
 
+    def to_c_next(tree)
+      "Qnil; longjmp(pframe->jmp,1)"
+    end
+
     def to_c_lit(tree)
       "(VALUE)#{tree[1].internal_value}"
     end
