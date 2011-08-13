@@ -67,4 +67,30 @@ describe FastRuby, "fastruby" do
     ::V4.new.foo
     }.should raise_error(LocalJumpError)
   end
+
+  class ::V5
+    fastruby "
+
+      def each
+        yield(1)
+        yield(2)
+        yield(3)
+      end
+
+      def foo
+        sum = 0
+        each do |a|
+          sum = sum + a
+          break if a == 2
+        end
+
+        sum
+      end
+    "
+  end
+
+  it "should execute basic test iterating an array with a conditional break (method with block on fastruby)" do
+    ::V5.new.foo.should be == 3
+  end
+
 end
