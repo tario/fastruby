@@ -304,8 +304,8 @@ module FastRuby
             plocals = frame.plocals;
 
             if (setjmp(frame.jmp) != 0) {
-
               if (pframe->target_frame != pframe) {
+
                 VALUE ex = rb_funcall(
                         (VALUE)#{UnwindFastrubyFrame.internal_value},
                         #{:new.to_i},
@@ -476,6 +476,25 @@ module FastRuby
       "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1);\n"
     end
 
+    def to_c_break(tree)
+      if @on_block
+        inline_block(
+         "
+         pframe->target_frame = (void*)-2;
+         pframe->exception = Qnil;
+         longjmp(pframe->jmp,1);"
+         )
+      else
+        inline_block("
+            pframe->target_frame = (void*)-1;
+            pframe->exception = (VALUE)#{LocalJumpError.exception.internal_value};
+            longjmp(pframe->jmp,1);
+            return Qnil;
+            ")
+
+      end
+    end
+
     def to_c_next(tree)
       if @on_block
        "Qnil; longjmp(pframe->jmp,1)"
@@ -638,14 +657,13 @@ module FastRuby
 
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
-        #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         void* block_function_address;
         VALUE block_function_param;
         jmp_buf jmp;
         VALUE return_value;
-
         void* pframe;
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
     end
 
@@ -1218,24 +1236,28 @@ module FastRuby
     end
 
     def protected_block(inner_code, always_rescue = false)
-
-      wrapper_code = "if (pframe->last_error != Qnil) {
+      wrapper_code = "
+         if (pframe->last_error != Qnil) {
               if (CLASS_OF(pframe->last_error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
               #{@frame_struct} *pframe = (void*)param;
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{:@target_frame.to_i}));
                 pframe->exception = rb_ivar_get(pframe->last_error, #{:@ex.to_i});
+
+               if (pframe->target_frame == (void*)-2) {
+                  return Qnil;
+               }
+
                 longjmp(pframe->jmp, 1);
                 return Qnil;
 
               } else {
-              // raise emulation
-
-              #{@frame_struct} *pframe = (void*)param;
-                pframe->target_frame = (void*)-1;
-                pframe->exception = pframe->last_error;
-                longjmp(pframe->jmp, 1);
-                return Qnil;
+                // raise emulation
+                  #{@frame_struct} *pframe = (void*)param;
+                  pframe->target_frame = (void*)-1;
+                  pframe->exception = pframe->last_error;
+                  longjmp(pframe->jmp, 1);
+                  return Qnil;
               }
 
           }
