@@ -48,6 +48,11 @@ module FastRuby
         int rescue;
       }"
 
+      @block_struct = "struct {
+        void* block_function_address;
+        void* block_function_param;
+      }"
+
       extra_code << '#include "node.h"
       '
 
@@ -601,11 +606,6 @@ module FastRuby
 
         }"
 
-      @block_struct = "struct {
-        void* block_function_address;
-        void* block_function_param;
-      }"
-
       strargs = if args_tree.size > 1
         "VALUE self, void* block_address, VALUE block_param, void* _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
       else
@@ -694,11 +694,6 @@ module FastRuby
 
         void* pframe;
         }"
-
-      @block_struct = "struct {
-        void* block_function_address;
-        void* block_function_param;
-      }"
 
       strargs = if args_tree.size > 1
         "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
