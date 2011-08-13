@@ -32,4 +32,30 @@ describe FastRuby, "fastruby" do
     ::W2.new.foo
     }.should raise_error(LocalJumpError)
   end
+
+  class ::W3
+    attr_reader :x, :y
+
+    fastruby "
+      def bar
+        @x = yield(1)
+        @y = yield(2)
+      end
+
+      def foo
+        bar do |a|
+          next 16 if a == 1
+          next 32 if a == 2
+        end
+      end
+    "
+  end
+
+  it "should return values on block using next" do
+     x = ::W3.new
+     x.foo
+     x.x.should be == 16
+     x.y.should be == 32
+  end
+
 end
