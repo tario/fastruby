@@ -374,6 +374,7 @@ module FastRuby
                   // raise exception
                   ((typeof(pframe))_parent_frame)->exception = pframe->exception;
                   ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+                  ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
                   longjmp(((typeof(pframe))_parent_frame)->jmp,1);
                 }
 
@@ -525,7 +526,7 @@ module FastRuby
 
     def to_c_next(tree)
       if @on_block
-       "Qnil; pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"}; longjmp(pframe->jmp,1)"
+       "Qnil; pframe->target_frame = (void*)-3; pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"}; longjmp(pframe->jmp,1)"
       else
         inline_block("
             pframe->target_frame = (void*)-1;
@@ -1355,6 +1356,8 @@ module FastRuby
             // raise exception
             ((typeof(pframe))_parent_frame)->exception = pframe->exception;
             ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+            ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
+
             longjmp(((typeof(pframe))_parent_frame)->jmp,1);
           }
 
@@ -1396,6 +1399,7 @@ module FastRuby
             if (original_frame->target_frame != original_frame) {
               pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
+              pframe->return_value = original_frame->return_value;
               longjmp(pframe->jmp,1);
             }
 
