@@ -329,7 +329,7 @@ module FastRuby
 
         if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",")
-          value_cast = value_cast + ", VALUE" if convention == :fastruby
+          value_cast = value_cast + ", VALUE, VALUE" if convention == :fastruby
 
           str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
 
@@ -344,7 +344,7 @@ module FastRuby
 
                 #{str_lvar_initialization}
 
-                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, #{str_called_code_args});
+                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
               }
             "
             }
@@ -360,7 +360,7 @@ module FastRuby
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
 
-                return ((VALUE(*)(VALUE,VALUE))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block);
+                return ((VALUE(*)(VALUE,VALUE,VALUE))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
               }
             "
             }
@@ -619,9 +619,9 @@ module FastRuby
       end
 
       strargs = if args_tree.size > 1
-        "VALUE self, void* block_address, VALUE block_param, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        "VALUE self, void* block_address, VALUE block_param, void* _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
       else
-        "VALUE self, void* block_address, VALUE block_param"
+        "VALUE self, void* block_address, VALUE block_param, void* _parent_frame"
       end
 
       extra_code << "static VALUE #{@alt_method_name + "_real"}(#{strargs}) {
@@ -631,7 +631,7 @@ module FastRuby
         #{@frame_struct} *pframe;
 
         frame.plocals = plocals;
-        frame.parent_frame = 0;
+        frame.parent_frame = _parent_frame;
         frame.return_value = Qnil;
         frame.target_frame = &frame;
         frame.rescue = 0;
@@ -670,9 +670,9 @@ module FastRuby
       strmethodargs = ""
 
       if args_tree.size > 1
-        strmethodargs = "self,block_address,block_param,#{args_tree[1..-1].map(&:to_s).join(",") }"
+        strmethodargs = "self,block_address,block_param,0,#{args_tree[1..-1].map(&:to_s).join(",") }"
       else
-        strmethodargs = "self,block_address,block_param"
+        strmethodargs = "self,block_address,block_param,0"
       end
 
       "
@@ -733,9 +733,9 @@ module FastRuby
       end
 
       strargs = if args_tree.size > 1
-        "VALUE block, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
       else
-        "VALUE block"
+        "VALUE block, VALUE _parent_frame"
       end
 
       "VALUE #{@alt_method_name || method_name}(#{strargs}) {
@@ -745,7 +745,7 @@ module FastRuby
         #{@frame_struct} *pframe;
 
         frame.plocals = plocals;
-        frame.parent_frame = 0;
+        frame.parent_frame = (void*)_parent_frame;
         frame.return_value = Qnil;
         frame.target_frame = &frame;
         frame.exception = Qnil;
@@ -1026,10 +1026,10 @@ module FastRuby
         if address then
           if argnum == 0
             value_cast = "VALUE"
-            value_cast = value_cast + ", VALUE" if convention == :fastruby
+            value_cast = value_cast + ", VALUE,VALUE" if convention == :fastruby
 
             if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse)"
+              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
             else
 
               str_incall_args = nil
@@ -1060,11 +1060,11 @@ module FastRuby
             end
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",")
-            value_cast = value_cast + ", VALUE" if convention == :fastruby
+            value_cast = value_cast + ", VALUE, VALUE" if convention == :fastruby
 
             wrapper_func = nil
             if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, #{strargs})"
+              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
             else
 
               str_incall_args = nil
