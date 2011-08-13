@@ -58,4 +58,28 @@ describe FastRuby, "fastruby" do
      x.y.should be == 32
   end
 
+  class ::W4
+    attr_reader :x, :y
+
+    fastruby "
+      def foo(ary)
+        sum = 0
+        ary.each do |a|
+          begin
+            next if a == 2
+          ensure
+            sum = sum + a
+          end
+        end
+
+        sum
+      end
+    "
+  end
+
+  it "should execute ensure when using next" do
+     x = ::W4.new
+     x.foo([1,2,3]).should be == 6
+  end
+
 end
