@@ -434,7 +434,7 @@ module FastRuby
             }
         end
 
-        "#{anonymous_function(&caller_code)}((VALUE)pframe)"
+        wrapped_break_block("#{anonymous_function(&caller_code)}((VALUE)pframe)")
       end
     end
 
@@ -1262,6 +1262,14 @@ module FastRuby
 
     def inline_ruby(proced, parameter)
       "rb_funcall(#{proced.internal_value}, #{:call.to_i}, 1, #{parameter})"
+    end
+
+    def wrapped_break_block(inner_code)
+      frame("return " + inner_code, "
+            if (original_frame->target_frame == (void*)-2) {
+              return pframe->return_value;
+            }
+            ")
     end
 
     def protected_block(inner_code, always_rescue = false)
