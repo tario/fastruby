@@ -166,4 +166,25 @@ describe FastRuby, "fastruby" do
     x.a.should be == 87
   end
 
+  class ::V9
+    fastruby "
+      def each
+        yield(1)
+        yield(2)
+        yield(3)
+      end
+
+      def foo
+        each do |a|
+          break 85
+        end
+      end
+    "
+  end
+
+  it "should allow return value on parent method using break when called method is fastruby" do
+    ::V9.new.foo.should be == 85
+  end
+
+
 end
