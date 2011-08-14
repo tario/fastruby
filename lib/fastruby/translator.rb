@@ -1362,6 +1362,11 @@ module FastRuby
 
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
+
+          if (pframe->target_frame == (void*)-2) {
+            return pframe->return_value;
+          }
+
           if (pframe->target_frame != pframe) {
             // raise exception
             ((typeof(pframe))_parent_frame)->exception = pframe->exception;
