@@ -351,7 +351,7 @@ module FastRuby
         end
 
         block_code = proc { |name| "
-          static VALUE #{name}(int argc, VALUE* argv, VALUE _parent_frame, VALUE _parent_frame_) {
+          static VALUE #{name}(int argc, VALUE* argv, VALUE _locals, VALUE _parent_frame) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
             #{@frame_struct} frame;
@@ -359,7 +359,7 @@ module FastRuby
             #{@frame_struct} *parent_frame = (void*)_parent_frame;
             #{@locals_struct} *plocals;
 
-            frame.plocals = parent_frame->plocals;
+            frame.plocals = (void*)_locals;
             frame.parent_frame = parent_frame;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
@@ -404,15 +404,14 @@ module FastRuby
           str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
 
             caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
+              static VALUE #{name}(VALUE param, VALUE pframe) {
                 #{@block_struct} block;
+                #{@locals_struct} *plocals = (void*)param;
 
                 block.block_function_address = (void*)#{anonymous_function(&block_code)};
                 block.block_function_param = (void*)param;
 
                 // call to #{call_tree[2]}
-
-                #{str_lvar_initialization}
 
                 return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
               }
@@ -421,14 +420,14 @@ module FastRuby
 
         else
             caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
+              static VALUE #{name}(VALUE param, VALUE pframe) {
                 #{@block_struct} block;
+                #{@locals_struct} *plocals = (void*)param;
 
                 block.block_function_address = (void*)#{anonymous_function(&block_code)};
                 block.block_function_param = (void*)param;
 
                 // call to #{call_tree[2]}
-                #{str_lvar_initialization}
 
                 return ((VALUE(*)(VALUE,VALUE,VALUE))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
               }
@@ -436,7 +435,7 @@ module FastRuby
             }
         end
 
-        wrapped_break_block("#{anonymous_function(&caller_code)}((VALUE)pframe)")
+        wrapped_break_block("#{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe)")
       end
     end
 
@@ -1363,13 +1362,11 @@ module FastRuby
 
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
-
           if (pframe->target_frame != pframe) {
             // raise exception
             ((typeof(pframe))_parent_frame)->exception = pframe->exception;
             ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
             ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
-
             longjmp(((typeof(pframe))_parent_frame)->jmp,1);
           }
 
@@ -1412,6 +1409,7 @@ module FastRuby
               pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
               pframe->return_value = original_frame->return_value;
+
               longjmp(pframe->jmp,1);
             }
 
