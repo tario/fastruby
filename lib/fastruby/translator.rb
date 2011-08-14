@@ -435,7 +435,7 @@ module FastRuby
             }
         end
 
-        wrapped_break_block("#{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe)")
+        "#{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe)"
       end
     end
 
