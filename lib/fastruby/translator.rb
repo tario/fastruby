@@ -27,9 +27,10 @@ module FastRuby
   class Context
 
     class UnwindFastrubyFrame < Exception
-      def initialize(ex,target_frame)
+      def initialize(ex,target_frame,return_value)
         @ex = ex
         @target_frame = target_frame
+        @return_value = return_value
       end
     end
 
@@ -312,9 +313,10 @@ module FastRuby
                 VALUE ex = rb_funcall(
                         (VALUE)#{UnwindFastrubyFrame.internal_value},
                         #{:new.to_i},
-                        2,
+                        3,
                         pframe->exception,
-                        LONG2FIX(pframe->target_frame)
+                        LONG2FIX(pframe->target_frame),
+                        pframe->return_value
                         );
                 rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
               }
@@ -510,6 +512,7 @@ module FastRuby
         inline_block(
          "
          pframe->target_frame = (void*)-2;
+         pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
          pframe->exception = Qnil;
          longjmp(pframe->jmp,1);"
          )
@@ -1280,9 +1283,10 @@ module FastRuby
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{:@target_frame.to_i}));
                 pframe->exception = rb_ivar_get(pframe->last_error, #{:@ex.to_i});
+                pframe->return_value = rb_ivar_get(pframe->last_error, #{:@return_value.to_i});
 
                if (pframe->target_frame == (void*)-2) {
-                  return Qnil;
+                  return pframe->return_value;
                }
 
                 longjmp(pframe->jmp, 1);
