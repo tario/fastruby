@@ -351,7 +351,7 @@ module FastRuby
         end
 
         block_code = proc { |name| "
-          static VALUE #{name}(int argc, VALUE* argv, VALUE _parent_frame) {
+          static VALUE #{name}(int argc, VALUE* argv, VALUE _parent_frame, VALUE _parent_frame_) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
             #{@frame_struct} frame;
@@ -453,7 +453,7 @@ module FastRuby
           if (plocals->block_function_address == 0) {
             rb_raise(rb_eLocalJumpError, \"no block given\");
           } else {
-            return ((VALUE(*)(int,VALUE*,VALUE))plocals->block_function_address)(#{tree.size-1}, block_args, plocals->block_function_param);
+            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))plocals->block_function_address)(#{tree.size-1}, block_args, plocals->block_function_param, (VALUE)pframe);
           }
         }
       "

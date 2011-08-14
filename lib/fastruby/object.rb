@@ -314,7 +314,7 @@ class Object
 
     inline :C  do |builder|
       builder.include "<node.h>"
-      builder.inc << "static VALUE re_yield(int argc, VALUE* argv, VALUE param) {
+      builder.inc << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
         return rb_yield_splat(rb_ary_new4(argc,argv));
       }"
       builder.c c_code
