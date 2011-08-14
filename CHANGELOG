@@ -1,4 +1,6 @@
-0.0.4	Support for exceptions
+0.0.4	Basic support fot non-local goto: return, break, next
+
+		Basic support for exceptions
 
 		Support for defined?
 
