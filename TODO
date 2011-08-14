@@ -1,10 +1,8 @@
 Basic functionality:
 
 * Flow control setences: case
-* Exceptions
 * Defining and call of methods with variable number of arguments
 * Blocks with variable number of arguments
-* call to monkey patched methods from fastruby code
 * callcc
 
 To improve:
