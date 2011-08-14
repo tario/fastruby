@@ -136,4 +136,34 @@ describe FastRuby, "fastruby" do
     x.a.should be == 87
   end
 
+
+  class ::V8
+
+    attr_reader :a
+
+      def each
+        yield(1)
+        yield(2)
+        yield(3)
+      ensure
+        @a = 87
+      end
+
+    fastruby "
+
+      def foo
+        each do |x|
+          break if x == 2
+        end
+      end
+    "
+  end
+
+  it "should execute ensure on parent frame when using break (and called method is ruby)" do
+    x = ::V8.new
+
+    x.foo
+    x.a.should be == 87
+  end
+
 end
