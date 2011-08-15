@@ -415,4 +415,21 @@ describe FastRuby, "fastruby" do
     y28 = ::Y28.new
     y28.foo(::Y27.new, 713).should be == 713
   end
+
+  class ::Y29
+    fastruby "
+      def foo(ary)
+        cc = nil
+        ary.each do |x|
+          cc = x
+        end
+        cc
+      end
+    "
+  end
+
+  it "should assign variables from inside a block" do
+    ::Y29.new.foo([1,2,3]).should be == 3
+  end
+
 end
