@@ -86,5 +86,30 @@ describe FastRuby, "fastruby" do
     ::N4.new.foo(4).should be == 6
   end
 
+  class ::N5
+    fastruby "
+      def foo(n_)
+        $n = n_
+
+        $val = 0
+        c = 0
+        u = nil
+
+        x = callcc{|c| $cc_n4 = c; u = 44; nil}
+
+        $val = $val + x if x
+        $n = $n - 1
+
+        $cc_n4.call($n) if $n > 0
+
+        u
+      end
+    "
+  end
+
+  it "should execute callcc loops and preserve local variables" do
+    ::N5.new.foo(4).should be == 44
+  end
+
 
 end
