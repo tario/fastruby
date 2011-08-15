@@ -57,8 +57,34 @@ describe FastRuby, "fastruby" do
     "
   end
 
-  it "should execute callcc from ruby" do
+  it "should execute callcc from ruby using local variables" do
     ::N3.new.foo(4).should be == 6
   end
+
+  class ::N4
+    fastruby "
+      def foo(n_)
+        $n = n_
+
+        $val = 0
+        c = 0
+
+
+        x = callcc{|c| $cc_n4 = c; nil}
+
+        $val = $val + x if x
+        $n = $n - 1
+
+        $cc_n4.call($n) if $n > 0
+
+        $val
+      end
+    "
+  end
+
+  it "should execute callcc from ruby using global variables" do
+    ::N4.new.foo(4).should be == 6
+  end
+
 
 end
