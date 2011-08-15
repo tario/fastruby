@@ -1216,12 +1216,13 @@ module FastRuby
 
         return anonymous_function{ |name| "
            static VALUE #{name}(VALUE param) {
-            #{@locals_struct} *plocals = (void*)param;
+            #{@frame_struct} *pframe = (void*)param;
+            #{@locals_struct} *plocals = (void*)pframe->plocals;
             #{code};
             return Qnil;
           }
          "
-        }+"((VALUE)plocals)"
+        }+"((VALUE)pframe)"
       else
         nil
       end
