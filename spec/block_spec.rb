@@ -432,4 +432,48 @@ describe FastRuby, "fastruby" do
     ::Y29.new.foo([1,2,3]).should be == 3
   end
 
+
+  class ::Y30
+    attr_accessor :a, :b, :c
+
+      def bar
+        begin
+          doo do
+            yield
+          end
+        ensure
+          @a = 15
+        end
+      end
+
+    fastruby "
+
+      def doo
+        begin
+          yield
+        ensure
+          @b = 16
+        end
+      end
+
+      def foo
+        cc = nil
+        bar do
+          return
+        end
+      ensure
+        @c = 17
+      end
+    "
+  end
+
+  it "should assign variables from inside a block" do
+    y = ::Y30.new
+    y.foo
+
+    y.a.should be == 15
+    y.b.should be == 16
+    y.c.should be == 17
+  end
+
 end
