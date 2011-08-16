@@ -22,6 +22,7 @@ require "fastruby/translator"
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
+require "fastruby/translator"
 require "ruby_parser"
 require "inline"
 
@@ -314,10 +315,58 @@ class Object
       return Qnil;
     }"
 
+    generic_frame_struct = "struct {
+        void* parent_frame;
+        void* target_frame;
+        void* plocals;
+        jmp_buf jmp;
+        VALUE return_value;
+        VALUE exception;
+        int rescue;
+        VALUE last_error;
+      }";
+
     inline :C  do |builder|
       builder.include "<node.h>"
-      builder.inc << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
-        return rb_yield_splat(rb_ary_new4(argc,argv));
+      builder.inc <<
+
+      "
+      static VALUE catch_yield_error(VALUE pframe_, VALUE err) {
+        #{generic_frame_struct} *pframe = (void*)pframe_;
+        pframe->last_error = err;
+        return Qnil;
+      }
+
+      static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
+
+        #{generic_frame_struct} *pframe = (void*)_parent_frame;
+        rb_rescue2(rb_yield_splat,rb_ary_new4(argc,argv),catch_yield_error,(VALUE)pframe, rb_eException,(VALUE)0);
+
+         if (pframe->last_error != Qnil) {
+              if (CLASS_OF(pframe->last_error)==(VALUE)#{FastRuby::Context::UnwindFastrubyFrame.internal_value}) {
+
+                pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{:@target_frame.to_i}));
+                pframe->exception = rb_ivar_get(pframe->last_error, #{:@ex.to_i});
+                pframe->return_value = rb_ivar_get(pframe->last_error, #{:@return_value.to_i});
+
+               if (pframe->target_frame == (void*)-2) {
+                  return pframe->return_value;
+               }
+
+                longjmp(pframe->jmp, 1);
+                return Qnil;
+
+              } else {
+
+                // raise emulation
+                  pframe->target_frame = (void*)-1;
+                  pframe->exception = pframe->last_error;
+                  longjmp(pframe->jmp, 1);
+                  return Qnil;
+              }
+
+          }
+
       }"
       builder.c c_code
     end
