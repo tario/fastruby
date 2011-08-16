@@ -292,7 +292,9 @@ class Object
 
           int aux = setjmp(frame.jmp);
           if (aux != 0) {
-            rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+            if (frame.target_frame == (void*)-1) {
+              rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+            }
             return Qnil;
           }
 

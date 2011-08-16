@@ -315,6 +315,7 @@ module FastRuby
                         LONG2FIX(pframe->target_frame),
                         pframe->return_value
                         );
+
                 rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
               }
               return frame.return_value;
@@ -471,11 +472,13 @@ module FastRuby
         @yield_signature = new_yield_signature
       end
 
-      if tree.size > 1
-        anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
-      else
-        anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
-      end
+      ret = if tree.size > 1
+          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
+        else
+          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
+        end
+
+      protected_block(ret, true)
     end
 
     def to_c_block(tree)
@@ -500,7 +503,7 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1);\n"
+      "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1); return Qnil;\n"
     end
 
     def to_c_break(tree)
@@ -1290,6 +1293,7 @@ module FastRuby
                 return Qnil;
 
               } else {
+
                 // raise emulation
                   #{@frame_struct} *pframe = (void*)param;
                   pframe->target_frame = (void*)-1;
@@ -1380,6 +1384,7 @@ module FastRuby
       "
     end
 
+
     def frame(code, jmp_code, not_jmp_code = "", rescued = nil)
 
       anonymous_function{ |name| "
@@ -1412,7 +1417,6 @@ module FastRuby
               pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
               pframe->return_value = original_frame->return_value;
-
               longjmp(pframe->jmp,1);
             }
 
