@@ -292,7 +292,7 @@ module FastRuby
 
             #{@frame_struct} frame;
             #{@frame_struct} *pframe = (void*)&frame;
-            #{@locals_struct} *plocals = (VALUE)_plocals;
+            #{@locals_struct} *plocals = (void*)_plocals;
 
             frame.plocals = plocals;
             frame.parent_frame = 0;
