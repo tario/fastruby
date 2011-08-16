@@ -286,23 +286,20 @@ module FastRuby
         str_arg_initialization
 
         block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _parent_frame) {
+          static VALUE #{name}(VALUE arg, VALUE _plocals) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
 
             #{@frame_struct} frame;
             #{@frame_struct} *pframe = (void*)&frame;
-            #{@frame_struct} *parent_frame = (void*)_parent_frame;
-            #{@locals_struct} *plocals;
+            #{@locals_struct} *plocals = (VALUE)_plocals;
 
-            frame.plocals = parent_frame->plocals;
-            frame.parent_frame = parent_frame;
+            frame.plocals = plocals;
+            frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
-
-            plocals = frame.plocals;
 
             if (setjmp(frame.jmp) != 0) {
               if (pframe->target_frame != pframe) {
@@ -332,7 +329,7 @@ module FastRuby
         "
         }
 
-        protected_block("rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)pframe)", true)
+        protected_block("rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)plocals)", true)
 
       elsif convention == :fastruby
 
