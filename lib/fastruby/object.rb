@@ -22,8 +22,10 @@ require "fastruby/translator"
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
+require "fastruby/translator"
 require "ruby_parser"
 require "inline"
+
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
@@ -295,6 +297,20 @@ class Object
             if (frame.target_frame == (void*)-1) {
               rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
             }
+
+            if (frame.target_frame != &frame) {
+                VALUE ex = rb_funcall(
+                        (VALUE)#{FastRuby::Context::UnwindFastrubyFrame.internal_value},
+                        #{:new.to_i},
+                        3,
+                        frame.exception,
+                        LONG2FIX(frame.target_frame),
+                        frame.return_value
+                        );
+
+                rb_funcall(self, #{:raise.to_i}, 1, ex);
+            }
+
             return Qnil;
           }
 
