@@ -472,13 +472,13 @@ module FastRuby
         @yield_signature = new_yield_signature
       end
 
-      if tree.size > 1
-        anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
-      else
-        anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
-      end
+      ret = if tree.size > 1
+          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
+        else
+          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
+        end
 
-#      protected_block(ret, true)
+      protected_block(ret, true)
     end
 
     def to_c_block(tree)
