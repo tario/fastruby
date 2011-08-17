@@ -476,4 +476,29 @@ describe FastRuby, "fastruby" do
     y.c.should be == 17
   end
 
+  class ::Y31
+    fastruby "
+
+      def bar
+        begin
+          yield
+        rescue
+        end
+      end
+
+      def foo
+        bar do
+          return 8
+        end
+        return 0
+      end
+    "
+  end
+
+  it "should return values from block through rescue" do
+    y = ::Y31.new
+    y.foo.should be == 8
+  end
+
+
 end
