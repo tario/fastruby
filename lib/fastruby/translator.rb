@@ -622,7 +622,23 @@ module FastRuby
     end
 
     def to_c_case(tree)
-      "Qnil"
+      code = tree[2..-2].map{|subtree|
+            calltree = s(:call, subtree[1][1], :===, s(:arglist, tree[1]))
+            # this subtree is a when
+            "
+              if (RTEST(#{to_c(calltree)})) {
+                 return #{to_c(subtree[2])};
+              }
+
+            "
+
+          }.join("\n")
+
+      inline_block "
+        #{code};
+
+        return Qnil;
+      "
     end
 
     def to_c_const(tree)
