@@ -621,6 +621,10 @@ module FastRuby
       end
     end
 
+    def to_c_case(tree)
+      "Qnil"
+    end
+
     def to_c_const(tree)
       "rb_const_get(CLASS_OF(plocals->self), #{tree[1].to_i})"
     end
