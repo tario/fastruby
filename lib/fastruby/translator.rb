@@ -637,7 +637,7 @@ module FastRuby
       inline_block "
         #{code};
 
-        return Qnil;
+        return #{to_c tree[-1]};
       "
     end
 
