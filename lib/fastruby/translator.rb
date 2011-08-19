@@ -622,11 +622,16 @@ module FastRuby
     end
 
     def to_c_case(tree)
+
+      tmpvarname = "tmp" + rand(1000000).to_s;
+
       code = tree[2..-2].map{|subtree|
-            calltree = s(:call, subtree[1][1], :===, s(:arglist, tree[1]))
+
+            c_calltree = s(:call, nil, :inline_c, s(:arglist, s(:str, tmpvarname), s(:false)))
+            calltree = s(:call, subtree[1][1], :===, s(:arglist, c_calltree))
             # this subtree is a when
             "
-              if (RTEST(#{to_c(calltree)})) {
+              if (RTEST(#{to_c_call(calltree, tmpvarname)})) {
                  return #{to_c(subtree[2])};
               }
 
@@ -635,6 +640,9 @@ module FastRuby
           }.join("\n")
 
       inline_block "
+
+        VALUE #{tmpvarname} = #{to_c tree[1]};
+
         #{code};
 
         return #{to_c tree[-1]};
@@ -986,7 +994,7 @@ module FastRuby
       end
     end
 
-    def to_c_call(tree)
+    def to_c_call(tree, repass_var = nil)
       directive_code = directive(tree)
       if directive_code
         return directive_code
@@ -1066,8 +1074,13 @@ module FastRuby
           len = getlen(mobject)
         end
 
-        extraargs = ""
-        extraargs = ", Qfalse" if convention == :fastruby
+        if repass_var
+          extraargs = ","+repass_var
+          extraargs_signature = ",VALUE " + repass_var
+        else
+          extraargs = ""
+          extraargs_signature = ""
+        end
 
         if address then
           if argnum == 0
@@ -1092,7 +1105,7 @@ module FastRuby
               protected_block(
 
                 anonymous_function{ |name| "
-                  static VALUE #{name}(VALUE recv) {
+                  static VALUE #{name}(VALUE recv#{extraargs_signature}) {
                     // call to #{recvtype}##{mname}
                     if (rb_block_given_p()) {
                       // no passing block, recall
@@ -1101,8 +1114,7 @@ module FastRuby
                       return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                     }
                   }
-                " } + "(#{to_c(recv)})"
-              )
+                " } + "(#{to_c(recv)}#{extraargs})", false, repass_var)
             end
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",")
@@ -1136,24 +1148,24 @@ module FastRuby
                       return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                     }
                   }
-                " } + "(#{to_c(recv)}, #{strargs})"
+                " } + "(#{to_c(recv)}, #{strargs})", false, repass_var
               )
             end
           end
         else
 
           if argnum == 0
-            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)")
+            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)", false, repass_var)
           else
-            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )")
+            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )", false, repass_var)
           end
         end
 
       else
         if argnum == 0
-          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)")
+          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)", false, repass_var)
         else
-          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )")
+          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )", false, repass_var)
         end
       end
     end
@@ -1232,17 +1244,23 @@ module FastRuby
       elsif mname == :block_given?
         return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
+
         code = args[1][1]
 
-        return anonymous_function{ |name| "
-           static VALUE #{name}(VALUE param) {
-            #{@frame_struct} *pframe = (void*)param;
-            #{@locals_struct} *plocals = (void*)pframe->plocals;
-            #{code};
-            return Qnil;
-          }
-         "
-        }+"((VALUE)pframe)"
+        unless (args[2] == s(:false))
+          return anonymous_function{ |name| "
+             static VALUE #{name}(VALUE param) {
+              #{@frame_struct} *pframe = (void*)param;
+              #{@locals_struct} *plocals = (void*)pframe->plocals;
+              #{code};
+              return Qnil;
+            }
+           "
+          }+"((VALUE)pframe)"
+        else
+          code
+        end
+
       else
         nil
       end
@@ -1270,9 +1288,9 @@ module FastRuby
       }
     end
 
-    def inline_block(code)
+    def inline_block(code, repass_var = nil)
       anonymous_function{ |name| "
-        static VALUE #{name}(VALUE param) {
+        static VALUE #{name}(VALUE param#{repass_var ? ",VALUE " + repass_var : "" }) {
           #{@frame_struct} *pframe = (void*)param;
           #{@locals_struct} *plocals = (void*)pframe->plocals;
           VALUE last_expression = Qnil;
@@ -1280,7 +1298,7 @@ module FastRuby
           #{code}
           }
         "
-      } + "((VALUE)pframe)"
+      } + "((VALUE)pframe#{repass_var ? ", " + repass_var : "" })"
     end
 
     def inline_ruby(proced, parameter)
@@ -1295,7 +1313,7 @@ module FastRuby
             ")
     end
 
-    def protected_block(inner_code, always_rescue = false)
+    def protected_block(inner_code, always_rescue = false,repass_var = nil)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
               if (CLASS_OF(pframe->last_error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
@@ -1324,7 +1342,29 @@ module FastRuby
 
           }
       "
-      rescue_code = "rb_rescue2(#{inline_block_reference "return #{inner_code};"},(VALUE)pframe,#{anonymous_function{|name| "
+
+
+      body = nil
+      rescue_args = nil
+      if repass_var
+        body =  anonymous_function{ |name| "
+          static VALUE #{name}(VALUE param) {
+            #{@frame_struct} *pframe = ((void**)param)[0];
+            #{@locals_struct} *plocals = pframe->plocals;
+            VALUE #{repass_var} = (VALUE)((void**)param)[1];
+            return #{inner_code};
+            }
+          "
+        }
+
+        rescue_args = ""
+        rescue_args = "(VALUE){pframe,#{repass_var}}"
+      else
+        body = inline_block_reference("return #{inner_code}")
+        rescue_args = "(VALUE)pframe"
+      end
+
+      rescue_code = "rb_rescue2(#{body},#{rescue_args},#{anonymous_function{|name| "
         static VALUE #{name}(VALUE param, VALUE error) {
             #{@frame_struct} *pframe = (void*)param;
             pframe->last_error = error;
@@ -1340,7 +1380,7 @@ module FastRuby
           #{wrapper_code}
 
           return result;
-        "
+        ", repass_var
       else
         inline_block "
           VALUE result;
@@ -1355,7 +1395,7 @@ module FastRuby
           #{wrapper_code}
 
           return result;
-        "
+        ", repass_var
       end
 
     end
