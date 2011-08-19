@@ -627,15 +627,17 @@ module FastRuby
 
       code = tree[2..-2].map{|subtree|
 
-            c_calltree = s(:call, nil, :inline_c, s(:arglist, s(:str, tmpvarname), s(:false)))
-            calltree = s(:call, subtree[1][1], :===, s(:arglist, c_calltree))
-            # this subtree is a when
-            "
-              if (RTEST(#{to_c_call(calltree, tmpvarname)})) {
-                 return #{to_c(subtree[2])};
-              }
+              # this subtree is a when
+            subtree[1][1..-1].map{|subsubtree|
+              c_calltree = s(:call, nil, :inline_c, s(:arglist, s(:str, tmpvarname), s(:false)))
+              calltree = s(:call, subsubtree, :===, s(:arglist, c_calltree))
+              "
+                if (RTEST(#{to_c_call(calltree, tmpvarname)})) {
+                   return #{to_c(subtree[2])};
+                }
 
-            "
+              "
+            }.join("\n")
 
           }.join("\n")
 
