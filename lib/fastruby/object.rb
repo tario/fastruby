@@ -255,7 +255,7 @@ class Object
         VALUE argv_class[] = {#{strmethodargs_class} };
         VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
 
-        rb_funcall(method_hash, #{:build.to_i}, 1, signature);
+        rb_funcall(method_hash, build_id, 1, signature);
         body = rb_method_node(klass,id);
       }
 
@@ -295,20 +295,20 @@ class Object
           int aux = setjmp(frame.jmp);
           if (aux != 0) {
             if (frame.target_frame == (void*)-1) {
-              rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+              rb_funcall(self, raise_id, 1, frame.exception);
             }
 
             if (frame.target_frame != &frame) {
                 VALUE ex = rb_funcall(
                         (VALUE)#{FastRuby::Context::UnwindFastrubyFrame.internal_value},
-                        #{:new.to_i},
+                        new_id,
                         3,
                         frame.exception,
                         LONG2FIX(frame.target_frame),
                         frame.return_value
                         );
 
-                rb_funcall(self, #{:raise.to_i}, 1, ex);
+                rb_funcall(self, raise_id, 1, ex);
             }
 
             return Qnil;
@@ -332,9 +332,21 @@ class Object
 
     inline :C  do |builder|
       builder.include "<node.h>"
-      builder.inc << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
+      builder.inc << "
+
+      ID raise_id = 0;
+      ID new_id = 0;
+      ID build_id = 0;
+
+      static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
         return rb_yield_splat(rb_ary_new4(argc,argv));
       }"
+
+      builder.init_extra << "
+        raise_id = rb_intern(\"raise\");
+        new_id = rb_intern(\"new\");
+        build_id = rb_intern(\"build\");
+      "
       builder.c c_code
     end
   end

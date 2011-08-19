@@ -256,7 +256,7 @@ module FastRuby
                 // call to #{call_tree[2]}
 
                 #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
+                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, #{str_called_code_args});
               }
             "
             }
@@ -269,7 +269,7 @@ module FastRuby
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
+                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
               }
             "
             }
@@ -313,14 +313,14 @@ module FastRuby
 
                 VALUE ex = rb_funcall(
                         (VALUE)#{const_resource("FastRuby::Context::UnwindFastrubyFrame")},
-                        #{:new.to_i},
+                        #{intern_num :new},
                         3,
                         pframe->exception,
                         LONG2FIX(pframe->target_frame),
                         pframe->return_value
                         );
 
-                rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
+                rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
               }
               return frame.return_value;
             }
@@ -601,7 +601,7 @@ module FastRuby
         inline_block "
           // set constant #{tree[1].to_s}
           VALUE val = #{to_c tree[2]};
-          rb_const_set(rb_cObject, #{tree[1].to_i}, val);
+          rb_const_set(rb_cObject, #{intern_num tree[1]}, val);
           return val;
           "
       elsif tree[1].instance_of? Sexp
@@ -611,14 +611,14 @@ module FastRuby
             // set constant #{tree[1].to_s}
             VALUE val = #{to_c tree[2]};
             VALUE klass = #{to_c tree[1][1]};
-            rb_const_set(klass, #{tree[1][2].to_i}, val);
+            rb_const_set(klass, #{intern_num tree[1][2]}, val);
             return val;
             "
         elsif tree[1].node_type == :colon3
           inline_block "
             // set constant #{tree[1].to_s}
             VALUE val = #{to_c tree[2]};
-            rb_const_set(rb_cObject, #{tree[1][1].to_i}, val);
+            rb_const_set(rb_cObject, #{intern_num tree[1][1]}, val);
             return val;
             "
         end
@@ -660,7 +660,7 @@ module FastRuby
     end
 
     def to_c_defn(tree)
-      "rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value})"
+      "rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{tree.internal_value})"
     end
 
     def to_c_defs(tree)
@@ -693,13 +693,13 @@ module FastRuby
       elsif nt == :gvar
       "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? #{"global-variable".internal_value} : Qnil"
       elsif nt == :const
-      "rb_const_defined(rb_cObject, #{tree[1][1].to_i}) ? #{"constant".internal_value} : Qnil"
+      "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{"constant".internal_value} : Qnil"
       elsif nt == :call
-      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{tree[1][2].to_i}) ? #{"method".internal_value} : Qnil"
+      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{"method".internal_value} : Qnil"
       elsif nt == :yield
         "rb_block_given_p() ? #{"yield".internal_value} : Qnil"
       elsif nt == :ivar
-      "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? #{"instance-variable".internal_value} : Qnil"
+      "rb_ivar_defined(plocals->self,#{intern_num tree[1][1]}) ? #{"instance-variable".internal_value} : Qnil"
       elsif nt == :attrset or
             nt == :op_asgn1 or
             nt == :op_asgn2 or
@@ -826,7 +826,7 @@ module FastRuby
 
           int aux = setjmp(frame.jmp);
           if (aux != 0) {
-            rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+            rb_funcall(self, #{intern_num :raise}, 1, frame.exception);
           }
 
 
@@ -883,25 +883,25 @@ module FastRuby
     end
 
     def to_c_ivar(tree)
-      "rb_ivar_get(#{locals_accessor}self,#{tree[1].to_i})"
+      "rb_ivar_get(#{locals_accessor}self,#{intern_num tree[1]})"
     end
 
     def to_c_iasgn(tree)
-      "_rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
+      "_rb_ivar_set(#{locals_accessor}self,#{intern_num tree[1]},#{to_c tree[2]})"
     end
 
     def to_c_colon3(tree)
-      "rb_const_get_from(rb_cObject, #{tree[1].to_i})"
+      "rb_const_get_from(rb_cObject, #{intern_num tree[1]})"
     end
     def to_c_colon2(tree)
       inline_block "
         VALUE klass = #{to_c tree[1]};
 
-      if (rb_is_const_id(#{tree[2].to_i})) {
+      if (rb_is_const_id(#{intern_num tree[2]})) {
         switch (TYPE(klass)) {
           case T_CLASS:
           case T_MODULE:
-            return rb_const_get_from(klass, #{tree[2].to_i});
+            return rb_const_get_from(klass, #{intern_num tree[2]});
             break;
           default:
             rb_raise(rb_eTypeError, \"%s is not a class/module\",
@@ -910,7 +910,7 @@ module FastRuby
         }
       }
       else {
-        return rb_funcall(klass, #{tree[2].to_i}, 0, 0);
+        return rb_funcall(klass, #{intern_num tree[2]}, 0, 0);
       }
 
         return Qnil;
@@ -1036,7 +1036,7 @@ module FastRuby
 
         return inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = rb_funcall(#{to_c args[1]}, #{:exception.to_i},0);
+            pframe->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},0);
             longjmp(pframe->jmp, 1);
             return Qnil;
             ")
@@ -1137,7 +1137,7 @@ module FastRuby
                     // call to #{recvtype}##{mname}
                     if (rb_block_given_p()) {
                       // no passing block, recall
-                      return rb_funcall(recv, #{tree[2].to_i}, 0);
+                      return rb_funcall(recv, #{intern_num tree[2]}, 0);
                     } else {
                       return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                     }
@@ -1171,7 +1171,7 @@ module FastRuby
                     // call to #{recvtype}##{mname}
                     if (rb_block_given_p()) {
                       // no passing block, recall
-                      return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
+                      return rb_funcall(recv, #{intern_num tree[2]}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
                     } else {
                       return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
                     }
@@ -1183,24 +1183,24 @@ module FastRuby
         else
 
           if argnum == 0
-            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)", false, repass_var)
+            protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", false, repass_var)
           else
-            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )", false, repass_var)
+            protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", false, repass_var)
           end
         end
 
       else
         if argnum == 0
-          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)", false, repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", false, repass_var)
         else
-          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )", false, repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", false, repass_var)
         end
       end
     end
 
     def to_c_class(tree)
       inline_block("
-        rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value});
+        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{tree.internal_value});
         return Qnil;
       ")
 
@@ -1208,7 +1208,7 @@ module FastRuby
 
     def to_c_module(tree)
       inline_block("
-        rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value});
+        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{tree.internal_value});
         return Qnil;
       ")
     end
@@ -1330,7 +1330,7 @@ module FastRuby
     end
 
     def inline_ruby(proced, parameter)
-      "rb_funcall(#{proced.internal_value}, #{:call.to_i}, 1, #{parameter})"
+      "rb_funcall(#{proced.internal_value}, #{intern_num :call}, 1, #{parameter})"
     end
 
     def wrapped_break_block(inner_code)
@@ -1347,9 +1347,9 @@ module FastRuby
               if (CLASS_OF(pframe->last_error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
               #{@frame_struct} *pframe = (void*)param;
 
-                pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{:@target_frame.to_i}));
-                pframe->exception = rb_ivar_get(pframe->last_error, #{:@ex.to_i});
-                pframe->return_value = rb_ivar_get(pframe->last_error, #{:@return_value.to_i});
+                pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
+                pframe->exception = rb_ivar_get(pframe->last_error, #{intern_num :@ex});
+                pframe->return_value = rb_ivar_get(pframe->last_error, #{intern_num :@return_value});
 
                if (pframe->target_frame == (void*)-2) {
                   return pframe->return_value;
