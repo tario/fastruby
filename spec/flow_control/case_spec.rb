@@ -71,4 +71,66 @@ describe FastRuby, "case statement" do
     o3 = ::O3.new
     o3.foo(obj,b,c,d).should be == nil
   end
+
+  class ::O4
+    fastruby '
+      def foo(a)
+        case a
+        when 1,3
+          2
+        when 2,4
+          10
+        end
+      end
+    '
+  end
+
+  it "should execute case with arrays in when" do
+    o4 = ::O4.new
+    o4.foo(1).should be == 2
+    o4.foo(2).should be == 10
+    o4.foo(3).should be == 2
+    o4.foo(4).should be == 10
+  end
+
+  class ::O5
+    fastruby '
+      def foo(a)
+        case a
+        when /a/
+          2
+        else
+          nil
+        end
+      end
+    '
+  end
+
+  it "should execute case with regular expressions" do
+    o5 = ::O5.new
+    o5.foo("aaa").should be == 2
+  end
+
+
+  class ::O6
+    fastruby '
+      def foo(a)
+        case a
+        when 5..10
+          2
+        else
+          nil
+        end
+      end
+    '
+  end
+
+  it "should execute case with ranges" do
+    o6 = ::O6.new
+
+    (5..10).each do |i|
+      o6.foo(i).should be == 2
+    end
+  end
+
 end
