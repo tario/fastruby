@@ -40,7 +40,7 @@ module FastRuby
 
     context.alt_method_name = "singleton_" + method_name + rand(100000000).to_s
 
-    [context.extra_code + context.to_c_method_defs(tree), context.alt_method_name]
+    [context.extra_code + context.to_c_method_defs(tree), context.alt_method_name, context.init_extra]
   end
 
   class Method
@@ -89,6 +89,7 @@ module FastRuby
         inline :C  do |builder|
           builder.inc << context.extra_code
           builder.include "<node.h>"
+          builder.init_extra = context.init_extra
           builder.c c_code
         end
       end

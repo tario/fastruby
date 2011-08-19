@@ -39,6 +39,7 @@ module FastRuby
     attr_accessor :locals
     attr_accessor :options
     attr_accessor :infer_self
+    attr_reader :init_extra
     attr_reader :extra_code
     attr_reader :yield_signature
 
@@ -46,6 +47,7 @@ module FastRuby
       @infer_lvar_map = Hash.new
       @extra_code = ""
       @options = {}
+      @init_extra = Array.new
       @frame_struct = "struct {
         void* parent_frame;
         void* target_frame;
@@ -62,9 +64,11 @@ module FastRuby
         void* block_function_param;
       }"
 
+
       extra_code << '#include "node.h"
       '
 
+      @common_func = common_func
       if common_func
         extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
           rb_gvar_set((struct global_entry*)ge,value);
@@ -308,7 +312,7 @@ module FastRuby
                 }
 
                 VALUE ex = rb_funcall(
-                        (VALUE)#{UnwindFastrubyFrame.internal_value},
+                        (VALUE)#{const_resource("FastRuby::Context::UnwindFastrubyFrame")},
                         #{:new.to_i},
                         3,
                         pframe->exception,
@@ -652,7 +656,7 @@ module FastRuby
     end
 
     def to_c_const(tree)
-      "rb_const_get(CLASS_OF(plocals->self), #{tree[1].to_i})"
+      "rb_const_get(CLASS_OF(plocals->self), #{intern_num(tree[1])})"
     end
 
     def to_c_defn(tree)
@@ -665,6 +669,7 @@ module FastRuby
       tmp = FastRuby.build_defs(tree)
 
       extra_code << tmp[0]
+      @init_extra = @init_extra + tmp[2]
 
       inline_block "
         rb_define_singleton_method(#{to_c tree[1]}, \"#{tree[2].to_s}\", (void*)#{tmp[1]}, #{args_tree.size-1});
@@ -726,6 +731,27 @@ module FastRuby
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
+
+      if @common_func
+        init_extra << "
+          #{@frame_struct} frame;
+          #{@locals_struct} locals;
+
+          locals.return_value = Qnil;
+          locals.pframe = &frame;
+          locals.self = rb_cObject;
+
+          frame.target_frame = 0;
+          frame.plocals = (void*)&locals;
+          frame.return_value = Qnil;
+          frame.exception = Qnil;
+          frame.rescue = 0;
+          frame.last_error = Qnil;
+
+          typeof(&frame) pframe = &frame;
+        "
+      end
+
     end
 
     def to_c_method_defs(tree)
@@ -1444,6 +1470,36 @@ module FastRuby
 
         locals.self = self;
       "
+    end
+
+    def intern_num(symbol)
+      name = self.add_global_name("ID");
+
+      init_extra << "
+        #{name} = rb_intern(\"#{symbol.to_s}\");
+      "
+
+      name
+    end
+
+    def const_resource(src)
+      name = self.add_global_name("VALUE")
+      tree =  RubyParser.new.parse(src)
+
+      init_extra << "
+        #{name} = #{to_c tree};
+      "
+
+      name
+    end
+
+    def add_global_name(ctype)
+      name = "glb" + rand(1000000000).to_s
+
+      extra_code << "
+        static #{ctype} #{name} = Qnil;
+      "
+      name
     end
 
 
