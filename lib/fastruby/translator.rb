@@ -1358,7 +1358,7 @@ module FastRuby
         }
 
         rescue_args = ""
-        rescue_args = "(VALUE){pframe,#{repass_var}}"
+        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,#{repass_var}}"
       else
         body = inline_block_reference("return #{inner_code}")
         rescue_args = "(VALUE)pframe"
