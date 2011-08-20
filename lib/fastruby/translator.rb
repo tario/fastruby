@@ -1339,10 +1339,90 @@ module FastRuby
       end
     end
 
+    def get_class_name(argument)
+      if argument.instance_of? Symbol
+        argument.to_s
+      elsif argument.instance_of? Sexp
+        if argument[0] == :colon3
+          get_class_name(argument[1])
+        elsif argument[0] == :colon2
+          get_class_name(argument[2])
+        end
+      end
+    end
+
+    def locals_scope(locals)
+       old_locals = @locals
+       old_locals_struct = @locals_struct
+
+       @locals = locals
+       @locals_struct = "struct {
+        void* block_function_address;
+        VALUE block_function_param;
+        jmp_buf jmp;
+        VALUE return_value;
+        void* pframe;
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        }"
+
+      begin
+        yield
+      ensure
+        @locals = old_locals
+        @locals_struct = old_locals_struct
+      end
+    end
+
     def to_c_class(tree)
+
+      alt_locals = Set.new
+      alt_locals << :self
+
+      FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
+        alt_locals << local
+      end
+
+      fun = nil
+
+      locals_scope(alt_locals) do
+        fun = anonymous_function { |method_name| "static VALUE #{method_name}(VALUE self) {
+
+            #{@frame_struct} frame;
+            #{@locals_struct} locals;
+            typeof(&frame) pframe = &frame;
+            typeof(&locals) plocals = &locals;
+
+            frame.plocals = plocals;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
+            locals.self = self;
+
+            #{to_c tree[3]};
+            return Qnil;
+          }
+        "
+        }
+      end
+
+      str_class_name = get_class_name(tree[1])
+
       inline_block("
-        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{literal_value tree});
+
+        VALUE tmpklass = rb_define_class(
+                    #{str_class_name.inspect},
+                    #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
+                );
+
+        rb_funcall(tmpklass, #{intern_num :internal_value},0);
+
+        #{fun}(tmpklass);
         return Qnil;
+
+
       ")
 
     end
