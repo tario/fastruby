@@ -1,3 +1,7 @@
+0.0.5	Support for case..when..end
+
+		Fixes on wrapping/translation of fastruby frames through ruby calls
+
 0.0.4	Basic support fot non-local goto: return, break, next
 
 		Basic support for exceptions
