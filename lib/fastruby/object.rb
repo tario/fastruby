@@ -334,6 +334,10 @@ class Object
       builder.include "<node.h>"
       builder.inc << "
 
+/*
+       #{caller.join("\n")}
+*/
+
       ID raise_id = 0;
       ID new_id = 0;
       ID build_id = 0;

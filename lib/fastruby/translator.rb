@@ -90,6 +90,11 @@ module FastRuby
           *destination = value;
           return value;
         }
+
+/*
+       #{caller.join("\n")}
+*/
+
         "
       end
     end
