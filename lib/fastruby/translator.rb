@@ -522,7 +522,7 @@ module FastRuby
       else
         inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = (VALUE)#{LocalJumpError.exception.internal_value};
+            pframe->exception = #{literal_value LocalJumpError.exception};
             longjmp(pframe->jmp,1);
             return Qnil;
             ")
@@ -536,7 +536,7 @@ module FastRuby
       else
         inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = (VALUE)#{LocalJumpError.exception.internal_value};
+            pframe->exception = #{literal_value LocalJumpError.exception};
             longjmp(pframe->jmp,1);
             return Qnil;
             ")
@@ -545,7 +545,7 @@ module FastRuby
     end
 
     def to_c_lit(tree)
-      "(VALUE)#{tree[1].internal_value}"
+      literal_value tree[1]
     end
 
     def to_c_nil(tree)
@@ -553,7 +553,7 @@ module FastRuby
     end
 
     def to_c_str(tree)
-      "(VALUE)#{tree[1].internal_value}"
+      literal_value tree[1]
     end
 
     def to_c_hash(tree)
@@ -691,15 +691,15 @@ module FastRuby
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
       elsif nt == :gvar
-      "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? #{"global-variable".internal_value} : Qnil"
+      "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? #{literal_value "global-variable"} : Qnil"
       elsif nt == :const
-      "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{"constant".internal_value} : Qnil"
+      "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{literal_value "constant"} : Qnil"
       elsif nt == :call
-      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{"method".internal_value} : Qnil"
+      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
       elsif nt == :yield
-        "rb_block_given_p() ? #{"yield".internal_value} : Qnil"
+        "rb_block_given_p() ? #{literal_value "yield"} : Qnil"
       elsif nt == :ivar
-      "rb_ivar_defined(plocals->self,#{intern_num tree[1][1]}) ? #{"instance-variable".internal_value} : Qnil"
+      "rb_ivar_defined(plocals->self,#{intern_num tree[1][1]}) ? #{literal_value "instance-variable"} : Qnil"
       elsif nt == :attrset or
             nt == :op_asgn1 or
             nt == :op_asgn2 or
@@ -715,9 +715,9 @@ module FastRuby
             nt == :cdecl or
             nt == :cvdecl or
             nt == :cvasgn
-        "assignment".internal_value
+        literal_value "assignment"
       else
-        "expression".internal_value
+        literal_value "expression"
       end
     end
 
@@ -924,7 +924,7 @@ module FastRuby
 
           verify_type_function = proc { |name| "
             static VALUE #{name}(VALUE arg) {
-              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\");
+              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{const_resource "FastRuby::TypeMismatchAssignmentException"}, \"Illegal assignment at runtime (type mismatch)\");
               return arg;
             }
           "
@@ -1344,7 +1344,7 @@ module FastRuby
     def protected_block(inner_code, always_rescue = false,repass_var = nil)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
-              if (CLASS_OF(pframe->last_error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
+              if (CLASS_OF(pframe->last_error)==(VALUE)#{const_resource "FastRuby::Context::UnwindFastrubyFrame"}) {
               #{@frame_struct} *pframe = (void*)param;
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
@@ -1470,6 +1470,22 @@ module FastRuby
 
         locals.self = self;
       "
+    end
+
+    def c_escape(str)
+      str.inspect
+    end
+
+    def literal_value(value)
+      name = self.add_global_name("VALUE");
+
+      str = Marshal.dump(value)
+
+      init_extra << "
+        #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
+      "
+
+      name
     end
 
     def intern_num(symbol)
