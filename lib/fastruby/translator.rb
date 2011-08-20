@@ -312,7 +312,7 @@ module FastRuby
                 }
 
                 VALUE ex = rb_funcall(
-                        (VALUE)#{const_resource("FastRuby::Context::UnwindFastrubyFrame")},
+                        #{literal_value FastRuby::Context::UnwindFastrubyFrame},
                         #{intern_num :new},
                         3,
                         pframe->exception,
@@ -924,7 +924,7 @@ module FastRuby
 
           verify_type_function = proc { |name| "
             static VALUE #{name}(VALUE arg) {
-              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{const_resource "FastRuby::TypeMismatchAssignmentException"}, \"Illegal assignment at runtime (type mismatch)\");
+              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{literal_value FastRuby::TypeMismatchAssignmentException}, \"Illegal assignment at runtime (type mismatch)\");
               return arg;
             }
           "
@@ -1344,7 +1344,7 @@ module FastRuby
     def protected_block(inner_code, always_rescue = false,repass_var = nil)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
-              if (CLASS_OF(pframe->last_error)==(VALUE)#{const_resource "FastRuby::Context::UnwindFastrubyFrame"}) {
+              if (CLASS_OF(pframe->last_error)==#{literal_value FastRuby::Context::UnwindFastrubyFrame}) {
               #{@frame_struct} *pframe = (void*)param;
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
@@ -1493,17 +1493,6 @@ module FastRuby
 
       init_extra << "
         #{name} = rb_intern(\"#{symbol.to_s}\");
-      "
-
-      name
-    end
-
-    def const_resource(src)
-      name = self.add_global_name("VALUE")
-      tree =  RubyParser.new.parse(src)
-
-      init_extra << "
-        #{name} = #{to_c tree};
       "
 
       name
