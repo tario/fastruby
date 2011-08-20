@@ -1432,10 +1432,11 @@ module FastRuby
     end
 
     def to_c_module(tree)
-      inline_block("
-        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{literal_value tree});
-        return Qnil;
-      ")
+      str_class_name = get_class_name(tree[1])
+
+      method_group("VALUE tmpklass = rb_define_module(
+                    #{str_class_name.inspect});
+      ", tree[2])
     end
 
     def to_c_while(tree)
