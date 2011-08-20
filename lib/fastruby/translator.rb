@@ -660,7 +660,7 @@ module FastRuby
     end
 
     def to_c_defn(tree)
-      "rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{tree.internal_value})"
+      "rb_funcall(plocals->self,#{intern_num :fastruby},1,#{literal_value tree})"
     end
 
     def to_c_defs(tree)
@@ -1200,7 +1200,7 @@ module FastRuby
 
     def to_c_class(tree)
       inline_block("
-        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{tree.internal_value});
+        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{literal_value tree});
         return Qnil;
       ")
 
@@ -1208,7 +1208,7 @@ module FastRuby
 
     def to_c_module(tree)
       inline_block("
-        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{tree.internal_value});
+        rb_funcall(plocals->self,#{intern_num :fastruby},1,(VALUE)#{literal_value tree});
         return Qnil;
       ")
     end
