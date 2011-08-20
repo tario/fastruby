@@ -1373,7 +1373,7 @@ module FastRuby
       end
     end
 
-    def to_c_class(tree)
+    def method_group(init_code, tree)
 
       alt_locals = Set.new
       alt_locals << :self
@@ -1401,21 +1401,15 @@ module FastRuby
 
             locals.self = self;
 
-            #{to_c tree[3]};
+            #{to_c tree};
             return Qnil;
           }
         "
         }
       end
 
-      str_class_name = get_class_name(tree[1])
-
       inline_block("
-
-        VALUE tmpklass = rb_define_class(
-                    #{str_class_name.inspect},
-                    #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
-                );
+        #{init_code}
 
         rb_funcall(tmpklass, #{intern_num :internal_value},0);
 
@@ -1425,6 +1419,16 @@ module FastRuby
 
       ")
 
+    end
+
+    def to_c_class(tree)
+      str_class_name = get_class_name(tree[1])
+
+      method_group("VALUE tmpklass = rb_define_class(
+                    #{str_class_name.inspect},
+                    #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
+                );
+      ", tree[3])
     end
 
     def to_c_module(tree)
