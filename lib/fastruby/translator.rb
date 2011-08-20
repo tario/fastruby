@@ -924,7 +924,7 @@ module FastRuby
 
           verify_type_function = proc { |name| "
             static VALUE #{name}(VALUE arg) {
-              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{literal_value FastRuby::TypeMismatchAssignmentException}, \"Illegal assignment at runtime (type mismatch)\");
+              if (CLASS_OF(arg)!=#{literal_value klass}) rb_raise(#{literal_value FastRuby::TypeMismatchAssignmentException}, \"Illegal assignment at runtime (type mismatch)\");
               return arg;
             }
           "
