@@ -22,6 +22,7 @@ require "rubygems"
 require "inline"
 require "set"
 require "fastruby/method_extension"
+require "fastruby/set_tree"
 
 module FastRuby
   class Context
@@ -788,7 +789,18 @@ module FastRuby
         }"
       }
 
-      "rb_funcall(plocals->self,#{intern_num :fastruby},1,#{literal_value tree})"
+      inline_block "
+        #{global_klass_variable} = plocals->self;
+        // set tree
+        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
+                #{global_klass_variable},
+                rb_str_new2(#{method_name.to_s.inspect}),
+                #{literal_value tree},
+                #{literal_value options}
+                );
+
+        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, #{args_tree.size-1} );
+        "
 
     end
 

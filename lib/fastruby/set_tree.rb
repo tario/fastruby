@@ -19,11 +19,32 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "fastruby/translator"
-require "fastruby/object"
-require "fastruby/exceptions"
-require "fastruby/custom_require"
-require "fastruby/set_tree"
+require "fastruby/builder"
+require "fastruby/getlocals"
+require "fastruby/method_extension"
+require "fastruby/translator"
+
 
 module FastRuby
-  VERSION = "0.0.3"
+  def self.set_tree(klass, method_name, tree, options)
+    locals = Set.new
+    locals << :self
+
+    FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
+      locals << local
+    end
+
+    klass.class_eval do
+      class << self
+        include FastRuby::BuilderModule
+      end
+    end
+
+    fastrubym = klass.fastruby_method(method_name)
+    fastrubym.tree = tree
+    fastrubym.locals = locals
+    fastrubym.options = options
+
+    nil
+  end
 end
