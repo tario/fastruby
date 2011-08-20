@@ -76,6 +76,10 @@ module FastRuby
         }
         "
 
+        extra_code << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
+        return rb_yield_splat(rb_ary_new4(argc,argv));
+        }"
+
         extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
           rb_ivar_set(recv,idvar,value);
           return value;
@@ -660,7 +664,127 @@ module FastRuby
     end
 
     def to_c_defn(tree)
+
+      method_name = tree[1]
+      args_tree = tree[2]
+
+      global_klass_variable = add_global_name("VALUE");
+
+      hash = Hash.new
+      value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
+
+      strmethodargs = ""
+      strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
+
+      if args_tree.size > 1
+        strmethodargs = "self,block,(VALUE)&frame,#{args_tree[1..-1].map(&:to_s).join(",") }"
+      else
+        strmethodargs = "self,block,(VALUE)&frame"
+      end
+
+      strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
+        "sprintf(method_name+strlen(method_name), \"%lu\", CLASS_OF(#{arg}));\n"
+      }.join
+
+      anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(#{(["self"]+args_tree[1..-1]).map{|arg| "VALUE #{arg}" }.join(",")}) {
+
+          VALUE klass = #{global_klass_variable};
+          char method_name[0x100];
+
+          method_name[0] = '_';
+          method_name[1] = 0;
+
+          sprintf(method_name+1, \"#{method_name}\");
+          #{strmethod_signature}
+
+          NODE* body;
+          ID id;
+
+          id = rb_intern(method_name);
+          body = rb_method_node(klass,id);
+
+          if (body == 0) {
+            VALUE argv_class[] = {#{strmethodargs_class} };
+            VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
+
+            rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
+            body = rb_method_node(#{global_klass_variable},id);
+          }
+
+            if (nd_type(body) == NODE_CFUNC) {
+              struct {
+                void* parent_frame;
+                void* target_frame;
+                void* plocals;
+                jmp_buf jmp;
+                VALUE return_value;
+                VALUE exception;
+                int rescue;
+              } frame;
+
+              frame.target_frame = 0;
+              frame.parent_frame = 0;
+              frame.rescue = 0;
+              frame.exception = Qnil;
+              frame.return_value = Qnil;
+
+              int argc = body->nd_argc;
+
+              VALUE block = Qfalse;
+
+              if (rb_block_given_p()) {
+                struct {
+                  void *block_function_address;
+                  void *block_function_param;
+                } block_struct;
+
+                block_struct.block_function_address = re_yield;
+                block_struct.block_function_param = 0;
+
+                block = (VALUE)&block_struct;
+              }
+
+              int aux = setjmp(frame.jmp);
+              if (aux != 0) {
+                if (frame.target_frame == (void*)-1) {
+                  rb_funcall(self, #{intern_num :raise}, 1, frame.exception);
+                }
+
+                if (frame.target_frame != &frame) {
+                    VALUE ex = rb_funcall(
+                            #{literal_value FastRuby::Context::UnwindFastrubyFrame},
+                            #{intern_num :new},
+                            3,
+                            frame.exception,
+                            LONG2FIX(frame.target_frame),
+                            frame.return_value
+                            );
+
+                    rb_funcall(self, #{intern_num :raise}, 1, ex);
+                }
+
+                return Qnil;
+              }
+
+              if (argc == #{args_tree.size+1}) {
+                return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+              } else if (argc == -1) {
+                VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+                return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
+              } else if (argc == -2) {
+                VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+                return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
+              } else {
+                rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
+              }
+            }
+
+          return Qnil;
+        }"
+      }
+
       "rb_funcall(plocals->self,#{intern_num :fastruby},1,#{literal_value tree})"
+
     end
 
     def to_c_defs(tree)
