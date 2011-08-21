@@ -1728,6 +1728,8 @@ module FastRuby
 
     def encode_address(recvtype,signature,mname,call_tree,inference_complete)
       name = self.add_global_name("void*", 0);
+      cruby_name = self.add_global_name("void*", 0);
+      cruby_len = self.add_global_name("int", 0);
       args_tree = call_tree[3]
       method_tree = nil
 
@@ -1762,7 +1764,33 @@ module FastRuby
         "
       }
 
-      cruby_wrapper = ruby_wrapper
+      value_cast = ( ["VALUE"]*(args_tree.size) ).join(",")
+
+      cruby_wrapper = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+          #{@frame_struct}* pframe = frame;
+          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+
+          // call to #{recvtype}::#{mname}
+
+          if (#{cruby_len} == -1) {
+            return #{
+              protected_block "((VALUE(*)(int,VALUE*,VALUE))#{cruby_name})(#{args_tree.size-1}, ((VALUE*)method_arguments)+1,*((VALUE*)method_arguments));", false, "method_arguments"
+              };
+
+          } else if (#{cruby_len} == -2) {
+            return #{
+              protected_block "((VALUE(*)(VALUE,VALUE))#{cruby_name})(*((VALUE*)method_arguments), rb_ary_new4(#{args_tree.size-1},((VALUE*)method_arguments)+1) );", false, "method_arguments"
+              };
+
+          } else {
+            return #{
+              protected_block "((VALUE(*)(#{value_cast}))#{cruby_name})(((VALUE*)method_arguments)[0] #{inprocstrargs});", false, "method_arguments"
+              };
+          }
+        }
+        "
+      }
 
       recvdump = nil
 
@@ -1787,7 +1815,14 @@ module FastRuby
                 #{name} = (void*)FIX2LONG(rb_funcall(recvtype, #{intern_num :address}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
               } else if (convention == #{literal_value :cruby}) {
                 // cruby, wrap direct call
-                #{name} = (void*)#{cruby_wrapper};
+                #{cruby_name} = (void*)FIX2LONG(rb_funcall(recvtype, #{intern_num :address}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
+
+                if (#{cruby_name} == 0) {
+                  #{name} = (void*)#{ruby_wrapper};
+                } else {
+                  #{cruby_len} = FIX2INT(rb_funcall(recvtype, #{intern_num :len}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
+                  #{name} = (void*)#{cruby_wrapper};
+                }
               } else {
                 // ruby, wrap rb_funcall
                 #{name} = (void*)#{ruby_wrapper};

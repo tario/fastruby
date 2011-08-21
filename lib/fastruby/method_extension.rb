@@ -43,8 +43,28 @@ module FastRuby
             return INT2FIX(data->body->nd_cfnc);
           }
 
+          return 0;
+      }"
+
+      builder.c "VALUE getlen() {
+          struct METHOD {
+            VALUE klass, rklass;
+            VALUE recv;
+            ID id, oid;
+            int safe_level;
+            NODE *body;
+          };
+
+          struct METHOD *data;
+          Data_Get_Struct(self, struct METHOD, data);
+
+          if (nd_type(data->body) == NODE_CFUNC) {
+            return INT2FIX(data->body->nd_argc);
+          }
+
           return Qnil;
       }"
+
    end
 
   end
