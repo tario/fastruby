@@ -1761,7 +1761,7 @@ module FastRuby
       rescue
       end
 
-      if recvdump
+      if recvdump and recvtype
 
         init_extra << "
           {
