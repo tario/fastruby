@@ -66,65 +66,9 @@ class Object
 
     return unless tree
 
-    if tree[0] == :class
-      classname = Object.to_class_name tree[1]
-
-      if tree[2]
-        superclassname = Object.to_class_name tree[2]
-
-        eval("
-        class #{classname} < #{superclassname}
-        end
-        ", $top_level_binding)
-
-      else
-        eval("
-        class #{classname}
-        end
-        ", $top_level_binding)
-      end
-
-      klass = eval(classname)
-
-      method_name = "_anonymous_" + rand(100000000000).to_s
-      $generated_tree = FastRuby.encapsulate_tree(tree[3],method_name)
-      $options_hashes = options_hashes
-
-      klass.class_eval do
-        class << self
-           fastruby $generated_tree, *$options_hashes
-        end
-      end
-
-      klass.send(method_name)
-    elsif tree[0] == :module
-      modulename = Object.to_class_name tree[1]
-
-      eval("
-      module #{modulename}
-      end
-      ", $top_level_binding)
-
-      klass = eval(modulename)
-
-      method_name = "_anonymous_" + rand(100000000000).to_s
-      $generated_tree = FastRuby.encapsulate_tree(tree[2],method_name)
-      $options_hashes = options_hashes
-
-      klass.class_eval do
-        class << self
-           fastruby $generated_tree, *$options_hashes
-        end
-      end
-
-      klass.send(method_name)
-    elsif tree[0] == :defn
-      Object.fastruby_defn(tree, *options_hashes)
-    else
       method_name = "_anonymous_" + rand(100000000000).to_s
       Object.fastruby(FastRuby.encapsulate_tree(tree,method_name), *options_hashes)
       send(method_name)
-    end
   end
 
   def self.fastruby(argument,*options_hashes)
