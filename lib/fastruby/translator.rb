@@ -151,8 +151,6 @@ module FastRuby
       mobject = nil
       len = nil
 
-      convention = :ruby
-
       extra_inference = {}
 
       if recvtype
@@ -168,50 +166,6 @@ module FastRuby
             inference_complete = false
           end
         end
-
-        convention = nil
-
-        if recvtype.respond_to? :fastruby_method and inference_complete
-
-          method_tree = nil
-          begin
-            method_tree = recvtype.instance_method(call_tree[2]).fastruby.tree
-          rescue NoMethodError
-          end
-
-          if method_tree
-            mobject = recvtype.build(signature, call_tree[2])
-            yield_signature = mobject.yield_signature
-
-            if not args_tree
-            elsif args_tree.first == :lasgn
-              if yield_signature[0]
-              extra_inference[args_tree.last] = yield_signature[0]
-              end
-            elsif args_tree.first == :masgn
-              yield_args = args_tree[1][1..-1].map(&:last)
-              (0...yield_signature.size-1).each do |i|
-                extra_inference[yield_args[i]] = yield_signature[i]
-              end
-            end
-
-            convention = :fastruby
-          else
-            mobject = recvtype.instance_method(call_tree[2])
-            convention = :cruby
-          end
-        else
-          mobject = recvtype.instance_method(call_tree[2])
-          convention = :cruby
-        end
-
-        address = getaddress(mobject)
-        len = getlen(mobject)
-
-        unless address
-          convention = :ruby
-        end
-
       end
 
       anonymous_impl = tree[3]
@@ -407,10 +361,10 @@ module FastRuby
         end
 
         caller_code = nil
+        convention_global_name = add_global_name("int",0)
 
         if call_args_tree.size > 1
-          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",")
-          value_cast = value_cast + ", VALUE, VALUE" if convention == :fastruby
+          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
 
           str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
 
@@ -424,7 +378,7 @@ module FastRuby
 
                 // call to #{call_tree[2]}
 
-                return ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
+                return ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
               }
             "
             }
@@ -440,20 +394,21 @@ module FastRuby
 
                 // call to #{call_tree[2]}
 
-                return ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
+                return ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
               }
             "
             }
         end
 
-
-
-
-      if convention == :ruby or convention == :cruby
-        protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
-      elsif convention == :fastruby
-        "#{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe)"
-      end
+      inline_block "
+        if (#{convention_global_name}) {
+          return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
+        } else {
+          return #{
+            protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+          };
+        }
+      "
     end
 
     def to_c_yield(tree)
@@ -1731,7 +1686,7 @@ module FastRuby
       name
     end
 
-    def encode_address(recvtype,signature,mname,call_tree,inference_complete)
+    def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
       name = self.add_global_name("void*", 0);
       cruby_name = self.add_global_name("void*", 0);
       cruby_len = self.add_global_name("int", 0);
@@ -1816,9 +1771,11 @@ module FastRuby
             VALUE tree = #{literal_value method_tree};
             VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
 
+            #{convention_global_name ? convention_global_name + " = 0;" : ""}
             if (recvtype != Qnil) {
 
               if (convention == #{literal_value :fastruby}) {
+                #{convention_global_name ? convention_global_name + " = 1;" : ""}
                 #{name} = (void*)FIX2LONG(rb_funcall(recvtype, #{intern_num :address}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
               } else if (convention == #{literal_value :cruby}) {
                 // cruby, wrap direct call
