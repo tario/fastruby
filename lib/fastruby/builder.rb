@@ -53,6 +53,49 @@ module FastRuby
       @owner = owner
     end
 
+    def convention(signature, inference_complete)
+        recvtype = @owner
+        if recvtype.respond_to? :fastruby_method and inference_complete
+
+          method_tree = nil
+          begin
+            method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
+          rescue NoMethodError
+          end
+
+          if method_tree
+            mobject = recvtype.build(signature, @method_name.to_sym)
+            :fastruby
+          else
+            mobject = recvtype.instance_method(@method_name.to_sym)
+            :cruby
+          end
+        else
+          mobject = recvtype.instance_method(@method_name.to_sym)
+          :cruby
+        end
+    end
+
+    def address(signature, inference_complete)
+        recvtype = @owner
+        if recvtype.respond_to? :fastruby_method and inference_complete
+
+          method_tree = nil
+          begin
+            method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
+          rescue NoMethodError
+          end
+
+          if method_tree
+            recvtype.build(signature, @method_name.to_sym).getaddress
+          else
+            recvtype.instance_method(@method_name.to_sym).getaddress
+          end
+        else
+          recvtype.instance_method(@method_name.to_sym).getaddress
+        end
+    end
+
     def build(signature)
       mname = "_" + @method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
 
@@ -110,6 +153,14 @@ module FastRuby
   module BuilderModule
     def build(signature, method_name)
       fastruby_method(method_name.to_sym).build(signature)
+    end
+
+    def address(signature, method_name, inference_complete)
+      fastruby_method(method_name.to_sym).address(signature, inference_complete)
+    end
+
+    def convention(signature, method_name, inference_complete)
+      fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
     def fastruby_method(mname_)

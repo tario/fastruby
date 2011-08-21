@@ -24,6 +24,29 @@ module FastRuby
     def fastruby
       owner.fastruby_method(name.to_sym)
     end
+
+        inline :C  do |builder|
+      builder.include "<node.h>"
+      builder.c "VALUE getaddress() {
+          struct METHOD {
+            VALUE klass, rklass;
+            VALUE recv;
+            ID id, oid;
+            int safe_level;
+            NODE *body;
+          };
+
+          struct METHOD *data;
+          Data_Get_Struct(self, struct METHOD, data);
+
+          if (nd_type(data->body) == NODE_CFUNC) {
+            return INT2FIX(data->body->nd_cfnc);
+          }
+
+          return Qnil;
+      }"
+   end
+
   end
 end
 

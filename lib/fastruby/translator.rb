@@ -1291,35 +1291,6 @@ module FastRuby
           end
         end
 
-        convention = nil
-
-        if recvtype.respond_to? :fastruby_method and inference_complete
-
-          method_tree = nil
-          begin
-            method_tree = recvtype.instance_method(tree[2]).fastruby.tree
-          rescue NoMethodError
-          end
-
-          if method_tree
-            mobject = recvtype.build(signature, tree[2])
-            convention = :fastruby
-          else
-            mobject = recvtype.instance_method(tree[2])
-            convention = :cruby
-          end
-        else
-          mobject = recvtype.instance_method(tree[2])
-          convention = :cruby
-        end
-
-        address = nil
-        len = 0
-        if mobject
-          address = getaddress(mobject)
-          len = getlen(mobject)
-        end
-
         if repass_var
           extraargs = ","+repass_var
           extraargs_signature = ",VALUE " + repass_var
@@ -1328,92 +1299,21 @@ module FastRuby
           extraargs_signature = ""
         end
 
-        if address then
           if argnum == 0
-            value_cast = "VALUE"
-            value_cast = value_cast + ", VALUE,VALUE" if convention == :fastruby
-
-            if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
-            else
-
-              str_incall_args = nil
-              if len == -1
-                str_incall_args = "0, (VALUE[]){}, recv"
-                value_cast = "int,VALUE*,VALUE"
-              elsif len == -2
-                str_incall_args = "recv, rb_ary_new4(#{})"
-                value_cast = "VALUE,VALUE"
-              else
-                str_incall_args = "recv"
-              end
-
-              protected_block(
-
-                anonymous_function{ |name| "
-                  static VALUE #{name}(VALUE recv#{extraargs_signature}) {
-                    // call to #{recvtype}##{mname}
-                    if (rb_block_given_p()) {
-                      // no passing block, recall
-                      return rb_funcall(recv, #{intern_num tree[2]}, 0);
-                    } else {
-                      return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
-                    }
-                  }
-                " } + "(#{to_c(recv)}#{extraargs})", false, repass_var)
-            end
+            value_cast = "VALUE,VALUE,VALUE"
+            "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
           else
-            value_cast = ( ["VALUE"]*(args.size) ).join(",")
-            value_cast = value_cast + ", VALUE, VALUE" if convention == :fastruby
-
-            wrapper_func = nil
-            if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
-            else
-
-              str_incall_args = nil
-              if len == -1
-                str_incall_args = "#{argnum}, (VALUE[]){#{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}}, recv"
-                value_cast = "int,VALUE*,VALUE"
-              elsif len == -2
-                str_incall_args = "recv, rb_ary_new4(#{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")})"
-                value_cast = "VALUE,VALUE"
-              else
-                str_incall_args = "recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}"
-              end
-
-              protected_block(
-
-                anonymous_function{ |name| "
-                  static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
-                    // call to #{recvtype}##{mname}
-                    if (rb_block_given_p()) {
-                      // no passing block, recall
-                      return rb_funcall(recv, #{intern_num tree[2]}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
-                    } else {
-                      return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
-                    }
-                  }
-                " } + "(#{to_c(recv)}, #{strargs})", false, repass_var
-              )
-            end
+            value_cast = ( ["VALUE"]*(args.size) ).join(",") + ",VALUE,VALUE"
+            "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
           end
-        else
 
-          if argnum == 0
-            protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", false, repass_var)
-          else
-            protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", false, repass_var)
-          end
-        end
-
-      else
+      else # else recvtype
         if argnum == 0
           protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", false, repass_var)
         else
           protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", false, repass_var)
         end
-      end
+      end # if recvtype
     end
 
     def get_class_name(argument)
@@ -1656,7 +1556,7 @@ module FastRuby
 
     def inline_block(code, repass_var = nil)
       anonymous_function{ |name| "
-        static VALUE #{name}(VALUE param#{repass_var ? ",VALUE " + repass_var : "" }) {
+        static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
           #{@frame_struct} *pframe = (void*)param;
           #{@locals_struct} *plocals = (void*)pframe->plocals;
           VALUE last_expression = Qnil;
@@ -1724,7 +1624,7 @@ module FastRuby
         }
 
         rescue_args = ""
-        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,#{repass_var}}"
+        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
       else
         body = inline_block_reference("return #{inner_code}")
         rescue_args = "(VALUE)pframe"
@@ -1822,6 +1722,89 @@ module FastRuby
       init_extra << "
         #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
       "
+
+      name
+    end
+
+    def encode_address(recvtype,signature,mname,call_tree,inference_complete)
+      name = self.add_global_name("void*", 0);
+      args_tree = call_tree[3]
+      method_tree = nil
+
+      begin
+        method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
+      rescue NoMethodError
+      end
+
+
+      strargs_signature = (0..args_tree.size-2).map{|x| "VALUE arg#{x}"}.join(",")
+      strargs = (0..args_tree.size-2).map{|x| "arg#{x}"}.join(",")
+      inprocstrargs = (1..args_tree.size-1).map{|x| "((VALUE*)method_arguments)[#{x}]"}.join(",")
+
+      if args_tree.size > 1
+        strargs_signature = "," + strargs_signature
+        toprocstrargs = "self,"+strargs
+        strargs = "," + strargs
+        inprocstrargs = ","+inprocstrargs
+      else
+        toprocstrargs = "self"
+      end
+
+      ruby_wrapper = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+          #{@frame_struct}* pframe = frame;
+          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+
+          return #{
+            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+            };
+        }
+        "
+      }
+
+      cruby_wrapper = ruby_wrapper
+
+      recvdump = nil
+
+      begin
+         recvdump = literal_value recvtype
+      rescue
+      end
+
+      if recvdump
+
+        init_extra << "
+          {
+            VALUE recvtype = #{recvdump};
+            VALUE signature = #{literal_value signature};
+            VALUE mname = #{literal_value mname};
+            VALUE tree = #{literal_value method_tree};
+            VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+
+            if (recvtype != Qnil) {
+
+              if (convention == #{literal_value :fastruby}) {
+                #{name} = (void*)FIX2LONG(rb_funcall(recvtype, #{intern_num :address}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
+              } else if (convention == #{literal_value :cruby}) {
+                // cruby, wrap direct call
+                #{name} = (void*)#{cruby_wrapper};
+              } else {
+                // ruby, wrap rb_funcall
+                #{name} = (void*)#{ruby_wrapper};
+              }
+            } else {
+              // ruby, wrap rb_funcall
+              #{name} = (void*)#{ruby_wrapper};
+            }
+
+          }
+        "
+      else
+        init_extra << "
+        // ruby, wrap rb_funcall
+        #{name} = (void*)#{ruby_wrapper};
+        "
+      end
 
       name
     end
