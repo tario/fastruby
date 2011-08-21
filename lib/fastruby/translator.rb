@@ -798,7 +798,7 @@ module FastRuby
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
       elsif nt == :gvar
-      "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? #{literal_value "global-variable"} : Qnil"
+      "rb_gvar_defined((struct global_entry*)#{global_entry(tree[1][1])}) ? #{literal_value "global-variable"} : Qnil"
       elsif nt == :const
       "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{literal_value "constant"} : Qnil"
       elsif nt == :call
@@ -1053,11 +1053,11 @@ module FastRuby
     end
 
     def to_c_gvar(tree)
-      "rb_gvar_get((struct global_entry*)0x#{global_entry(tree[1]).to_s(16)})"
+      "rb_gvar_get((struct global_entry*)#{global_entry(tree[1])})"
     end
 
     def to_c_gasgn(tree)
-      "_rb_gvar_set((void*)0x#{global_entry(tree[1]).to_s(16)}, #{to_c tree[2]})"
+      "_rb_gvar_set((void*)#{global_entry(tree[1])}, #{to_c tree[2]})"
     end
 
     def to_c_ivar(tree)
@@ -1827,6 +1827,16 @@ module FastRuby
       name
     end
 
+    def global_entry(glbname)
+      name = add_global_name("struct global_entry*", 0);
+
+      init_extra << "
+        #{name} = rb_global_entry(SYM2ID(#{literal_value glbname}));
+      "
+
+      name
+    end
+
 
     def frame(code, jmp_code, not_jmp_code = "", rescued = nil)
 
@@ -1919,15 +1929,6 @@ module FastRuby
 
           return Qnil;
       }"
-
-      builder.c "VALUE global_entry(VALUE global_id) {
-        ID id = SYM2ID(global_id);
-        struct global_entry* entry;
-
-        entry = rb_global_entry(id);
-        return INT2FIX(entry);
-      }
-      "
     end
   end
 end
