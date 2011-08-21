@@ -674,7 +674,7 @@ module FastRuby
       method_name = tree[1]
       args_tree = tree[2]
 
-      global_klass_variable = add_global_name("VALUE");
+      global_klass_variable = add_global_name("VALUE", "Qnil");
 
       hash = Hash.new
       value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
@@ -1004,7 +1004,7 @@ module FastRuby
           "VALUE block, VALUE _parent_frame"
         end
 
-        "VALUE #{@alt_method_name || method_name}() {
+        ret = "VALUE #{@alt_method_name || method_name}() {
 
           #{@locals_struct} locals;
           #{@locals_struct} *plocals = (void*)&locals;
@@ -1051,6 +1051,8 @@ module FastRuby
           return #{to_c impl_tree};
         }"
 
+        add_main
+        ret
       else
 
         initialize_method_structs(args_tree)
@@ -1061,7 +1063,7 @@ module FastRuby
           "VALUE block, VALUE _parent_frame"
         end
 
-        "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+        ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
 
           #{func_frame}
 
@@ -1080,6 +1082,9 @@ module FastRuby
 
           return #{to_c impl_tree};
         }"
+
+        add_main
+        ret
       end
     end
 
@@ -1810,7 +1815,7 @@ module FastRuby
     end
 
     def literal_value(value)
-      name = self.add_global_name("VALUE");
+      name = self.add_global_name("VALUE", "Qnil");
 
       str = Marshal.dump(value)
 
@@ -1822,7 +1827,7 @@ module FastRuby
     end
 
     def intern_num(symbol)
-      name = self.add_global_name("ID");
+      name = self.add_global_name("ID", 0);
 
       init_extra << "
         #{name} = rb_intern(\"#{symbol.to_s}\");
@@ -1831,11 +1836,11 @@ module FastRuby
       name
     end
 
-    def add_global_name(ctype)
+    def add_global_name(ctype, default)
       name = "glb" + rand(1000000000).to_s
 
       extra_code << "
-        static #{ctype} #{name} = Qnil;
+        static #{ctype} #{name} = #{default};
       "
       name
     end
