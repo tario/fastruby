@@ -346,21 +346,17 @@ module FastRuby
         }
 
 
-      if convention == :ruby or convention == :cruby
-        protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
-      elsif convention == :fastruby
-
-        str_arg_initialization = ""
+        fastruby_str_arg_initialization = ""
 
         if not args_tree
-          str_arg_initialization = ""
+          fastruby_str_arg_initialization = ""
         elsif args_tree.first == :lasgn
-          str_arg_initialization = "plocals->#{args_tree[1]} = argv[0];"
+          fastruby_str_arg_initialization = "plocals->#{args_tree[1]} = argv[0];"
         elsif args_tree.first == :masgn
           arguments = args_tree[1][1..-1].map(&:last)
 
           (0..arguments.size-1).each do |i|
-            str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
+            fastruby_str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
           end
         end
 
@@ -396,7 +392,7 @@ module FastRuby
 
             }
 
-            #{str_arg_initialization}
+            #{fastruby_str_arg_initialization}
             #{str_impl}
 
             return last_expression;
@@ -404,12 +400,13 @@ module FastRuby
         "
         }
 
-
         str_recv = "plocals->self"
 
         if recv_tree
            str_recv = to_c recv_tree
         end
+
+        caller_code = nil
 
         if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",")
@@ -449,6 +446,12 @@ module FastRuby
             }
         end
 
+
+
+
+      if convention == :ruby or convention == :cruby
+        protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+      elsif convention == :fastruby
         "#{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe)"
       end
     end
