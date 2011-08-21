@@ -254,7 +254,19 @@ module FastRuby
         end
       end
 
-      if convention == :ruby or convention == :cruby
+
+        if not args_tree
+          str_arg_initialization = ""
+        elsif args_tree.first == :lasgn
+          str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
+        elsif args_tree.first == :masgn
+          arguments = args_tree[1][1..-1].map(&:last)
+
+          (0..arguments.size-1).each do |i|
+            str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+          end
+        end
+        rb_funcall_caller_code = nil
 
         if call_args_tree.size > 1
 
@@ -263,7 +275,7 @@ module FastRuby
 
           str_recv = "plocals->self" unless recv_tree
 
-            caller_code = proc { |name| "
+            rb_funcall_caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
 
@@ -277,7 +289,7 @@ module FastRuby
           str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
-            caller_code = proc { |name| "
+            rb_funcall_caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
@@ -287,21 +299,8 @@ module FastRuby
             }
         end
 
-        if not args_tree
-          str_arg_initialization = ""
-        elsif args_tree.first == :lasgn
-          str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
-        elsif args_tree.first == :masgn
-          arguments = args_tree[1][1..-1].map(&:last)
 
-          (0..arguments.size-1).each do |i|
-            str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
-          end
-        end
-
-        str_arg_initialization
-
-        block_code = proc { |name| "
+        rb_funcall_block_code = proc { |name| "
           static VALUE #{name}(VALUE arg, VALUE _plocals) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
@@ -346,8 +345,9 @@ module FastRuby
         "
         }
 
-        protected_block("rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)plocals)", true)
 
+      if convention == :ruby or convention == :cruby
+        protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
       elsif convention == :fastruby
 
         str_arg_initialization = ""
