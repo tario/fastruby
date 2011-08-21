@@ -26,7 +26,7 @@ require "fastruby/translator"
 
 
 module FastRuby
-  def self.set_tree(klass, method_name, tree, options)
+  def self.set_tree(klass, method_name, tree, options = {})
     locals = Set.new
     locals << :self
 

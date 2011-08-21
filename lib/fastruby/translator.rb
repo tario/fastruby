@@ -789,6 +789,11 @@ module FastRuby
         }"
       }
 
+      alt_options = options.dup
+
+      alt_options.delete(:self)
+      alt_options.delete(:main)
+
       inline_block "
         #{global_klass_variable} = plocals->self;
         // set tree
@@ -796,7 +801,8 @@ module FastRuby
                 #{global_klass_variable},
                 rb_str_new2(#{method_name.to_s.inspect}),
                 #{literal_value tree},
-                #{literal_value options}
+                #{literal_value alt_options}
+
                 );
 
         rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, #{args_tree.size-1} );
@@ -976,39 +982,105 @@ module FastRuby
       "
     end
 
+    def add_main
+      if options[:main]
+        init_extra << "
+            #{@alt_method_name}(#{to_c s(:gvar, :$class_self)});
+          "
+      end
+    end
+
     def to_c_method(tree)
       method_name = tree[1]
       args_tree = tree[2]
-
       impl_tree = tree[3][1]
 
-      initialize_method_structs(args_tree)
+      if (options[:main])
+        initialize_method_structs(args_tree)
 
-      strargs = if args_tree.size > 1
-        "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
-      else
-        "VALUE block, VALUE _parent_frame"
-      end
+        strargs = if args_tree.size > 1
+          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        else
+          "VALUE block, VALUE _parent_frame"
+        end
 
-      "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+        "VALUE #{@alt_method_name || method_name}() {
 
-        #{func_frame}
+          #{@locals_struct} locals;
+          #{@locals_struct} *plocals = (void*)&locals;
+          #{@frame_struct} frame;
+          #{@frame_struct} *pframe;
 
-        #{args_tree[1..-1].map { |arg|
-          "locals.#{arg} = #{arg};\n"
-        }.join("") }
+          frame.plocals = plocals;
+          frame.parent_frame = 0;
+          frame.return_value = Qnil;
+          frame.target_frame = &frame;
+          frame.exception = Qnil;
+          frame.rescue = 0;
 
-        pblock = (void*)block;
-        if (pblock) {
-          locals.block_function_address = pblock->block_function_address;
-          locals.block_function_param = (VALUE)pblock->block_function_param;
-        } else {
+          locals.pframe = &frame;
+
+          pframe = (void*)&frame;
+
+          VALUE last_expression = Qnil;
+
+          int aux = setjmp(pframe->jmp);
+          if (aux != 0) {
+
+            if (pframe->target_frame == (void*)-2) {
+              return pframe->return_value;
+            }
+
+            if (pframe->target_frame != pframe) {
+              // raise exception
+              return Qnil;
+            }
+
+            return plocals->return_value;
+          }
+
+          locals.self = self;
+
+          #{args_tree[1..-1].map { |arg|
+            "locals.#{arg} = #{arg};\n"
+          }.join("") }
+
           locals.block_function_address = 0;
           locals.block_function_param = Qnil;
-        }
 
-        return #{to_c impl_tree};
-      }"
+          return #{to_c impl_tree};
+        }"
+
+      else
+
+        initialize_method_structs(args_tree)
+
+        strargs = if args_tree.size > 1
+          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        else
+          "VALUE block, VALUE _parent_frame"
+        end
+
+        "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+
+          #{func_frame}
+
+          #{args_tree[1..-1].map { |arg|
+            "locals.#{arg} = #{arg};\n"
+          }.join("") }
+
+          pblock = (void*)block;
+          if (pblock) {
+            locals.block_function_address = pblock->block_function_address;
+            locals.block_function_param = (VALUE)pblock->block_function_param;
+          } else {
+            locals.block_function_address = 0;
+            locals.block_function_param = Qnil;
+          }
+
+          return #{to_c impl_tree};
+        }"
+      end
     end
 
     def locals_accessor

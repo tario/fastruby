@@ -67,13 +67,14 @@ class Object
     return unless tree
 
       method_name = "_anonymous_" + rand(100000000000).to_s
-      Object.fastruby(FastRuby.encapsulate_tree(tree,method_name), *options_hashes)
-      send(method_name)
+      Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, *options_hashes)
   end
 
-  def self.fastruby(argument,*options_hashes)
-
-    tree = nil
+  def self.execute_tree(argument,*options_hashes)
+    options_hash = {:validate_lvar_types => true}
+    options_hashes.each do |opt|
+      options_hash.merge!(opt)
+    end
 
     if argument.instance_of? Sexp
       tree = argument
@@ -83,216 +84,16 @@ class Object
       raise ArgumentError
     end
 
-    return unless tree
-
-    if tree.node_type == :defn
-      fastruby_defn(tree,*options_hashes)
-    else
-       method_name = "_anonymous_" + rand(100000000000).to_s
-      $generated_tree = FastRuby.encapsulate_tree(tree,method_name)
-      $options_hashes = options_hashes
-
-      klass = self
-      klass.class_eval do
-        class << self
-          fastruby_defn($generated_tree,*$options_hashes)
-        end
-      end
-
-      send(method_name)
-    end
-
-  end
-
-  def self.fastruby_defn(tree, *options_hashes)
-
-    options_hash = {:validate_lvar_types => true}
-    options_hashes.each do |opt|
-      options_hash.merge!(opt)
-    end
-
-    if tree[0] == :block
-      (1..tree.size-1).each do |i|
-        fastruby(tree[i], *options_hashes)
-      end
-
-      return
-    elsif tree[0] != :defn
-      raise ArgumentError, "Only definition of methods are accepted"
-    end
-
     method_name = tree[1]
-    args_tree = tree[2]
+    FastRuby.set_tree(self, method_name, tree, options_hash)
 
-    hashname = "$hash" + rand(1000000).to_s
-
-    hash = Hash.new
-
-    locals = Set.new
-    locals << :self
-
-    FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
-      locals << local
+    class << self
+      $metaclass = self
     end
 
-    self_ = self
-    hash.instance_eval{@klass = self_}
-    hash.instance_eval{@method_name = method_name}
+    $class_self = options_hash[:self]
 
-    class_eval do
-      class << self
-        include FastRuby::BuilderModule
-      end
-    end
-
-    fastrubym = self_.fastruby_method(method_name)
-    fastrubym.tree = tree
-    fastrubym.locals = locals
-    fastrubym.options = options_hash
-
-    def hash.build(key)
-      @klass.build(key, @method_name)
-    end
-
-    eval("#{hashname} = hash")
-
-    value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
-
-    main_signature_argument = args_tree[1..-1].first || "self"
-
-    strmethodargs = ""
-    strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
-
-    if args_tree.size > 1
-      strmethodargs = "self,block,(VALUE)&frame,#{args_tree[1..-1].map(&:to_s).join(",") }"
-    else
-      strmethodargs = "self,block,(VALUE)&frame"
-    end
-
-    strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
-      "sprintf(method_name+strlen(method_name), \"%lu\", CLASS_OF(#{arg}));\n"
-    }.join
-
-    c_code = "VALUE #{method_name}(#{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",")}) {
-      VALUE method_hash = (VALUE)#{hash.internal_value};
-      VALUE klass = (VALUE)#{self.internal_value};
-
-      char method_name[0x100];
-
-      method_name[0] = '_';
-      method_name[1] = 0;
-
-      sprintf(method_name+1, \"#{method_name}\");
-      #{strmethod_signature}
-
-      NODE* body;
-      ID id;
-
-      id = rb_intern(method_name);
-      body = rb_method_node(klass,id);
-
-      if (body == 0) {
-        VALUE argv_class[] = {#{strmethodargs_class} };
-        VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
-
-        rb_funcall(method_hash, build_id, 1, signature);
-        body = rb_method_node(klass,id);
-      }
-
-        if (nd_type(body) == NODE_CFUNC) {
-          struct {
-            void* parent_frame;
-            void* target_frame;
-            void* plocals;
-            jmp_buf jmp;
-            VALUE return_value;
-            VALUE exception;
-            int rescue;
-          } frame;
-
-          frame.target_frame = 0;
-          frame.parent_frame = 0;
-          frame.rescue = 0;
-          frame.exception = Qnil;
-          frame.return_value = Qnil;
-
-          int argc = body->nd_argc;
-
-          VALUE block = Qfalse;
-
-          if (rb_block_given_p()) {
-            struct {
-              void *block_function_address;
-              void *block_function_param;
-            } block_struct;
-
-            block_struct.block_function_address = re_yield;
-            block_struct.block_function_param = 0;
-
-            block = (VALUE)&block_struct;
-          }
-
-          int aux = setjmp(frame.jmp);
-          if (aux != 0) {
-            if (frame.target_frame == (void*)-1) {
-              rb_funcall(self, raise_id, 1, frame.exception);
-            }
-
-            if (frame.target_frame != &frame) {
-                VALUE ex = rb_funcall(
-                        (VALUE)#{FastRuby::Context::UnwindFastrubyFrame.internal_value},
-                        new_id,
-                        3,
-                        frame.exception,
-                        LONG2FIX(frame.target_frame),
-                        frame.return_value
-                        );
-
-                rb_funcall(self, raise_id, 1, ex);
-            }
-
-            return Qnil;
-          }
-
-          if (argc == #{args_tree.size+1}) {
-            return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
-          } else if (argc == -1) {
-            VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
-            return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
-          } else if (argc == -2) {
-            VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
-            return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
-          } else {
-            rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
-          }
-        }
-
-      return Qnil;
-    }"
-
-    inline :C  do |builder|
-      builder.include "<node.h>"
-      builder.inc << "
-
-/*
-       #{caller.join("\n")}
-*/
-
-      ID raise_id = 0;
-      ID new_id = 0;
-      ID build_id = 0;
-
-      static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
-        return rb_yield_splat(rb_ary_new4(argc,argv));
-      }"
-
-      builder.init_extra << "
-        raise_id = rb_intern(\"raise\");
-        new_id = rb_intern(\"new\");
-        build_id = rb_intern(\"build\");
-      "
-      builder.c c_code
-    end
+    self.build([$metaclass],method_name)
   end
 
   def internal_value
