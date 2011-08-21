@@ -139,6 +139,8 @@ module FastRuby
       other_call_tree = call_tree.dup
       other_call_tree[1] = s(:lvar, :arg)
 
+      mname = call_tree[2]
+
       call_args_tree = call_tree[3]
 
       caller_code = nil
@@ -425,7 +427,7 @@ module FastRuby
 
                 // call to #{call_tree[2]}
 
-                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
+                return ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
               }
             "
             }
@@ -441,7 +443,7 @@ module FastRuby
 
                 // call to #{call_tree[2]}
 
-                return ((VALUE(*)(VALUE,VALUE,VALUE))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
+                return ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
               }
             "
             }
@@ -1755,6 +1757,7 @@ module FastRuby
       ruby_wrapper = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
           #{@frame_struct}* pframe = frame;
+
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
 
           return #{
@@ -1769,6 +1772,7 @@ module FastRuby
       cruby_wrapper = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
           #{@frame_struct}* pframe = frame;
+
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
 
           // call to #{recvtype}::#{mname}
