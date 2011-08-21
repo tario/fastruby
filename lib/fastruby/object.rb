@@ -127,10 +127,6 @@ class Object
     end
   end
 
-  def self.fastruby_defs(*args)
-    raise NoMethodError, "not implemented yet"
-  end
-
   def self.fastruby(argument,*options_hashes)
 
     tree = nil
