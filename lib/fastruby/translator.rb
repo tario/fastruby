@@ -673,8 +673,23 @@ module FastRuby
             VALUE argv_class[] = {#{strmethodargs_class} };
             VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
 
-            rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
-            body = rb_method_node(#{global_klass_variable},id);
+            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
+
+            struct METHOD {
+              VALUE klass, rklass;
+              VALUE recv;
+              ID id, oid;
+              int safe_level;
+              NODE *body;
+            };
+
+            struct METHOD *data;
+            Data_Get_Struct(mobject, struct METHOD, data);
+            body = data->body;
+
+            if (body == 0) {
+              rb_raise(rb_eRuntimeError,\"method not found after build: '%s'\", method_name);
+            }
           }
 
             if (nd_type(body) == NODE_CFUNC) {
@@ -948,6 +963,22 @@ module FastRuby
             #{@alt_method_name}(#{to_c s(:gvar, :$class_self)});
           "
       end
+    end
+
+    def define_method_at_init(klass, method_name, size, signature)
+      init_extra << "
+        {
+          VALUE method_name = rb_funcall(
+                #{literal_value FastRuby},
+                #{intern_num :make_str_signature},
+                2,
+                #{literal_value method_name},
+                #{literal_value signature}
+                );
+
+          rb_define_method(#{literal_value klass}, RSTRING(method_name)->ptr, #{alt_method_name}, #{size});
+        }
+      "
     end
 
     def to_c_method(tree)

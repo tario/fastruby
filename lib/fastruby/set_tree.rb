@@ -26,6 +26,11 @@ require "fastruby/translator"
 
 
 module FastRuby
+
+  def self.make_str_signature(method_name, signature)
+     "_" + method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
+  end
+
   def self.set_tree(klass, method_name, tree, options = {})
     locals = Set.new
     locals << :self

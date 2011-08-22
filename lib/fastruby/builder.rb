@@ -102,10 +102,6 @@ module FastRuby
     end
 
     def build(signature)
-      mname = "_" + @method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
-
-      FastRuby.logger.info mname.to_s
-
       begin
         if (@owner.instance_method(mname))
           FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"
@@ -122,7 +118,7 @@ module FastRuby
       args_tree = tree[2]
 
       # create random method name
-      context.alt_method_name = mname
+      context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
 
       (1..signature.size).each do |i|
         arg = args_tree[i]
@@ -131,6 +127,11 @@ module FastRuby
 
       context.infer_self = signature[0]
       c_code = context.to_c_method(tree)
+
+      begin
+        context.define_method_at_init(@owner, @method_name, args_tree.size+1, signature)
+      rescue TypeError => e
+      end
 
       @owner.class_eval do
         inline :C  do |builder|
@@ -141,13 +142,12 @@ module FastRuby
         end
       end
 
-      ret = @owner.instance_method(mname)
+      ret = @owner.instance_method(context.alt_method_name)
 
       ret.extend MethodExtent
       ret.yield_signature = context.yield_signature
 
       ret
-
     end
 
     module MethodExtent
