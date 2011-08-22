@@ -1832,21 +1832,41 @@ module FastRuby
             VALUE mname = #{literal_value mname};
             VALUE tree = #{literal_value method_tree};
             VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+
+            struct METHOD {
+              VALUE klass, rklass;
+              VALUE recv;
+              ID id, oid;
+              int safe_level;
+              NODE *body;
+            };
+
+            int len = 0;
+            void* address = 0;
+
+            struct METHOD *data;
+            Data_Get_Struct(mobject, struct METHOD, data);
+
+            if (nd_type(data->body) == NODE_CFUNC) {
+            address = data->body->nd_cfnc;
+            len = data->body->nd_argc;
+            }
 
             #{convention_global_name ? convention_global_name + " = 0;" : ""}
             if (recvtype != Qnil) {
 
               if (convention == #{literal_value :fastruby}) {
                 #{convention_global_name ? convention_global_name + " = 1;" : ""}
-                #{name} = (void*)FIX2LONG(rb_funcall(recvtype, #{intern_num :address}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
+                #{name} = address;
               } else if (convention == #{literal_value :cruby}) {
                 // cruby, wrap direct call
-                #{cruby_name} = (void*)FIX2LONG(rb_funcall(recvtype, #{intern_num :address}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
+                #{cruby_name} = address;
 
                 if (#{cruby_name} == 0) {
                   #{name} = (void*)#{ruby_wrapper};
                 } else {
-                  #{cruby_len} = FIX2INT(rb_funcall(recvtype, #{intern_num :len}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}));
+                  #{cruby_len} = len;
                   #{name} = (void*)#{cruby_wrapper};
                 }
               } else {

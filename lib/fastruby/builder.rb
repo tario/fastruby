@@ -72,14 +72,6 @@ module FastRuby
         end
     end
 
-    def len(*args)
-      method_from_signature(*args).getlen
-    end
-
-    def address(*args)
-      method_from_signature(*args).getaddress
-    end
-
     def convention(signature, inference_complete)
         recvtype = @owner
         if recvtype.respond_to? :fastruby_method and inference_complete
@@ -161,16 +153,12 @@ module FastRuby
       fastruby_method(method_name.to_sym).build(signature)
     end
 
-    def address(signature, method_name, inference_complete)
-      fastruby_method(method_name.to_sym).address(signature, inference_complete)
-    end
-
     def convention(signature, method_name, inference_complete)
       fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
-    def len(signature, method_name, inference_complete)
-      fastruby_method(method_name.to_sym).len(signature, inference_complete)
+    def method_from_signature(signature, method_name, inference_complete)
+      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete)
     end
 
     def fastruby_method(mname_)
