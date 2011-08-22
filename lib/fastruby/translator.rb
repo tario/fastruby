@@ -23,18 +23,10 @@ require "inline"
 require "set"
 require "fastruby/method_extension"
 require "fastruby/set_tree"
+require "fastruby/exceptions"
 
 module FastRuby
   class Context
-
-    class UnwindFastrubyFrame < Exception
-      def initialize(ex,target_frame,return_value)
-        @ex = ex
-        @target_frame = target_frame
-        @return_value = return_value
-      end
-    end
-
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
     attr_accessor :locals

@@ -21,4 +21,14 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class TypeMismatchAssignmentException < Exception
   end
+
+  class Context
+    class UnwindFastrubyFrame < Exception
+      def initialize(ex,target_frame,return_value)
+        @ex = ex
+        @target_frame = target_frame
+        @return_value = return_value
+      end
+    end
+  end
 end
