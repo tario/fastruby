@@ -19,6 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module Kernel
+
+  alias original_require require
+
   def fastruby_require(path)
     if path =~ /\.so$/
       require(path)

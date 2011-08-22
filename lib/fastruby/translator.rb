@@ -61,6 +61,11 @@ module FastRuby
       extra_code << '#include "node.h"
       '
 
+      init_extra << "
+        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
+        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"fastruby\"));
+	"
+
       @common_func = common_func
       if common_func
         extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
@@ -788,6 +793,10 @@ module FastRuby
 
       inline_block "
         #{global_klass_variable} = plocals->self;
+
+        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
+        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"sexp\"));
+
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
                 #{global_klass_variable},
