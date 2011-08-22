@@ -1675,6 +1675,9 @@ module FastRuby
     end
 
     def literal_value(value)
+      @literal_value_hash = Hash.new unless @literal_value_hash
+      return @literal_value_hash[value] if @literal_value_hash[value]
+
       name = self.add_global_name("VALUE", "Qnil");
 
       str = Marshal.dump(value)
@@ -1682,6 +1685,8 @@ module FastRuby
       init_extra << "
         #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
       "
+
+      @literal_value_hash[value] = name
 
       name
     end
@@ -1809,11 +1814,16 @@ module FastRuby
     end
 
     def intern_num(symbol)
+      @intern_num_hash = Hash.new unless @intern_num_hash
+      return @intern_num_hash[symbol] if @intern_num_hash[symbol]
+
       name = self.add_global_name("ID", 0);
 
       init_extra << "
         #{name} = rb_intern(\"#{symbol.to_s}\");
       "
+
+      @intern_num_hash[symbol] = name
 
       name
     end
