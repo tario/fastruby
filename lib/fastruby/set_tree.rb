@@ -18,12 +18,9 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
-require "fastruby/translator"
-
 
 module FastRuby
 

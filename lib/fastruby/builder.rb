@@ -18,7 +18,6 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
 require "fastruby/inline_extension"
 require "fastruby/method_extension"
 require "fastruby/logging"
@@ -102,6 +101,8 @@ module FastRuby
     end
 
     def build(signature)
+      require "fastruby/translator"
+
       begin
         if (@owner.instance_method(mname))
           FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"
