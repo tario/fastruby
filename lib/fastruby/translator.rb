@@ -1955,46 +1955,5 @@ module FastRuby
         "
       } + "((VALUE)pframe)"
     end
-
-    inline :C  do |builder|
-      builder.include "<node.h>"
-      builder.c "VALUE getaddress(VALUE method) {
-          struct METHOD {
-            VALUE klass, rklass;
-            VALUE recv;
-            ID id, oid;
-            int safe_level;
-            NODE *body;
-          };
-
-          struct METHOD *data;
-          Data_Get_Struct(method, struct METHOD, data);
-
-          if (nd_type(data->body) == NODE_CFUNC) {
-            return INT2FIX(data->body->nd_cfnc);
-          }
-
-          return Qnil;
-      }"
-
-      builder.c "VALUE getlen(VALUE method) {
-          struct METHOD {
-            VALUE klass, rklass;
-            VALUE recv;
-            ID id, oid;
-            int safe_level;
-            NODE *body;
-          };
-
-          struct METHOD *data;
-          Data_Get_Struct(method, struct METHOD, data);
-
-          if (nd_type(data->body) == NODE_CFUNC) {
-            return INT2FIX(data->body->nd_argc);
-          }
-
-          return Qnil;
-      }"
-    end
   end
 end
