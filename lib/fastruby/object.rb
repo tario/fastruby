@@ -23,9 +23,7 @@ require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
 require "fastruby/translator"
-require "ruby_parser"
 require "inline"
-
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
@@ -54,11 +52,14 @@ end
 class Object
 
   def fastruby(argument, *options_hashes)
+
     tree = nil
 
+    require "sexp"
     if argument.instance_of? Sexp
       tree = argument
     elsif argument.instance_of? String
+      require "ruby_parser"
       tree = RubyParser.new.parse(argument)
     else
       raise ArgumentError
@@ -76,9 +77,11 @@ class Object
       options_hash.merge!(opt)
     end
 
+    require "sexp"
     if argument.instance_of? Sexp
       tree = argument
     elsif argument.instance_of? String
+      require "ruby_parser"
       tree = RubyParser.new.parse(argument)
     else
       raise ArgumentError
@@ -119,6 +122,7 @@ class Object
 
   private
       def self.to_class_name(argument)
+        require "sexp"
         if argument.instance_of? Symbol
           argument.to_s
         elsif argument.instance_of? Sexp
