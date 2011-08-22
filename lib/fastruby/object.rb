@@ -96,17 +96,25 @@ class Object
     self.build([$metaclass],method_name)
   end
 
+  @@helper_compiled = false
   def internal_value
     $refered_from_code_array = Array.new unless $refered_from_code_array
     $refered_from_code_array << self
 
+    unless @@helper_compiled
+      Object.build_helper_methods
+      @@helper_compiled = true
+    end
+
     internal_value_
   end
 
-  inline :C do |builder|
-    builder.c "VALUE internal_value_() {
-      return INT2FIX(self);
-    }"
+  def self.build_helper_methods
+    inline :C do |builder|
+      builder.c "VALUE internal_value_() {
+        return INT2FIX(self);
+      }"
+    end
   end
 
   private
