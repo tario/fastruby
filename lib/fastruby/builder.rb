@@ -95,6 +95,8 @@ module FastRuby
     def build(signature)
       require "fastruby/translator"
 
+      mname = FastRuby.make_str_signature(@method_name, signature)
+
       begin
         if (@owner.instance_method(mname))
           FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"

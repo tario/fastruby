@@ -671,7 +671,7 @@ module FastRuby
       end
 
       strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
-        "sprintf(method_name+strlen(method_name), \"%lu\", CLASS_OF(#{arg}));\n"
+        "sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(#{arg}))));\n"
       }.join
 
       anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(#{(["self"]+args_tree[1..-1]).map{|arg| "VALUE #{arg}" }.join(",")}) {
@@ -1417,7 +1417,7 @@ module FastRuby
       inline_block("
         #{init_code}
 
-        rb_funcall(tmpklass, #{intern_num :internal_value},0);
+        rb_funcall(tmpklass, #{intern_num :__id__},0);
 
         #{fun}(tmpklass);
         return Qnil;
@@ -1585,7 +1585,7 @@ module FastRuby
     end
 
     def inline_ruby(proced, parameter)
-      "rb_funcall(#{proced.internal_value}, #{intern_num :call}, 1, #{parameter})"
+      "rb_funcall(#{proced.__id__}, #{intern_num :call}, 1, #{parameter})"
     end
 
     def wrapped_break_block(inner_code)
