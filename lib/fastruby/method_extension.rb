@@ -25,47 +25,71 @@ module FastRuby
       owner.fastruby_method(name.to_sym)
     end
 
-        inline :C  do |builder|
-      builder.include "<node.h>"
-      builder.c "VALUE getaddress() {
-          struct METHOD {
-            VALUE klass, rklass;
-            VALUE recv;
-            ID id, oid;
-            int safe_level;
-            NODE *body;
-          };
+    def self.build_method_helpers
+      inline :C  do |builder|
+        builder.include "<node.h>"
+        builder.c "VALUE getaddress_() {
+            struct METHOD {
+              VALUE klass, rklass;
+              VALUE recv;
+              ID id, oid;
+              int safe_level;
+              NODE *body;
+            };
 
-          struct METHOD *data;
-          Data_Get_Struct(self, struct METHOD, data);
+            struct METHOD *data;
+            Data_Get_Struct(self, struct METHOD, data);
 
-          if (nd_type(data->body) == NODE_CFUNC) {
-            return INT2FIX(data->body->nd_cfnc);
-          }
+            if (nd_type(data->body) == NODE_CFUNC) {
+              return INT2FIX(data->body->nd_cfnc);
+            }
 
-          return 0;
-      }"
+            return 0;
+        }"
 
-      builder.c "VALUE getlen() {
-          struct METHOD {
-            VALUE klass, rklass;
-            VALUE recv;
-            ID id, oid;
-            int safe_level;
-            NODE *body;
-          };
+        builder.c "VALUE getlen_() {
+            struct METHOD {
+              VALUE klass, rklass;
+              VALUE recv;
+              ID id, oid;
+              int safe_level;
+              NODE *body;
+            };
 
-          struct METHOD *data;
-          Data_Get_Struct(self, struct METHOD, data);
+            struct METHOD *data;
+            Data_Get_Struct(self, struct METHOD, data);
 
-          if (nd_type(data->body) == NODE_CFUNC) {
-            return INT2FIX(data->body->nd_argc);
-          }
+            if (nd_type(data->body) == NODE_CFUNC) {
+              return INT2FIX(data->body->nd_argc);
+            }
 
-          return Qnil;
-      }"
+            return Qnil;
+        }"
+      end
 
-   end
+      alias getaddress getaddress_
+      alias getlen getlen_
+    end
+
+    @@helper_compiled = false
+
+    def getaddress
+      unless @@helper_compiled
+        FastRuby::MethodExtension.build_method_helpers
+        @@helper_compiled = true
+      end
+
+      getaddress_
+    end
+
+    def getlen
+      unless @@helper_compiled
+        FastRuby::MethodExtension.build_method_helpers
+        @@helper_compiled = true
+      end
+
+      getlen_
+    end
 
   end
 end
