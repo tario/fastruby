@@ -452,7 +452,7 @@ module FastRuby
           anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
         end
 
-      protected_block(ret, true)
+      protected_block(ret, false)
     end
 
     def to_c_block(tree)
