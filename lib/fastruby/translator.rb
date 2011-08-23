@@ -794,9 +794,6 @@ module FastRuby
       inline_block "
         #{global_klass_variable} = plocals->self;
 
-        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
-        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"sexp\"));
-
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
                 #{global_klass_variable},
@@ -1738,6 +1735,13 @@ module FastRuby
       name = self.add_global_name("VALUE", "Qnil");
 
       str = Marshal.dump(value)
+
+      if (value.instance_of? Sexp)
+        init_extra << "
+          rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
+          rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"sexp\"));
+        "
+      end
 
       init_extra << "
         #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
