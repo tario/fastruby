@@ -1745,6 +1745,8 @@ module FastRuby
 
       init_extra << "
         #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
+        rb_funcall(#{name},#{intern_num :gc_register_object},0);
+
       "
 
       @literal_value_hash[value] = name

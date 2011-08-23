@@ -97,6 +97,11 @@ class Object
     self.build([$metaclass],method_name)
   end
 
+  def gc_register_object
+    $refered_from_code_array = Array.new unless $refered_from_code_array
+    $refered_from_code_array << self
+  end
+
   private
       def self.to_class_name(argument)
         require "sexp"
