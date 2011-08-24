@@ -58,7 +58,8 @@ class Object
       tree = argument
     elsif argument.instance_of? String
       require "ruby_parser"
-      tree = RubyParser.new.parse(argument)
+      require "fastruby/sexp_extension"
+      tree = RubyParser.new.parse(argument).to_fastruby_sexp
     else
       raise ArgumentError
     end
@@ -80,7 +81,8 @@ class Object
       tree = argument
     elsif argument.instance_of? String
       require "ruby_parser"
-      tree = RubyParser.new.parse(argument)
+      require "fastruby/sexp_extension"
+      tree = RubyParser.new.parse(argument).to_fastruby_sexp
     else
       raise ArgumentError
     end

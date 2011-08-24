@@ -596,7 +596,7 @@ module FastRuby
           rb_const_set(rb_cObject, #{intern_num tree[1]}, val);
           return val;
           "
-      elsif tree[1].instance_of? Sexp
+      elsif tree[1].instance_of? FastRuby::FastRubySexp
 
         if tree[1].node_type == :colon2
           inline_block "
@@ -1333,7 +1333,7 @@ module FastRuby
     def get_class_name(argument)
       if argument.instance_of? Symbol
         argument.to_s
-      elsif argument.instance_of? Sexp
+      elsif argument.instance_of? FastRuby::FastRubySexp
         if argument[0] == :colon3
           get_class_name(argument[1])
         elsif argument[0] == :colon2
@@ -1345,7 +1345,7 @@ module FastRuby
     def get_container_tree(argument)
       if argument.instance_of? Symbol
         s(:self)
-      elsif argument.instance_of? Sexp
+      elsif argument.instance_of? FastRuby::FastRubySexp
         if argument[0] == :colon3
           s(:const, :Object)
         elsif argument[0] == :colon2
@@ -1549,7 +1549,7 @@ module FastRuby
     def inline_block_reference(arg)
       code = nil
 
-      if arg.instance_of? Sexp
+      if arg.instance_of? FastRuby::FastRubySexp
         code = to_c(arg);
       else
         code = arg
@@ -1736,7 +1736,7 @@ module FastRuby
 
       str = Marshal.dump(value)
 
-      if (value.instance_of? Sexp)
+      if (value.instance_of? FastRuby::FastRubySexp)
         init_extra << "
           rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
           rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"sexp\"));
