@@ -21,7 +21,6 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
-require "inline"
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
@@ -43,7 +42,7 @@ module FastRuby
                     s(:scope, s(:block, generated_tree)))
       end
 
-      generated_tree
+      generated_tree.to_fastruby_sexp
   end
 end
 
@@ -53,10 +52,11 @@ class Object
 
     tree = nil
 
-    require "sexp"
-    if argument.instance_of? Sexp
+    require "fastruby/fastruby_sexp"
+    if argument.instance_of? FastRuby::FastRubySexp
       tree = argument
     elsif argument.instance_of? String
+      require "rubygems"
       require "ruby_parser"
       require "fastruby/sexp_extension"
       tree = RubyParser.new.parse(argument).to_fastruby_sexp
@@ -76,14 +76,17 @@ class Object
       options_hash.merge!(opt)
     end
 
-    require "sexp"
-    if argument.instance_of? Sexp
+    require "fastruby/fastruby_sexp"
+    if argument.instance_of? FastRuby::FastRubySexp
       tree = argument
     elsif argument.instance_of? String
+      require "rubygems"
       require "ruby_parser"
       require "fastruby/sexp_extension"
       tree = RubyParser.new.parse(argument).to_fastruby_sexp
     else
+      require "pry"
+      binding.pry
       raise ArgumentError
     end
 

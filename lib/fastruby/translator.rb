@@ -18,8 +18,6 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "rubygems"
-require "inline"
 require "set"
 require "fastruby/method_extension"
 require "fastruby/set_tree"
