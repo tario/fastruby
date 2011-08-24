@@ -22,6 +22,8 @@ require "set"
 require "fastruby/method_extension"
 require "fastruby/set_tree"
 require "fastruby/exceptions"
+require "rubygems"
+require "sexp"
 
 module FastRuby
   class Context
@@ -59,10 +61,14 @@ module FastRuby
       extra_code << '#include "node.h"
       '
 
+      ruby_code = "
+        $LOAD_PATH << #{FastRuby.fastruby_load_path.inspect}
+        require #{FastRuby.fastruby_script_path.inspect}
+      "
+
       init_extra << "
-        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
-        rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"fastruby\"));
-	"
+        rb_eval_string(#{ruby_code.inspect});
+    	"
 
       @common_func = common_func
       if common_func
@@ -1733,13 +1739,6 @@ module FastRuby
       name = self.add_global_name("VALUE", "Qnil");
 
       str = Marshal.dump(value)
-
-      if (value.instance_of? FastRuby::FastRubySexp)
-        init_extra << "
-          rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"rubygems\"));
-          rb_funcall(Qnil, #{intern_num :send}, 2, #{literal_value :require}, rb_str_new2(\"sexp\"));
-        "
-      end
 
       init_extra << "
         #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));

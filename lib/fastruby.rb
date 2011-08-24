@@ -25,5 +25,14 @@ require "fastruby/custom_require"
 require "fastruby/set_tree"
 
 module FastRuby
-  VERSION = "0.0.3"
+  class << self
+    attr_accessor :fastruby_script_path
+    attr_accessor :fastruby_load_path
+  end
+
+  FastRuby.fastruby_script_path = File.expand_path(__FILE__)
+  FastRuby.fastruby_load_path = File.expand_path(File.dirname(__FILE__))
+
+  VERSION = "0.0.3" unless defined? VERSION
 end
+

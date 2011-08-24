@@ -94,6 +94,7 @@ module FastRuby
 
     def build(signature)
       require "fastruby/translator"
+      require "rubygems"
       require "inline"
 
       mname = FastRuby.make_str_signature(@method_name, signature)
