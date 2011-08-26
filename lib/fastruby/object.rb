@@ -21,6 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
+require "fastruby/cache/cache"
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
@@ -48,26 +49,38 @@ end
 
 class Object
 
+  @@cache = FastRuby::Cache.new(ENV['HOME']+"/.fastruby/")
+
   def fastruby(argument, *options_hashes)
 
-    tree = nil
+    snippet_hash = @@cache.hash_snippet(argument)
+    objs = @@cache.retrieve(snippet_hash)
+    if objs.empty?
 
-    require "fastruby/fastruby_sexp"
-    if argument.instance_of? FastRuby::FastRubySexp
-      tree = argument
-    elsif argument.instance_of? String
-      require "rubygems"
-      require "ruby_parser"
-      require "fastruby/sexp_extension"
-      tree = RubyParser.new.parse(argument).to_fastruby_sexp
+      tree = nil
+
+      require "fastruby/fastruby_sexp"
+      if argument.instance_of? FastRuby::FastRubySexp
+        tree = argument
+      elsif argument.instance_of? String
+        require "rubygems"
+        require "ruby_parser"
+        require "fastruby/sexp_extension"
+        tree = RubyParser.new.parse(argument).to_fastruby_sexp
+      else
+        raise ArgumentError
+      end
+
+      return unless tree
+
+        method_name = "_anonymous_" + rand(100000000000).to_s
+        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, *options_hashes)
+
     else
-      raise ArgumentError
+      objs.each do |obj|
+        require obj
+      end
     end
-
-    return unless tree
-
-      method_name = "_anonymous_" + rand(100000000000).to_s
-      Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, *options_hashes)
   end
 
   def self.execute_tree(argument,*options_hashes)
