@@ -48,13 +48,10 @@ module FastRuby
 end
 
 class Object
-
-  @@cache = FastRuby::Cache.new(ENV['HOME']+"/.fastruby/")
-
   def fastruby(argument, *options_hashes)
 
-    snippet_hash = @@cache.hash_snippet(argument)
-    objs = @@cache.retrieve(snippet_hash)
+    snippet_hash = FastRuby.cache.hash_snippet(argument)
+    objs = FastRuby.cache.retrieve(snippet_hash)
     if objs.empty?
 
       tree = nil
@@ -72,9 +69,8 @@ class Object
       end
 
       return unless tree
-
         method_name = "_anonymous_" + rand(100000000000).to_s
-        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, *options_hashes)
+        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, :snippet_hash => snippet_hash, *options_hashes)
 
     else
       objs.each do |obj|
@@ -112,7 +108,7 @@ class Object
 
     $class_self = options_hash[:self]
 
-    self.build([$metaclass],method_name)
+    self.build([$metaclass],method_name, options_hash[:snippet_hash])
   end
 
   def gc_register_object

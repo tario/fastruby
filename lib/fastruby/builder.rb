@@ -92,7 +92,7 @@ module FastRuby
         end
     end
 
-    def build(signature)
+    def build(signature, snippet_hash)
       require "fastruby/translator"
       require "rubygems"
       require "inline"
@@ -115,6 +115,7 @@ module FastRuby
       args_tree = tree[2]
 
       # create random method name
+      context.snippet_hash = snippet_hash
       context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
 
       (1..signature.size).each do |i|
@@ -131,12 +132,15 @@ module FastRuby
       end
 
       @owner.class_eval do
+        so_name = nil
         inline :C  do |builder|
           builder.inc << context.extra_code
           builder.include "<node.h>"
           builder.init_extra = context.init_extra
           builder.c c_code
+          so_name = builder.so_name
         end
+        FastRuby.cache.insert(snippet_hash, so_name)
       end
 
       ret = @owner.instance_method(context.alt_method_name)
@@ -153,8 +157,8 @@ module FastRuby
   end
 
   module BuilderModule
-    def build(signature, method_name)
-      fastruby_method(method_name.to_sym).build(signature)
+    def build(signature, method_name, snippet_hash)
+      fastruby_method(method_name.to_sym).build(signature, snippet_hash)
     end
 
     def convention(signature, method_name, inference_complete)

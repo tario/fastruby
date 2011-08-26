@@ -32,6 +32,7 @@ module FastRuby
     attr_accessor :locals
     attr_accessor :options
     attr_accessor :infer_self
+    attr_accessor :snippet_hash
     attr_reader :init_extra
     attr_reader :extra_code
     attr_reader :yield_signature
@@ -699,7 +700,7 @@ module FastRuby
             VALUE argv_class[] = {#{strmethodargs_class} };
             VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
 
-            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
+            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 3, signature,rb_str_new2(#{method_name.to_s.inspect}),rb_str_new2(#{snippet_hash.to_s.inspect}));
 
             struct METHOD {
               VALUE klass, rklass;

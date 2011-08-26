@@ -22,6 +22,12 @@ require "sha1"
 require "fileutils"
 
 module FastRuby
+
+  def self.cache
+    @@cache = FastRuby::Cache.new(ENV['HOME']+"/.fastruby/") unless defined? @@cache
+    @@cache
+  end
+
   class Cache
     include FileUtils
 
