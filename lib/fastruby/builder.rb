@@ -46,13 +46,14 @@ module FastRuby
     attr_accessor :tree
     attr_accessor :locals
     attr_accessor :options
+    attr_accessor :snippet_hash
 
     def initialize(method_name, owner)
       @method_name = method_name
       @owner = owner
     end
 
-    def method_from_signature(signature, inference_complete, snippet_hash)
+    def method_from_signature(signature, inference_complete)
         recvtype = @owner
         if recvtype.respond_to? :fastruby_method and inference_complete
 
@@ -63,7 +64,7 @@ module FastRuby
           end
 
           if method_tree
-            recvtype.build(signature, @method_name.to_sym, snippet_hash)
+            recvtype.build(signature, @method_name.to_sym)
           else
             recvtype.instance_method(@method_name.to_sym)
           end
@@ -92,7 +93,7 @@ module FastRuby
         end
     end
 
-    def build(signature, snippet_hash)
+    def build(signature)
       require "fastruby/translator"
       require "rubygems"
       require "inline"
@@ -131,8 +132,8 @@ module FastRuby
       rescue TypeError => e
       end
 
+      so_name = nil
       @owner.class_eval do
-        so_name = nil
         inline :C  do |builder|
           builder.inc << context.extra_code
           builder.include "<node.h>"
@@ -140,8 +141,8 @@ module FastRuby
           builder.c c_code
           so_name = builder.so_name
         end
-        FastRuby.cache.insert(snippet_hash, so_name)
       end
+      FastRuby.cache.insert(snippet_hash, so_name)
 
       ret = @owner.instance_method(context.alt_method_name)
 
@@ -157,16 +158,16 @@ module FastRuby
   end
 
   module BuilderModule
-    def build(signature, method_name, snippet_hash)
-      fastruby_method(method_name.to_sym).build(signature, snippet_hash)
+    def build(signature, method_name)
+      fastruby_method(method_name.to_sym).build(signature)
     end
 
     def convention(signature, method_name, inference_complete)
       fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
-    def method_from_signature(signature, method_name, inference_complete, snippet_hash)
-      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete, snippet_hash)
+    def method_from_signature(signature, method_name, inference_complete)
+      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete)
     end
 
     def fastruby_method(mname_)

@@ -177,7 +177,7 @@ module FastRuby
           end
 
           if method_tree
-            mobject = recvtype.build(signature, call_tree[2], snippet_hash)
+            mobject = recvtype.build(signature, call_tree[2])
             yield_signature = mobject.yield_signature
 
             if not args_tree
@@ -700,7 +700,7 @@ module FastRuby
             VALUE argv_class[] = {#{strmethodargs_class} };
             VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
 
-            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 3, signature,rb_str_new2(#{method_name.to_s.inspect}),rb_str_new2(#{snippet_hash.to_s.inspect}));
+            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
 
             struct METHOD {
               VALUE klass, rklass;
@@ -800,10 +800,11 @@ module FastRuby
         #{global_klass_variable} = plocals->self;
 
         // set tree
-        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
+        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
                 #{global_klass_variable},
                 rb_str_new2(#{method_name.to_s.inspect}),
                 #{literal_value tree},
+                #{literal_value snippet_hash},
                 #{literal_value alt_options}
 
                 );
@@ -1836,7 +1837,7 @@ module FastRuby
             VALUE mname = #{literal_value mname};
             VALUE tree = #{literal_value method_tree};
             VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
-            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},4,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}, #{literal_value snippet_hash});
+            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
 
             struct METHOD {
               VALUE klass, rklass;

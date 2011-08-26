@@ -36,7 +36,7 @@ module FastRuby
     end
   end
 
-  def self.set_tree(klass, method_name, tree, options = {})
+  def self.set_tree(klass, method_name, tree, snippet_hash, options = {})
 
     locals = Set.new
     locals << :self
@@ -55,6 +55,7 @@ module FastRuby
     fastrubym.tree = tree
     fastrubym.locals = locals
     fastrubym.options = options
+    fastrubym.snippet_hash = snippet_hash
 
     nil
   end

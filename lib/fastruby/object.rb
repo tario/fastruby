@@ -102,7 +102,7 @@ class Object
     end
 
     method_name = tree[1]
-    FastRuby.set_tree(self, method_name, tree, options_hash)
+    FastRuby.set_tree(self, method_name, tree, options_hash[:snippet_hash], options_hash)
 
     class << self
       $metaclass = self
@@ -110,7 +110,7 @@ class Object
 
     $class_self = options_hash[:self]
 
-    self.build([$metaclass],method_name, options_hash[:snippet_hash])
+    self.build([$metaclass],method_name)
   end
 
   def gc_register_object
