@@ -73,6 +73,9 @@ class Object
         Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, :snippet_hash => snippet_hash, *options_hashes)
 
     else
+
+      $class_self = self
+
       objs.sort{|x,y|
           (y =~ /Inline_Object/ ? 1 : 0) - (x =~ /Inline_Object/ ? 1 : 0)
         }.each do |obj|
