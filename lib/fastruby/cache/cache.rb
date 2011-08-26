@@ -33,11 +33,7 @@ module FastRuby
 
     def initialize(base_path)
       @base_path = base_path
-
-      begin
-        Dir.mkdir(@base_path)
-      rescue Errno::EEXIST
-      end
+      create_dir_if_not_exists(@base_path)
     end
 
     def hash_snippet(snippet)
@@ -45,20 +41,33 @@ module FastRuby
     end
 
     def insert(hash,path)
-      dest = @base_path + "/#{hash}/"
-
-      begin
-        Dir.mkdir(dest)
-      rescue Errno::EEXIST
-      end
-
+      create_hash_dir(hash)
+      dest = hash_dir(hash)
       cp_r path, dest
     end
 
     def retrieve(hash)
-      dest = @base_path + "/#{hash}/"
-
+      create_hash_dir(hash)
+      dest = hash_dir(hash)
       Dir[dest + "*.so"]
+    end
+
+private
+
+    def hash_dir(hash)
+      @base_path + "/#{hash[0..1]}/#{hash[2..-1]}/"
+    end
+
+    def create_hash_dir(hash)
+      create_dir_if_not_exists(@base_path + "/#{hash[0..1]}/")
+      create_dir_if_not_exists(@base_path + "/#{hash[0..1]}/#{hash[2..-1]}/")
+    end
+
+    def create_dir_if_not_exists(dest)
+      begin
+        Dir.mkdir(dest)
+      rescue Errno::EEXIST
+      end
     end
   end
 end
