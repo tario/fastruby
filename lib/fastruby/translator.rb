@@ -177,7 +177,7 @@ module FastRuby
           end
 
           if method_tree
-            mobject = recvtype.build(signature, call_tree[2])
+            mobject = recvtype.build(signature, call_tree[2], snippet_hash)
             yield_signature = mobject.yield_signature
 
             if not args_tree
@@ -1836,7 +1836,7 @@ module FastRuby
             VALUE mname = #{literal_value mname};
             VALUE tree = #{literal_value method_tree};
             VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
-            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},4,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"}, #{literal_value snippet_hash});
 
             struct METHOD {
               VALUE klass, rklass;

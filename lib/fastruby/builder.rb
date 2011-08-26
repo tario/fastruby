@@ -52,7 +52,7 @@ module FastRuby
       @owner = owner
     end
 
-    def method_from_signature(signature, inference_complete)
+    def method_from_signature(signature, inference_complete, snippet_hash)
         recvtype = @owner
         if recvtype.respond_to? :fastruby_method and inference_complete
 
@@ -63,7 +63,7 @@ module FastRuby
           end
 
           if method_tree
-            recvtype.build(signature, @method_name.to_sym)
+            recvtype.build(signature, @method_name.to_sym, snippet_hash)
           else
             recvtype.instance_method(@method_name.to_sym)
           end
@@ -165,8 +165,8 @@ module FastRuby
       fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
-    def method_from_signature(signature, method_name, inference_complete)
-      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete)
+    def method_from_signature(signature, method_name, inference_complete, snippet_hash)
+      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete, snippet_hash)
     end
 
     def fastruby_method(mname_)
