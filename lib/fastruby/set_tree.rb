@@ -28,6 +28,14 @@ module FastRuby
     "_" + method_name.to_s + signature.map(&:__id__).map(&:to_s).join
   end
 
+  def self.set_builder_module(klass)
+    klass.class_eval do
+      class << self
+        include FastRuby::BuilderModule
+      end
+    end
+  end
+
   def self.set_tree(klass, method_name, tree, options = {})
 
     locals = Set.new

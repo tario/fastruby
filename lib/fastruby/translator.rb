@@ -1828,10 +1828,10 @@ module FastRuby
       end
 
       if recvdump and recvtype
-
         init_extra << "
           {
             VALUE recvtype = #{recvdump};
+            rb_funcall(#{literal_value FastRuby}, #{intern_num :set_builder_module}, 1, recvtype);
             VALUE signature = #{literal_value signature};
             VALUE mname = #{literal_value mname};
             VALUE tree = #{literal_value method_tree};
