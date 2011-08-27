@@ -37,7 +37,6 @@ module FastRuby
   end
 
   def self.set_tree(klass, method_name, tree, snippet_hash, options = {})
-
     locals = Set.new
     locals << :self
 

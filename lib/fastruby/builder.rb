@@ -134,51 +134,60 @@ module FastRuby
       c_code = context.to_c_method(tree)
 
       unless options[:main]
-        context.define_method_at_init(@owner, @method_name, args_tree.size+1, signature)
+         context.define_method_at_init(@method_name, args_tree.size+1, signature)
       end
 
-
       so_name = nil
-      @owner.class_eval do
-        inline :C  do |builder|
-          builder.inc << context.extra_code
-          builder.include "<node.h>"
-          builder.init_extra = context.init_extra
 
-            def builder.generate_ext
-              ext = []
+      old_class_self = $class_self
+      $class_self = @owner
 
-              if @include_ruby_first
-                @inc.unshift "#include \"ruby.h\""
-              else
-                @inc.push "#include \"ruby.h\""
+      begin
+
+        @owner.class_eval do
+          inline :C  do |builder|
+            builder.inc << context.extra_code
+            builder.include "<node.h>"
+            builder.init_extra = context.init_extra
+
+              def builder.generate_ext
+                ext = []
+
+                if @include_ruby_first
+                  @inc.unshift "#include \"ruby.h\""
+                else
+                  @inc.push "#include \"ruby.h\""
+                end
+
+                ext << @inc
+                ext << nil
+                ext << @src.join("\n\n")
+                ext << nil
+                ext << nil
+                ext << "#ifdef __cplusplus"
+                ext << "extern \"C\" {"
+                ext << "#endif"
+                ext << "  void Init_#{module_name}() {"
+
+                ext << @init_extra.join("\n") unless @init_extra.empty?
+
+                ext << nil
+                ext << "  }"
+                ext << "#ifdef __cplusplus"
+                ext << "}"
+                ext << "#endif"
+                ext << nil
+
+                ext.join "\n"
               end
 
-              ext << @inc
-              ext << nil
-              ext << @src.join("\n\n")
-              ext << nil
-              ext << nil
-              ext << "#ifdef __cplusplus"
-              ext << "extern \"C\" {"
-              ext << "#endif"
-              ext << "  void Init_#{module_name}() {"
-
-              ext << @init_extra.join("\n") unless @init_extra.empty?
-
-              ext << nil
-              ext << "  }"
-              ext << "#ifdef __cplusplus"
-              ext << "}"
-              ext << "#endif"
-              ext << nil
-
-              ext.join "\n"
-            end
-
-          builder.c c_code
-          so_name = builder.so_name
+            builder.c c_code
+            so_name = builder.so_name
+          end
         end
+
+      ensure
+        $class_self = old_class_self
       end
 
       unless no_cache

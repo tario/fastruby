@@ -105,15 +105,17 @@ class Object
     end
 
     method_name = tree[1]
-    FastRuby.set_tree(self, method_name, tree, options_hash[:snippet_hash], options_hash)
+
+    self_ = options_hash[:self]
+    self_ = self unless self_.instance_of? Class
+
+    FastRuby.set_tree(self_, method_name, tree, options_hash[:snippet_hash], options_hash)
 
     class << self
       $metaclass = self
     end
 
-    $class_self = options_hash[:self]
-
-    self.build([$metaclass],method_name,true)
+    self_.build([$class_self],method_name,true)
   end
 
   def gc_register_object
