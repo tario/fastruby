@@ -49,8 +49,12 @@ end
 
 class Object
   def fastruby(argument, *options_hashes)
+    options_hash = {:validate_lvar_types => true}
+    options_hashes.each do |opt|
+      options_hash.merge!(opt)
+    end
 
-    snippet_hash = FastRuby.cache.hash_snippet(argument, self.to_s)
+    snippet_hash = FastRuby.cache.hash_snippet(argument,options_hash[:validate_lvar_types].to_s)
     objs = FastRuby.cache.retrieve(snippet_hash)
     if objs.empty?
 
@@ -78,13 +82,15 @@ class Object
           (y =~ /Inline_Object/ ? 1 : 0) - (x =~ /Inline_Object/ ? 1 : 0)
         }.each do |obj|
 
-        $last_obj_proc = nil
-        require obj
-        if $last_obj_proc
-          FastRuby.cache.register_proc(obj, $last_obj_proc)
+        begin
+          $last_obj_proc = nil
+          require obj
+          if $last_obj_proc
+            FastRuby.cache.register_proc(obj, $last_obj_proc)
+          end
+          FastRuby.cache.execute(obj, self)
+        rescue
         end
-
-        FastRuby.cache.execute(obj, self)
       end
     end
   end

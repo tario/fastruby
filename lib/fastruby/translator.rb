@@ -1768,6 +1768,8 @@ module FastRuby
       rescue TypeError
         @no_cache = true
         FastRuby.logger.info "#{value} disabling cache for extension"
+        require "rubygems"
+        require "ruby_parser"
 
         init_extra << "
           #{name} = #{to_c RubyParser.new.parse("ObjectSpace._id2ref(#{value.__id__})") };
