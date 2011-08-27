@@ -36,8 +36,8 @@ module FastRuby
       create_dir_if_not_exists(@base_path)
     end
 
-    def hash_snippet(snippet)
-      SHA1.hexdigest(snippet)
+    def hash_snippet(snippet, addition)
+      SHA1.hexdigest(snippet + addition)
     end
 
     def insert(hash,path)

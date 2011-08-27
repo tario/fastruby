@@ -50,7 +50,7 @@ end
 class Object
   def fastruby(argument, *options_hashes)
 
-    snippet_hash = FastRuby.cache.hash_snippet(argument)
+    snippet_hash = FastRuby.cache.hash_snippet(argument, self.to_s)
     objs = FastRuby.cache.retrieve(snippet_hash)
     if objs.empty?
 
