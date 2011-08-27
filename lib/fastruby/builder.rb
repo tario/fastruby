@@ -142,6 +142,42 @@ module FastRuby
           builder.inc << context.extra_code
           builder.include "<node.h>"
           builder.init_extra = context.init_extra
+
+          if options[:main]
+
+            def builder.generate_ext
+              ext = []
+
+              if @include_ruby_first
+                @inc.unshift "#include \"ruby.h\""
+              else
+                @inc.push "#include \"ruby.h\""
+              end
+
+              ext << @inc
+              ext << nil
+              ext << @src.join("\n\n")
+              ext << nil
+              ext << nil
+              ext << "#ifdef __cplusplus"
+              ext << "extern \"C\" {"
+              ext << "#endif"
+              ext << "  void Init_#{module_name}() {"
+
+              ext << @init_extra.join("\n") unless @init_extra.empty?
+
+              ext << nil
+              ext << "  }"
+              ext << "#ifdef __cplusplus"
+              ext << "}"
+              ext << "#endif"
+              ext << nil
+
+              ext.join "\n"
+            end
+
+          end
+
           builder.c c_code
           so_name = builder.so_name
         end
