@@ -52,6 +52,17 @@ module FastRuby
       Dir[dest + "*.so"]
     end
 
+    def register_proc(obj, value)
+      @proc_hash = Hash.new unless @proc_hash
+      @proc_hash[obj] = value
+    end
+
+    def execute(obj, param)
+      @proc_hash = Hash.new unless @proc_hash
+      if @proc_hash[obj]
+        @proc_hash[obj].call(param)
+      end
+    end
 private
 
     def hash_dir(hash)
@@ -69,5 +80,7 @@ private
       rescue Errno::EEXIST
       end
     end
+
+
   end
 end

@@ -990,8 +990,23 @@ module FastRuby
 
     def add_main
       if options[:main]
+
+        extra_code << "
+          static VALUE #{@alt_method_name}(VALUE self__);
+          static VALUE main_proc_call(VALUE self__, VALUE class_self_) {
+            #{@alt_method_name}(class_self_);
+            return Qnil;
+          }
+
+        "
+
         init_extra << "
-            #{@alt_method_name}(#{to_c s(:gvar, :$class_self)});
+            {
+            VALUE newproc = rb_funcall(rb_cObject,#{intern_num :new},0);
+            rb_define_singleton_method(newproc, \"call\", main_proc_call, 1);
+            rb_gv_set(\"$last_obj_proc\", newproc);
+
+            }
           "
       end
     end

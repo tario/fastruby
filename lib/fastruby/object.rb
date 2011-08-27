@@ -74,12 +74,17 @@ class Object
 
     else
 
-      $class_self = self
-
       objs.sort{|x,y|
           (y =~ /Inline_Object/ ? 1 : 0) - (x =~ /Inline_Object/ ? 1 : 0)
         }.each do |obj|
+
+        $last_obj_proc = nil
         require obj
+        if $last_obj_proc
+          FastRuby.cache.register_proc(obj, $last_obj_proc)
+        end
+
+        FastRuby.cache.execute(obj, self)
       end
     end
   end

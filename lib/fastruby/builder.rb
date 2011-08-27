@@ -141,6 +141,8 @@ module FastRuby
 
       old_class_self = $class_self
       $class_self = @owner
+      $last_obj_proc = nil
+      registered_last_obj_proc = nil
 
       begin
 
@@ -186,15 +188,31 @@ module FastRuby
           end
         end
 
+        if $last_obj_proc
+          registered_last_obj_proc = $last_obj_proc
+          FastRuby.cache.register_proc(so_name, $last_obj_proc)
+          $last_obj_proc.call($class_self)
+        end
+
       ensure
         $class_self = old_class_self
       end
+
 
       unless no_cache
         no_cache = context.no_cache
       end
 
       FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
+      if registered_last_obj_proc
+        objs = FastRuby.cache.retrieve(snippet_hash)
+        objs.sort{|x,y|
+            (y =~ /Inline_Object/ ? 1 : 0) - (x =~ /Inline_Object/ ? 1 : 0)
+          }.each do |obj|
+
+          FastRuby.cache.register_proc(obj, registered_last_obj_proc)
+        end
+      end
 
       if noreturn then
         nil
