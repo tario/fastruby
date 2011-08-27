@@ -113,7 +113,7 @@ class Object
 
     $class_self = options_hash[:self]
 
-    self.build([$metaclass],method_name)
+    self.build([$metaclass],method_name,true)
   end
 
   def gc_register_object

@@ -97,7 +97,7 @@ module FastRuby
         end
     end
 
-    def build(signature)
+    def build(signature, noreturn = false)
       require "fastruby/translator"
       require "rubygems"
       require "inline"
@@ -143,8 +143,6 @@ module FastRuby
           builder.include "<node.h>"
           builder.init_extra = context.init_extra
 
-          if options[:main]
-
             def builder.generate_ext
               ext = []
 
@@ -176,20 +174,22 @@ module FastRuby
               ext.join "\n"
             end
 
-          end
-
           builder.c c_code
           so_name = builder.so_name
         end
       end
       FastRuby.cache.insert(snippet_hash, so_name)
 
-      ret = @owner.instance_method(context.alt_method_name)
+      if noreturn then
+        nil
+      else
+        ret = @owner.instance_method(mname)
 
-      ret.extend MethodExtent
-      ret.yield_signature = context.yield_signature
+        ret.extend MethodExtent
+        ret.yield_signature = context.yield_signature
 
-      ret
+        ret
+      end
     end
 
     module MethodExtent
@@ -198,8 +198,8 @@ module FastRuby
   end
 
   module BuilderModule
-    def build(signature, method_name)
-      fastruby_method(method_name.to_sym).build(signature)
+    def build(signature, method_name, noreturn = false)
+      fastruby_method(method_name.to_sym).build(signature, noreturn)
     end
 
     def convention(signature, method_name, inference_complete)
