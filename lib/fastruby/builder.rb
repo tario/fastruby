@@ -102,6 +102,8 @@ module FastRuby
       require "rubygems"
       require "inline"
 
+      no_cache = false
+
       mname = FastRuby.make_str_signature(@method_name, signature)
 
       begin
@@ -131,10 +133,10 @@ module FastRuby
       context.infer_self = signature[0]
       c_code = context.to_c_method(tree)
 
-      begin
+      unless options[:main]
         context.define_method_at_init(@owner, @method_name, args_tree.size+1, signature)
-      rescue TypeError => e
       end
+
 
       so_name = nil
       @owner.class_eval do
@@ -178,7 +180,12 @@ module FastRuby
           so_name = builder.so_name
         end
       end
-      FastRuby.cache.insert(snippet_hash, so_name)
+
+      unless no_cache
+        no_cache = context.no_cache
+      end
+
+      FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
 
       if noreturn then
         nil

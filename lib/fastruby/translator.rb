@@ -33,12 +33,14 @@ module FastRuby
     attr_accessor :options
     attr_accessor :infer_self
     attr_accessor :snippet_hash
+    attr_reader :no_cache
     attr_reader :init_extra
     attr_reader :extra_code
     attr_reader :yield_signature
 
     def initialize(common_func = true)
       @infer_lvar_map = Hash.new
+      @no_cache = false
       @extra_code = ""
       @options = {}
       @init_extra = Array.new
@@ -1740,15 +1742,24 @@ module FastRuby
 
       name = self.add_global_name("VALUE", "Qnil");
 
-      str = Marshal.dump(value)
+      begin
+        str = Marshal.dump(value)
 
-      init_extra << "
-        #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
-        rb_funcall(#{name},#{intern_num :gc_register_object},0);
+        init_extra << "
+          #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
+          rb_funcall(#{name},#{intern_num :gc_register_object},0);
 
-      "
+        "
+      rescue TypeError
+        @no_cache = true
+        FastRuby.logger.info "#{value} disabling cache for extension"
 
-      @literal_value_hash[value] = name
+        init_extra << "
+          #{name} = #{to_c RubyParser.new.parse("ObjectSpace._id2ref(#{value.__id__})") };
+        "
+
+      end
+     @literal_value_hash[value] = name
 
       name
     end
