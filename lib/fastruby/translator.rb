@@ -1850,12 +1850,15 @@ module FastRuby
             int len = 0;
             void* address = 0;
 
-            struct METHOD *data;
-            Data_Get_Struct(mobject, struct METHOD, data);
+            if (mobject != Qnil) {
 
-            if (nd_type(data->body) == NODE_CFUNC) {
-            address = data->body->nd_cfnc;
-            len = data->body->nd_argc;
+              struct METHOD *data;
+              Data_Get_Struct(mobject, struct METHOD, data);
+
+              if (nd_type(data->body) == NODE_CFUNC) {
+              address = data->body->nd_cfnc;
+              len = data->body->nd_argc;
+              }
             }
 
             #{convention_global_name ? convention_global_name + " = 0;" : ""}

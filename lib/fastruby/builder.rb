@@ -54,6 +54,7 @@ module FastRuby
     end
 
     def method_from_signature(signature, inference_complete)
+      begin
         recvtype = @owner
         if recvtype.respond_to? :fastruby_method and inference_complete
 
@@ -71,6 +72,9 @@ module FastRuby
         else
           recvtype.instance_method(@method_name.to_sym)
         end
+      rescue NameError
+        nil
+      end
     end
 
     def convention(signature, inference_complete)
@@ -80,7 +84,7 @@ module FastRuby
           method_tree = nil
           begin
             method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
-          rescue NoMethodError
+          rescue NoMethodError, NameError
           end
 
           if method_tree
