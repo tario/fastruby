@@ -1,6 +1,6 @@
 = Fastruby - fast execution of ruby code
 
-Fastruby is a gem which allows to execute ruby code faster than normal (about 100X of the MRI1.8)
+Fastruby is a gem which allows to execute ruby code faster than normal (about 20X of the MRI1.8)
 
 Fastruby IS NOT a separated ruby interpreter. Then, the design is simple
 
@@ -47,6 +47,8 @@ sudo gem install fastruby
 
 == Documentation
 
+Overhead due new frame structure of reduce the speed to 20x (previously was near 100X). This refactor was necessary 
+to implement most of the common ruby constructions (blocks, yields, breaks, next, exceptions, etc...)
 Since this first version of fastruby is in part an spike/PoC, there is no stable API to document. 
 So, I recommend not to develop other software on top of fastruby since its API could change in any moment. 
 But I will try as much as possible keep the backward compatibility in the near future
@@ -55,12 +57,26 @@ I will stabilize the API and document it for next releases. I promise
 
 == Known Limitations & Issues
 
-* Bootstrap is very slow since this is a Poc :P
 * monkey patching does not work with fastruby methods
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call it's pretty fast)
 * does not support methods with variable number of arguments
 
 == Usage
+
+=== Environment variables
+
+FASTRUBY_LOG			define the output file of logging (default is standard output)
+FASTRUBY_LOG_LEVEL	define the logging level (default 3)
+FASTRUBY_NO_CACHE	set to 1 to disable the cache globally
+
+=== Fastruby options
+
+This options can be passed to fastruby when defining fastruby blocks
+
+:no_cache				set to true to disable cache (default: false)
+:validate_lvar_vars		enable runtime check of assignments of typed variable (default: disabled)
+
+== Code Examples
 
 The basic method is fastruby, fastruby takes a string with ruby code and compile it
 
