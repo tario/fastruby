@@ -188,7 +188,9 @@ module FastRuby
         end
 
         if $last_obj_proc
-          FastRuby.cache.register_proc(so_name, $last_obj_proc)
+          unless options[:no_cache]
+            FastRuby.cache.register_proc(so_name, $last_obj_proc)
+          end
           $last_obj_proc.call($class_self)
         end
 
@@ -196,12 +198,13 @@ module FastRuby
         $class_self = old_class_self
       end
 
-
       unless no_cache
         no_cache = context.no_cache
       end
 
-      FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
+      unless options[:no_cache]
+        FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
+      end
 
       if noreturn then
         nil

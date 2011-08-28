@@ -54,8 +54,13 @@ class Object
       options_hash.merge!(opt)
     end
 
-    snippet_hash = FastRuby.cache.hash_snippet(argument,options_hash[:validate_lvar_types].to_s)
-    objs = FastRuby.cache.retrieve(snippet_hash)
+    objs = Array.new
+
+    unless options_hash[:no_cache]
+      snippet_hash = FastRuby.cache.hash_snippet(argument,options_hash[:validate_lvar_types].to_s)
+      objs = FastRuby.cache.retrieve(snippet_hash)
+    end
+
     if objs.empty?
 
       tree = nil
