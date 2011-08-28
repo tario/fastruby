@@ -18,34 +18,32 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "rubygems"
-require "inline"
 require "set"
 require "fastruby/method_extension"
+require "fastruby/set_tree"
+require "fastruby/exceptions"
+require "rubygems"
+require "sexp"
 
 module FastRuby
   class Context
-
-    class UnwindFastrubyFrame < Exception
-      def initialize(ex,target_frame,return_value)
-        @ex = ex
-        @target_frame = target_frame
-        @return_value = return_value
-      end
-    end
-
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
     attr_accessor :locals
     attr_accessor :options
     attr_accessor :infer_self
+    attr_accessor :snippet_hash
+    attr_reader :no_cache
+    attr_reader :init_extra
     attr_reader :extra_code
     attr_reader :yield_signature
 
     def initialize(common_func = true)
       @infer_lvar_map = Hash.new
+      @no_cache = false
       @extra_code = ""
       @options = {}
+      @init_extra = Array.new
       @frame_struct = "struct {
         void* parent_frame;
         void* target_frame;
@@ -62,15 +60,30 @@ module FastRuby
         void* block_function_param;
       }"
 
+
       extra_code << '#include "node.h"
       '
 
+      ruby_code = "
+        $LOAD_PATH << #{FastRuby.fastruby_load_path.inspect}
+        require #{FastRuby.fastruby_script_path.inspect}
+      "
+
+      init_extra << "
+        rb_eval_string(#{ruby_code.inspect});
+    	"
+
+      @common_func = common_func
       if common_func
         extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
           rb_gvar_set((struct global_entry*)ge,value);
           return value;
         }
         "
+
+        extra_code << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
+        return rb_yield_splat(rb_ary_new4(argc,argv));
+        }"
 
         extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
           rb_ivar_set(recv,idvar,value);
@@ -82,6 +95,11 @@ module FastRuby
           *destination = value;
           return value;
         }
+
+/*
+       #{caller.join("\n")}
+*/
+
         "
       end
     end
@@ -125,6 +143,8 @@ module FastRuby
       other_call_tree = call_tree.dup
       other_call_tree[1] = s(:lvar, :arg)
 
+      mname = call_tree[2]
+
       call_args_tree = call_tree[3]
 
       caller_code = nil
@@ -134,8 +154,6 @@ module FastRuby
       address = nil
       mobject = nil
       len = nil
-
-      convention = :ruby
 
       extra_inference = {}
 
@@ -153,10 +171,7 @@ module FastRuby
           end
         end
 
-        convention = nil
-
         if recvtype.respond_to? :fastruby_method and inference_complete
-
           method_tree = nil
           begin
             method_tree = recvtype.instance_method(call_tree[2]).fastruby.tree
@@ -178,24 +193,8 @@ module FastRuby
                 extra_inference[yield_args[i]] = yield_signature[i]
               end
             end
-
-            convention = :fastruby
-          else
-            mobject = recvtype.instance_method(call_tree[2])
-            convention = :cruby
           end
-        else
-          mobject = recvtype.instance_method(call_tree[2])
-          convention = :cruby
         end
-
-        address = getaddress(mobject)
-        len = getlen(mobject)
-
-        unless address
-          convention = :ruby
-        end
-
       end
 
       anonymous_impl = tree[3]
@@ -238,38 +237,6 @@ module FastRuby
         end
       end
 
-      if convention == :ruby or convention == :cruby
-
-        if call_args_tree.size > 1
-
-          str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
-          str_recv = to_c recv_tree
-
-          str_recv = "plocals->self" unless recv_tree
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-
-                #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, #{call_args_tree.size-1}, #{str_called_code_args});
-              }
-            "
-            }
-
-        else
-          str_recv = to_c recv_tree
-          str_recv = "plocals->self" unless recv_tree
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-                #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{call_tree[2].to_i}, 0);
-              }
-            "
-            }
-        end
 
         if not args_tree
           str_arg_initialization = ""
@@ -282,10 +249,41 @@ module FastRuby
             str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
           end
         end
+        rb_funcall_caller_code = nil
 
-        str_arg_initialization
+        if call_args_tree.size > 1
 
-        block_code = proc { |name| "
+          str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+          str_recv = to_c recv_tree
+
+          str_recv = "plocals->self" unless recv_tree
+
+            rb_funcall_caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, #{str_called_code_args});
+              }
+            "
+            }
+
+        else
+          str_recv = to_c recv_tree
+          str_recv = "plocals->self" unless recv_tree
+
+            rb_funcall_caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+              }
+            "
+            }
+        end
+
+
+        rb_funcall_block_code = proc { |name| "
           static VALUE #{name}(VALUE arg, VALUE _plocals) {
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
@@ -308,15 +306,15 @@ module FastRuby
                 }
 
                 VALUE ex = rb_funcall(
-                        (VALUE)#{UnwindFastrubyFrame.internal_value},
-                        #{:new.to_i},
+                        #{literal_value FastRuby::Context::UnwindFastrubyFrame},
+                        #{intern_num :new},
                         3,
                         pframe->exception,
                         LONG2FIX(pframe->target_frame),
                         pframe->return_value
                         );
 
-                rb_funcall(plocals->self, #{:raise.to_i}, 1, ex);
+                rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
               }
               return frame.return_value;
             }
@@ -330,21 +328,18 @@ module FastRuby
         "
         }
 
-        protected_block("rb_iterate(#{anonymous_function(&caller_code)}, (VALUE)pframe, #{anonymous_function(&block_code)}, (VALUE)plocals)", true)
 
-      elsif convention == :fastruby
-
-        str_arg_initialization = ""
+        fastruby_str_arg_initialization = ""
 
         if not args_tree
-          str_arg_initialization = ""
+          fastruby_str_arg_initialization = ""
         elsif args_tree.first == :lasgn
-          str_arg_initialization = "plocals->#{args_tree[1]} = argv[0];"
+          fastruby_str_arg_initialization = "plocals->#{args_tree[1]} = argv[0];"
         elsif args_tree.first == :masgn
           arguments = args_tree[1][1..-1].map(&:last)
 
           (0..arguments.size-1).each do |i|
-            str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
+            fastruby_str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
           end
         end
 
@@ -380,7 +375,7 @@ module FastRuby
 
             }
 
-            #{str_arg_initialization}
+            #{fastruby_str_arg_initialization}
             #{str_impl}
 
             return last_expression;
@@ -388,16 +383,17 @@ module FastRuby
         "
         }
 
-
         str_recv = "plocals->self"
 
         if recv_tree
            str_recv = to_c recv_tree
         end
 
+        caller_code = nil
+        convention_global_name = add_global_name("int",0)
+
         if call_args_tree.size > 1
-          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",")
-          value_cast = value_cast + ", VALUE, VALUE" if convention == :fastruby
+          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
 
           str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
 
@@ -411,7 +407,7 @@ module FastRuby
 
                 // call to #{call_tree[2]}
 
-                return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
+                return ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
               }
             "
             }
@@ -427,14 +423,21 @@ module FastRuby
 
                 // call to #{call_tree[2]}
 
-                return ((VALUE(*)(VALUE,VALUE,VALUE))0x#{address.to_s(16)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
+                return ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
               }
             "
             }
         end
 
-        "#{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe)"
-      end
+      inline_block "
+        if (#{convention_global_name}) {
+          return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
+        } else {
+          return #{
+            protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+          };
+        }
+      "
     end
 
     def to_c_yield(tree)
@@ -478,7 +481,7 @@ module FastRuby
           anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
         end
 
-      protected_block(ret, true)
+      protected_block(ret, false)
     end
 
     def to_c_block(tree)
@@ -518,7 +521,7 @@ module FastRuby
       else
         inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = (VALUE)#{LocalJumpError.exception.internal_value};
+            pframe->exception = #{literal_value LocalJumpError.exception};
             longjmp(pframe->jmp,1);
             return Qnil;
             ")
@@ -532,7 +535,7 @@ module FastRuby
       else
         inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = (VALUE)#{LocalJumpError.exception.internal_value};
+            pframe->exception = #{literal_value LocalJumpError.exception};
             longjmp(pframe->jmp,1);
             return Qnil;
             ")
@@ -541,7 +544,7 @@ module FastRuby
     end
 
     def to_c_lit(tree)
-      "(VALUE)#{tree[1].internal_value}"
+      literal_value tree[1]
     end
 
     def to_c_nil(tree)
@@ -549,7 +552,7 @@ module FastRuby
     end
 
     def to_c_str(tree)
-      "(VALUE)#{tree[1].internal_value}"
+      literal_value tree[1]
     end
 
     def to_c_hash(tree)
@@ -597,24 +600,24 @@ module FastRuby
         inline_block "
           // set constant #{tree[1].to_s}
           VALUE val = #{to_c tree[2]};
-          rb_const_set(rb_cObject, #{tree[1].to_i}, val);
+          rb_const_set(rb_cObject, #{intern_num tree[1]}, val);
           return val;
           "
-      elsif tree[1].instance_of? Sexp
+      elsif tree[1].instance_of? FastRuby::FastRubySexp
 
         if tree[1].node_type == :colon2
           inline_block "
             // set constant #{tree[1].to_s}
             VALUE val = #{to_c tree[2]};
             VALUE klass = #{to_c tree[1][1]};
-            rb_const_set(klass, #{tree[1][2].to_i}, val);
+            rb_const_set(klass, #{intern_num tree[1][2]}, val);
             return val;
             "
         elsif tree[1].node_type == :colon3
           inline_block "
             // set constant #{tree[1].to_s}
             VALUE val = #{to_c tree[2]};
-            rb_const_set(rb_cObject, #{tree[1][1].to_i}, val);
+            rb_const_set(rb_cObject, #{intern_num tree[1][1]}, val);
             return val;
             "
         end
@@ -652,11 +655,165 @@ module FastRuby
     end
 
     def to_c_const(tree)
-      "rb_const_get(CLASS_OF(plocals->self), #{tree[1].to_i})"
+      "rb_const_get(CLASS_OF(plocals->self), #{intern_num(tree[1])})"
     end
 
     def to_c_defn(tree)
-      "rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value})"
+
+      method_name = tree[1]
+      args_tree = tree[2]
+
+      global_klass_variable = add_global_name("VALUE", "Qnil");
+
+      hash = Hash.new
+      value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
+
+      strmethodargs = ""
+      strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
+
+      if args_tree.size > 1
+        strmethodargs = "self,block,(VALUE)&frame,#{args_tree[1..-1].map(&:to_s).join(",") }"
+      else
+        strmethodargs = "self,block,(VALUE)&frame"
+      end
+
+      strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
+        "sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(#{arg}))));\n"
+      }.join
+
+      anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(#{(["self"]+args_tree[1..-1]).map{|arg| "VALUE #{arg}" }.join(",")}) {
+
+          VALUE klass = #{global_klass_variable};
+          char method_name[0x100];
+
+          method_name[0] = '_';
+          method_name[1] = 0;
+
+          sprintf(method_name+1, \"#{method_name}\");
+          #{strmethod_signature}
+
+          NODE* body;
+          ID id;
+
+          id = rb_intern(method_name);
+          body = rb_method_node(klass,id);
+
+          if (body == 0) {
+            VALUE argv_class[] = {#{strmethodargs_class} };
+            VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
+
+            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
+
+            struct METHOD {
+              VALUE klass, rklass;
+              VALUE recv;
+              ID id, oid;
+              int safe_level;
+              NODE *body;
+            };
+
+            struct METHOD *data;
+            Data_Get_Struct(mobject, struct METHOD, data);
+            body = data->body;
+
+            if (body == 0) {
+              rb_raise(rb_eRuntimeError,\"method not found after build: '%s'\", method_name);
+            }
+          }
+
+            if (nd_type(body) == NODE_CFUNC) {
+              struct {
+                void* parent_frame;
+                void* target_frame;
+                void* plocals;
+                jmp_buf jmp;
+                VALUE return_value;
+                VALUE exception;
+                int rescue;
+              } frame;
+
+              frame.target_frame = 0;
+              frame.parent_frame = 0;
+              frame.rescue = 0;
+              frame.exception = Qnil;
+              frame.return_value = Qnil;
+
+              int argc = body->nd_argc;
+
+              VALUE block = Qfalse;
+
+              if (rb_block_given_p()) {
+                struct {
+                  void *block_function_address;
+                  void *block_function_param;
+                } block_struct;
+
+                block_struct.block_function_address = re_yield;
+                block_struct.block_function_param = 0;
+
+                block = (VALUE)&block_struct;
+              }
+
+              int aux = setjmp(frame.jmp);
+              if (aux != 0) {
+                if (frame.target_frame == (void*)-1) {
+                  rb_funcall(self, #{intern_num :raise}, 1, frame.exception);
+                }
+
+                if (frame.target_frame != &frame) {
+                    VALUE ex = rb_funcall(
+                            #{literal_value FastRuby::Context::UnwindFastrubyFrame},
+                            #{intern_num :new},
+                            3,
+                            frame.exception,
+                            LONG2FIX(frame.target_frame),
+                            frame.return_value
+                            );
+
+                    rb_funcall(self, #{intern_num :raise}, 1, ex);
+                }
+
+                return Qnil;
+              }
+
+              if (argc == #{args_tree.size+1}) {
+                return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+              } else if (argc == -1) {
+                VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+                return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
+              } else if (argc == -2) {
+                VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
+                return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
+              } else {
+                rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
+              }
+            }
+
+          return Qnil;
+        }"
+      }
+
+      alt_options = options.dup
+
+      alt_options.delete(:self)
+      alt_options.delete(:main)
+
+      inline_block "
+        #{global_klass_variable} = plocals->self;
+
+        // set tree
+        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
+                #{global_klass_variable},
+                rb_str_new2(#{method_name.to_s.inspect}),
+                #{literal_value tree},
+                #{literal_value snippet_hash},
+                #{literal_value alt_options}
+
+                );
+
+        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, #{args_tree.size-1} );
+        "
+
     end
 
     def to_c_defs(tree)
@@ -665,6 +822,7 @@ module FastRuby
       tmp = FastRuby.build_defs(tree)
 
       extra_code << tmp[0]
+      @init_extra = @init_extra + tmp[2]
 
       inline_block "
         rb_define_singleton_method(#{to_c tree[1]}, \"#{tree[2].to_s}\", (void*)#{tmp[1]}, #{args_tree.size-1});
@@ -686,15 +844,15 @@ module FastRuby
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
       elsif nt == :gvar
-      "rb_gvar_defined((struct global_entry*)0x#{global_entry(tree[1][1]).to_s(16)}) ? #{"global-variable".internal_value} : Qnil"
+      "rb_gvar_defined((struct global_entry*)#{global_entry(tree[1][1])}) ? #{literal_value "global-variable"} : Qnil"
       elsif nt == :const
-      "rb_const_defined(rb_cObject, #{tree[1][1].to_i}) ? #{"constant".internal_value} : Qnil"
+      "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{literal_value "constant"} : Qnil"
       elsif nt == :call
-      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{tree[1][2].to_i}) ? #{"method".internal_value} : Qnil"
+      "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
       elsif nt == :yield
-        "rb_block_given_p() ? #{"yield".internal_value} : Qnil"
+        "rb_block_given_p() ? #{literal_value "yield"} : Qnil"
       elsif nt == :ivar
-      "rb_ivar_defined(plocals->self,#{tree[1][1].to_i}) ? #{"instance-variable".internal_value} : Qnil"
+      "rb_ivar_defined(plocals->self,#{intern_num tree[1][1]}) ? #{literal_value "instance-variable"} : Qnil"
       elsif nt == :attrset or
             nt == :op_asgn1 or
             nt == :op_asgn2 or
@@ -710,9 +868,9 @@ module FastRuby
             nt == :cdecl or
             nt == :cvdecl or
             nt == :cvasgn
-        "assignment".internal_value
+        literal_value "assignment"
       else
-        "expression".internal_value
+        literal_value "expression"
       end
     end
 
@@ -726,6 +884,27 @@ module FastRuby
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
+
+      if @common_func
+        init_extra << "
+          #{@frame_struct} frame;
+          #{@locals_struct} locals;
+
+          locals.return_value = Qnil;
+          locals.pframe = &frame;
+          locals.self = rb_cObject;
+
+          frame.target_frame = 0;
+          frame.plocals = (void*)&locals;
+          frame.return_value = Qnil;
+          frame.exception = Qnil;
+          frame.rescue = 0;
+          frame.last_error = Qnil;
+
+          typeof(&frame) pframe = &frame;
+        "
+      end
+
     end
 
     def to_c_method_defs(tree)
@@ -800,7 +979,7 @@ module FastRuby
 
           int aux = setjmp(frame.jmp);
           if (aux != 0) {
-            rb_funcall(self, #{:raise.to_i}, 1, frame.exception);
+            rb_funcall(self, #{intern_num :raise}, 1, frame.exception);
           }
 
 
@@ -809,39 +988,141 @@ module FastRuby
       "
     end
 
+    def add_main
+      if options[:main]
+
+        extra_code << "
+          static VALUE #{@alt_method_name}(VALUE self__);
+          static VALUE main_proc_call(VALUE self__, VALUE class_self_) {
+            #{@alt_method_name}(class_self_);
+            return Qnil;
+          }
+
+        "
+
+        init_extra << "
+            {
+            VALUE newproc = rb_funcall(rb_cObject,#{intern_num :new},0);
+            rb_define_singleton_method(newproc, \"call\", main_proc_call, 1);
+            rb_gv_set(\"$last_obj_proc\", newproc);
+
+            }
+          "
+      end
+    end
+
+    def define_method_at_init(method_name, size, signature)
+      init_extra << "
+        {
+          VALUE method_name = rb_funcall(
+                #{literal_value FastRuby},
+                #{intern_num :make_str_signature},
+                2,
+                #{literal_value method_name},
+                #{literal_value signature}
+                );
+
+          rb_define_method(#{to_c s(:gvar, :$class_self)}, RSTRING(method_name)->ptr, #{alt_method_name}, #{size});
+        }
+      "
+    end
+
     def to_c_method(tree)
       method_name = tree[1]
       args_tree = tree[2]
-
       impl_tree = tree[3][1]
 
-      initialize_method_structs(args_tree)
+      if (options[:main])
+        initialize_method_structs(args_tree)
 
-      strargs = if args_tree.size > 1
-        "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
-      else
-        "VALUE block, VALUE _parent_frame"
-      end
+        strargs = if args_tree.size > 1
+          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        else
+          "VALUE block, VALUE _parent_frame"
+        end
 
-      "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+        ret = "VALUE #{@alt_method_name || method_name}() {
 
-        #{func_frame}
+          #{@locals_struct} locals;
+          #{@locals_struct} *plocals = (void*)&locals;
+          #{@frame_struct} frame;
+          #{@frame_struct} *pframe;
 
-        #{args_tree[1..-1].map { |arg|
-          "locals.#{arg} = #{arg};\n"
-        }.join("") }
+          frame.plocals = plocals;
+          frame.parent_frame = 0;
+          frame.return_value = Qnil;
+          frame.target_frame = &frame;
+          frame.exception = Qnil;
+          frame.rescue = 0;
 
-        pblock = (void*)block;
-        if (pblock) {
-          locals.block_function_address = pblock->block_function_address;
-          locals.block_function_param = (VALUE)pblock->block_function_param;
-        } else {
+          locals.pframe = &frame;
+
+          pframe = (void*)&frame;
+
+          VALUE last_expression = Qnil;
+
+          int aux = setjmp(pframe->jmp);
+          if (aux != 0) {
+
+            if (pframe->target_frame == (void*)-2) {
+              return pframe->return_value;
+            }
+
+            if (pframe->target_frame != pframe) {
+              // raise exception
+              return Qnil;
+            }
+
+            return plocals->return_value;
+          }
+
+          locals.self = self;
+
+          #{args_tree[1..-1].map { |arg|
+            "locals.#{arg} = #{arg};\n"
+          }.join("") }
+
           locals.block_function_address = 0;
           locals.block_function_param = Qnil;
-        }
 
-        return #{to_c impl_tree};
-      }"
+          return #{to_c impl_tree};
+        }"
+
+        add_main
+        ret
+      else
+
+        initialize_method_structs(args_tree)
+
+        strargs = if args_tree.size > 1
+          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        else
+          "VALUE block, VALUE _parent_frame"
+        end
+
+        ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+
+          #{func_frame}
+
+          #{args_tree[1..-1].map { |arg|
+            "locals.#{arg} = #{arg};\n"
+          }.join("") }
+
+          pblock = (void*)block;
+          if (pblock) {
+            locals.block_function_address = pblock->block_function_address;
+            locals.block_function_param = (VALUE)pblock->block_function_param;
+          } else {
+            locals.block_function_address = 0;
+            locals.block_function_param = Qnil;
+          }
+
+          return #{to_c impl_tree};
+        }"
+
+        add_main
+        ret
+      end
     end
 
     def locals_accessor
@@ -849,33 +1130,33 @@ module FastRuby
     end
 
     def to_c_gvar(tree)
-      "rb_gvar_get((struct global_entry*)0x#{global_entry(tree[1]).to_s(16)})"
+      "rb_gvar_get((struct global_entry*)#{global_entry(tree[1])})"
     end
 
     def to_c_gasgn(tree)
-      "_rb_gvar_set((void*)0x#{global_entry(tree[1]).to_s(16)}, #{to_c tree[2]})"
+      "_rb_gvar_set((void*)#{global_entry(tree[1])}, #{to_c tree[2]})"
     end
 
     def to_c_ivar(tree)
-      "rb_ivar_get(#{locals_accessor}self,#{tree[1].to_i})"
+      "rb_ivar_get(#{locals_accessor}self,#{intern_num tree[1]})"
     end
 
     def to_c_iasgn(tree)
-      "_rb_ivar_set(#{locals_accessor}self,#{tree[1].to_i},#{to_c tree[2]})"
+      "_rb_ivar_set(#{locals_accessor}self,#{intern_num tree[1]},#{to_c tree[2]})"
     end
 
     def to_c_colon3(tree)
-      "rb_const_get_from(rb_cObject, #{tree[1].to_i})"
+      "rb_const_get_from(rb_cObject, #{intern_num tree[1]})"
     end
     def to_c_colon2(tree)
       inline_block "
         VALUE klass = #{to_c tree[1]};
 
-      if (rb_is_const_id(#{tree[2].to_i})) {
+      if (rb_is_const_id(#{intern_num tree[2]})) {
         switch (TYPE(klass)) {
           case T_CLASS:
           case T_MODULE:
-            return rb_const_get_from(klass, #{tree[2].to_i});
+            return rb_const_get_from(klass, #{intern_num tree[2]});
             break;
           default:
             rb_raise(rb_eTypeError, \"%s is not a class/module\",
@@ -884,7 +1165,7 @@ module FastRuby
         }
       }
       else {
-        return rb_funcall(klass, #{tree[2].to_i}, 0, 0);
+        return rb_funcall(klass, #{intern_num tree[2]}, 0, 0);
       }
 
         return Qnil;
@@ -898,7 +1179,7 @@ module FastRuby
 
           verify_type_function = proc { |name| "
             static VALUE #{name}(VALUE arg) {
-              if (CLASS_OF(arg)!=#{klass.internal_value}) rb_raise(#{TypeMismatchAssignmentException.internal_value}, \"Illegal assignment at runtime (type mismatch)\");
+              if (CLASS_OF(arg)!=#{literal_value klass}) rb_raise(#{literal_value FastRuby::TypeMismatchAssignmentException}, \"Illegal assignment at runtime (type mismatch)\");
               return arg;
             }
           "
@@ -1010,7 +1291,7 @@ module FastRuby
 
         return inline_block("
             pframe->target_frame = (void*)-1;
-            pframe->exception = rb_funcall(#{to_c args[1]}, #{:exception.to_i},0);
+            pframe->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},0);
             longjmp(pframe->jmp, 1);
             return Qnil;
             ")
@@ -1047,35 +1328,6 @@ module FastRuby
           end
         end
 
-        convention = nil
-
-        if recvtype.respond_to? :fastruby_method and inference_complete
-
-          method_tree = nil
-          begin
-            method_tree = recvtype.instance_method(tree[2]).fastruby.tree
-          rescue NoMethodError
-          end
-
-          if method_tree
-            mobject = recvtype.build(signature, tree[2])
-            convention = :fastruby
-          else
-            mobject = recvtype.instance_method(tree[2])
-            convention = :cruby
-          end
-        else
-          mobject = recvtype.instance_method(tree[2])
-          convention = :cruby
-        end
-
-        address = nil
-        len = 0
-        if mobject
-          address = getaddress(mobject)
-          len = getlen(mobject)
-        end
-
         if repass_var
           extraargs = ","+repass_var
           extraargs_signature = ",VALUE " + repass_var
@@ -1084,107 +1336,156 @@ module FastRuby
           extraargs_signature = ""
         end
 
-        if address then
           if argnum == 0
-            value_cast = "VALUE"
-            value_cast = value_cast + ", VALUE,VALUE" if convention == :fastruby
-
-            if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
-            else
-
-              str_incall_args = nil
-              if len == -1
-                str_incall_args = "0, (VALUE[]){}, recv"
-                value_cast = "int,VALUE*,VALUE"
-              elsif len == -2
-                str_incall_args = "recv, rb_ary_new4(#{})"
-                value_cast = "VALUE,VALUE"
-              else
-                str_incall_args = "recv"
-              end
-
-              protected_block(
-
-                anonymous_function{ |name| "
-                  static VALUE #{name}(VALUE recv#{extraargs_signature}) {
-                    // call to #{recvtype}##{mname}
-                    if (rb_block_given_p()) {
-                      // no passing block, recall
-                      return rb_funcall(recv, #{tree[2].to_i}, 0);
-                    } else {
-                      return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
-                    }
-                  }
-                " } + "(#{to_c(recv)}#{extraargs})", false, repass_var)
-            end
+            value_cast = "VALUE,VALUE,VALUE"
+            "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
           else
-            value_cast = ( ["VALUE"]*(args.size) ).join(",")
-            value_cast = value_cast + ", VALUE, VALUE" if convention == :fastruby
-
-            wrapper_func = nil
-            if convention == :fastruby
-              "((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
-            else
-
-              str_incall_args = nil
-              if len == -1
-                str_incall_args = "#{argnum}, (VALUE[]){#{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}}, recv"
-                value_cast = "int,VALUE*,VALUE"
-              elsif len == -2
-                str_incall_args = "recv, rb_ary_new4(#{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")})"
-                value_cast = "VALUE,VALUE"
-              else
-                str_incall_args = "recv, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")}"
-              end
-
-              protected_block(
-
-                anonymous_function{ |name| "
-                  static VALUE #{name}(VALUE recv, #{ (1..argnum).map{|x| "VALUE _arg"+x.to_s }.join(",")} ) {
-                    // call to #{recvtype}##{mname}
-                    if (rb_block_given_p()) {
-                      // no passing block, recall
-                      return rb_funcall(recv, #{tree[2].to_i}, #{argnum}, #{ (1..argnum).map{|x| "_arg"+x.to_s }.join(",")});
-                    } else {
-                      return ((VALUE(*)(#{value_cast}))0x#{address.to_s(16)})(#{str_incall_args});
-                    }
-                  }
-                " } + "(#{to_c(recv)}, #{strargs})", false, repass_var
-              )
-            end
+            value_cast = ( ["VALUE"]*(args.size) ).join(",") + ",VALUE,VALUE"
+            "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
           end
-        else
 
-          if argnum == 0
-            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)", false, repass_var)
-          else
-            protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )", false, repass_var)
-          end
-        end
-
-      else
+      else # else recvtype
         if argnum == 0
-          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, 0)", false, repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", false, repass_var)
         else
-          protected_block("rb_funcall(#{to_c recv}, #{tree[2].to_i}, #{argnum}, #{strargs} )", false, repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", false, repass_var)
+        end
+      end # if recvtype
+    end
+
+    def get_class_name(argument)
+      if argument.instance_of? Symbol
+        argument.to_s
+      elsif argument.instance_of? FastRuby::FastRubySexp
+        if argument[0] == :colon3
+          get_class_name(argument[1])
+        elsif argument[0] == :colon2
+          get_class_name(argument[2])
         end
       end
     end
 
-    def to_c_class(tree)
+    def get_container_tree(argument)
+      if argument.instance_of? Symbol
+        s(:self)
+      elsif argument.instance_of? FastRuby::FastRubySexp
+        if argument[0] == :colon3
+          s(:const, :Object)
+        elsif argument[0] == :colon2
+          argument[1]
+        end
+      end
+    end
+
+    def locals_scope(locals)
+       old_locals = @locals
+       old_locals_struct = @locals_struct
+
+       @locals = locals
+       @locals_struct = "struct {
+        void* block_function_address;
+        VALUE block_function_param;
+        jmp_buf jmp;
+        VALUE return_value;
+        void* pframe;
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        }"
+
+      begin
+        yield
+      ensure
+        @locals = old_locals
+        @locals_struct = old_locals_struct
+      end
+    end
+
+    def method_group(init_code, tree)
+
+      alt_locals = Set.new
+      alt_locals << :self
+
+      FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
+        alt_locals << local
+      end
+
+      fun = nil
+
+      locals_scope(alt_locals) do
+        fun = anonymous_function { |method_name| "static VALUE #{method_name}(VALUE self) {
+
+            #{@frame_struct} frame;
+            #{@locals_struct} locals;
+            typeof(&frame) pframe = &frame;
+            typeof(&locals) plocals = &locals;
+
+            frame.plocals = plocals;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
+            locals.self = self;
+
+            #{to_c tree};
+            return Qnil;
+          }
+        "
+        }
+      end
+
       inline_block("
-        rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value});
+        #{init_code}
+
+        rb_funcall(tmpklass, #{intern_num :__id__},0);
+
+        #{fun}(tmpklass);
         return Qnil;
+
+
       ")
 
     end
 
+
+
+    def to_c_class(tree)
+      str_class_name = get_class_name(tree[1])
+      container_tree = get_container_tree(tree[1])
+
+      if container_tree == s(:self)
+        method_group("
+                    VALUE tmpklass = rb_define_class(
+                      #{str_class_name.inspect},
+                      #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
+                  );
+        ", tree[3])
+      else
+        method_group("
+                    VALUE container_klass = #{to_c(container_tree)};
+                    VALUE tmpklass = rb_define_class_under(
+                      container_klass,
+                      #{str_class_name.inspect},
+                      #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
+                  );
+        ", tree[3])
+      end
+    end
+
     def to_c_module(tree)
-      inline_block("
-        rb_funcall(plocals->self,#{:fastruby.to_i},1,(VALUE)#{tree.internal_value});
-        return Qnil;
-      ")
+      str_class_name = get_class_name(tree[1])
+      container_tree = get_container_tree(tree[1])
+
+      if container_tree == s(:self)
+        method_group("
+                      VALUE tmpklass = rb_define_module(#{str_class_name.inspect});
+        ", tree[2])
+      else
+        method_group("
+                      VALUE container_klass = #{to_c(container_tree)};
+                      VALUE tmpklass = rb_define_module_under(container_klass,#{str_class_name.inspect});
+        ", tree[2])
+      end
     end
 
     def to_c_while(tree)
@@ -1271,7 +1572,7 @@ module FastRuby
     def inline_block_reference(arg)
       code = nil
 
-      if arg.instance_of? Sexp
+      if arg.instance_of? FastRuby::FastRubySexp
         code = to_c(arg);
       else
         code = arg
@@ -1292,7 +1593,7 @@ module FastRuby
 
     def inline_block(code, repass_var = nil)
       anonymous_function{ |name| "
-        static VALUE #{name}(VALUE param#{repass_var ? ",VALUE " + repass_var : "" }) {
+        static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
           #{@frame_struct} *pframe = (void*)param;
           #{@locals_struct} *plocals = (void*)pframe->plocals;
           VALUE last_expression = Qnil;
@@ -1304,7 +1605,7 @@ module FastRuby
     end
 
     def inline_ruby(proced, parameter)
-      "rb_funcall(#{proced.internal_value}, #{:call.to_i}, 1, #{parameter})"
+      "rb_funcall(#{proced.__id__}, #{intern_num :call}, 1, #{parameter})"
     end
 
     def wrapped_break_block(inner_code)
@@ -1318,12 +1619,12 @@ module FastRuby
     def protected_block(inner_code, always_rescue = false,repass_var = nil)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
-              if (CLASS_OF(pframe->last_error)==(VALUE)#{UnwindFastrubyFrame.internal_value}) {
+              if (CLASS_OF(pframe->last_error)==#{literal_value FastRuby::Context::UnwindFastrubyFrame}) {
               #{@frame_struct} *pframe = (void*)param;
 
-                pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{:@target_frame.to_i}));
-                pframe->exception = rb_ivar_get(pframe->last_error, #{:@ex.to_i});
-                pframe->return_value = rb_ivar_get(pframe->last_error, #{:@return_value.to_i});
+                pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
+                pframe->exception = rb_ivar_get(pframe->last_error, #{intern_num :@ex});
+                pframe->return_value = rb_ivar_get(pframe->last_error, #{intern_num :@return_value});
 
                if (pframe->target_frame == (void*)-2) {
                   return pframe->return_value;
@@ -1360,7 +1661,7 @@ module FastRuby
         }
 
         rescue_args = ""
-        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,#{repass_var}}"
+        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
       else
         body = inline_block_reference("return #{inner_code}")
         rescue_args = "(VALUE)pframe"
@@ -1446,6 +1747,216 @@ module FastRuby
       "
     end
 
+    def c_escape(str)
+      str.inspect
+    end
+
+    def literal_value(value)
+      @literal_value_hash = Hash.new unless @literal_value_hash
+      return @literal_value_hash[value] if @literal_value_hash[value]
+
+      name = self.add_global_name("VALUE", "Qnil");
+
+      begin
+        str = Marshal.dump(value)
+
+        init_extra << "
+          #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
+          rb_funcall(#{name},#{intern_num :gc_register_object},0);
+
+        "
+      rescue TypeError
+        @no_cache = true
+        FastRuby.logger.info "#{value} disabling cache for extension"
+        init_extra << "
+          #{name} = rb_funcall(rb_const_get(rb_cObject, #{intern_num :ObjectSpace}), #{intern_num :_id2ref}, 1, INT2FIX(#{value.__id__}));
+        "
+
+      end
+     @literal_value_hash[value] = name
+
+      name
+    end
+
+    def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
+      name = self.add_global_name("void*", 0);
+      cruby_name = self.add_global_name("void*", 0);
+      cruby_len = self.add_global_name("int", 0);
+      args_tree = call_tree[3]
+      method_tree = nil
+
+      begin
+        method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
+      rescue NoMethodError
+      end
+
+
+      strargs_signature = (0..args_tree.size-2).map{|x| "VALUE arg#{x}"}.join(",")
+      strargs = (0..args_tree.size-2).map{|x| "arg#{x}"}.join(",")
+      inprocstrargs = (1..args_tree.size-1).map{|x| "((VALUE*)method_arguments)[#{x}]"}.join(",")
+
+      if args_tree.size > 1
+        strargs_signature = "," + strargs_signature
+        toprocstrargs = "self,"+strargs
+        strargs = "," + strargs
+        inprocstrargs = ","+inprocstrargs
+      else
+        toprocstrargs = "self"
+      end
+
+      ruby_wrapper = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+          #{@frame_struct}* pframe = frame;
+
+          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+
+          return #{
+            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+            };
+        }
+        "
+      }
+
+      value_cast = ( ["VALUE"]*(args_tree.size) ).join(",")
+
+      cruby_wrapper = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+          #{@frame_struct}* pframe = frame;
+
+          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+
+          // call to #{recvtype}::#{mname}
+
+          if (#{cruby_len} == -1) {
+            return #{
+              protected_block "((VALUE(*)(int,VALUE*,VALUE))#{cruby_name})(#{args_tree.size-1}, ((VALUE*)method_arguments)+1,*((VALUE*)method_arguments));", false, "method_arguments"
+              };
+
+          } else if (#{cruby_len} == -2) {
+            return #{
+              protected_block "((VALUE(*)(VALUE,VALUE))#{cruby_name})(*((VALUE*)method_arguments), rb_ary_new4(#{args_tree.size-1},((VALUE*)method_arguments)+1) );", false, "method_arguments"
+              };
+
+          } else {
+            return #{
+              protected_block "((VALUE(*)(#{value_cast}))#{cruby_name})(((VALUE*)method_arguments)[0] #{inprocstrargs});", false, "method_arguments"
+              };
+          }
+        }
+        "
+      }
+
+      recvdump = nil
+
+      begin
+         recvdump = literal_value recvtype
+      rescue
+      end
+
+      if recvdump and recvtype
+        init_extra << "
+          {
+            VALUE recvtype = #{recvdump};
+            rb_funcall(#{literal_value FastRuby}, #{intern_num :set_builder_module}, 1, recvtype);
+            VALUE signature = #{literal_value signature};
+            VALUE mname = #{literal_value mname};
+            VALUE tree = #{literal_value method_tree};
+            VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+
+            struct METHOD {
+              VALUE klass, rklass;
+              VALUE recv;
+              ID id, oid;
+              int safe_level;
+              NODE *body;
+            };
+
+            int len = 0;
+            void* address = 0;
+
+            if (mobject != Qnil) {
+
+              struct METHOD *data;
+              Data_Get_Struct(mobject, struct METHOD, data);
+
+              if (nd_type(data->body) == NODE_CFUNC) {
+              address = data->body->nd_cfnc;
+              len = data->body->nd_argc;
+              }
+            }
+
+            #{convention_global_name ? convention_global_name + " = 0;" : ""}
+            if (recvtype != Qnil) {
+
+              if (convention == #{literal_value :fastruby}) {
+                #{convention_global_name ? convention_global_name + " = 1;" : ""}
+                #{name} = address;
+              } else if (convention == #{literal_value :cruby}) {
+                // cruby, wrap direct call
+                #{cruby_name} = address;
+
+                if (#{cruby_name} == 0) {
+                  #{name} = (void*)#{ruby_wrapper};
+                } else {
+                  #{cruby_len} = len;
+                  #{name} = (void*)#{cruby_wrapper};
+                }
+              } else {
+                // ruby, wrap rb_funcall
+                #{name} = (void*)#{ruby_wrapper};
+              }
+            } else {
+              // ruby, wrap rb_funcall
+              #{name} = (void*)#{ruby_wrapper};
+            }
+
+          }
+        "
+      else
+        init_extra << "
+        // ruby, wrap rb_funcall
+        #{name} = (void*)#{ruby_wrapper};
+        "
+      end
+
+      name
+    end
+
+    def intern_num(symbol)
+      @intern_num_hash = Hash.new unless @intern_num_hash
+      return @intern_num_hash[symbol] if @intern_num_hash[symbol]
+
+      name = self.add_global_name("ID", 0);
+
+      init_extra << "
+        #{name} = rb_intern(\"#{symbol.to_s}\");
+      "
+
+      @intern_num_hash[symbol] = name
+
+      name
+    end
+
+    def add_global_name(ctype, default)
+      name = "glb" + rand(1000000000).to_s
+
+      extra_code << "
+        static #{ctype} #{name} = #{default};
+      "
+      name
+    end
+
+    def global_entry(glbname)
+      name = add_global_name("struct global_entry*", 0);
+
+      init_extra << "
+        #{name} = rb_global_entry(SYM2ID(#{literal_value glbname}));
+      "
+
+      name
+    end
+
 
     def frame(code, jmp_code, not_jmp_code = "", rescued = nil)
 
@@ -1497,56 +2008,6 @@ module FastRuby
           }
         "
       } + "((VALUE)pframe)"
-    end
-
-    inline :C  do |builder|
-      builder.include "<node.h>"
-      builder.c "VALUE getaddress(VALUE method) {
-          struct METHOD {
-            VALUE klass, rklass;
-            VALUE recv;
-            ID id, oid;
-            int safe_level;
-            NODE *body;
-          };
-
-          struct METHOD *data;
-          Data_Get_Struct(method, struct METHOD, data);
-
-          if (nd_type(data->body) == NODE_CFUNC) {
-            return INT2FIX(data->body->nd_cfnc);
-          }
-
-          return Qnil;
-      }"
-
-      builder.c "VALUE getlen(VALUE method) {
-          struct METHOD {
-            VALUE klass, rklass;
-            VALUE recv;
-            ID id, oid;
-            int safe_level;
-            NODE *body;
-          };
-
-          struct METHOD *data;
-          Data_Get_Struct(method, struct METHOD, data);
-
-          if (nd_type(data->body) == NODE_CFUNC) {
-            return INT2FIX(data->body->nd_argc);
-          }
-
-          return Qnil;
-      }"
-
-      builder.c "VALUE global_entry(VALUE global_id) {
-        ID id = SYM2ID(global_id);
-        struct global_entry* entry;
-
-        entry = rb_global_entry(id);
-        return INT2FIX(entry);
-      }
-      "
     end
   end
 end

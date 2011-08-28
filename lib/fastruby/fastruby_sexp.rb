@@ -18,34 +18,8 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-module Kernel
-
-  alias original_require require
-
-  def fastruby_require(path)
-    if path =~ /\.so$/
-      require(path)
-    else
-      FastRuby.logger.info "trying to load '#{path}'"
-
-      complete_path = path + (path =~ /\.rb$/ ? "" : ".rb")
-
-      $LOAD_PATH.each do |load_path|
-        begin
-          source = nil
-          File.open(load_path + "/" + complete_path) do |file|
-            source = file.read
-          end
-
-          FastRuby.logger.info "loading '#{load_path + "/" + complete_path}'"
-
-          fastruby source
-          return true
-        rescue Errno::ENOENT
-        end
-      end
-
-      raise LoadError
-    end
+module FastRuby
+  class FastRubySexp < Array
+    alias node_type first
   end
 end

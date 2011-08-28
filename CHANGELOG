@@ -1,3 +1,5 @@
+0.0.6	Implemented cache of native libraries to speedup init, see README for more info
+
 0.0.5	Support for case..when..end
 
 		Fixes on wrapping/translation of fastruby frames through ruby calls

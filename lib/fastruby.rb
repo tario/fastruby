@@ -18,11 +18,21 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
+require "fastruby/exceptions"
 require "fastruby/object"
 require "fastruby/exceptions"
 require "fastruby/custom_require"
+require "fastruby/set_tree"
 
 module FastRuby
-  VERSION = "0.0.5"
+  class << self
+    attr_accessor :fastruby_script_path
+    attr_accessor :fastruby_load_path
+  end
+
+  FastRuby.fastruby_script_path = File.expand_path(__FILE__)
+  FastRuby.fastruby_load_path = File.expand_path(File.dirname(__FILE__))
+
+  VERSION = "0.0.5" unless defined? VERSION
 end
+

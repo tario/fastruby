@@ -18,7 +18,6 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/translator"
 require "fastruby/inline_extension"
 require "fastruby/method_extension"
 require "fastruby/logging"
@@ -40,31 +39,80 @@ module FastRuby
 
     context.alt_method_name = "singleton_" + method_name + rand(100000000).to_s
 
-    [context.extra_code + context.to_c_method_defs(tree), context.alt_method_name]
+    [context.extra_code + context.to_c_method_defs(tree), context.alt_method_name, context.init_extra]
   end
 
   class Method
     attr_accessor :tree
     attr_accessor :locals
     attr_accessor :options
+    attr_accessor :snippet_hash
 
     def initialize(method_name, owner)
       @method_name = method_name
       @owner = owner
     end
 
-    def build(signature)
-      mname = "_" + @method_name.to_s + signature.map(&:internal_value).map(&:to_s).join
+    def method_from_signature(signature, inference_complete)
+      begin
+        recvtype = @owner
+        if recvtype.respond_to? :fastruby_method and inference_complete
 
-      FastRuby.logger.info mname.to_s
+          method_tree = nil
+          begin
+            method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
+          rescue NoMethodError
+          end
+
+          if method_tree
+            recvtype.build(signature, @method_name.to_sym)
+          else
+            recvtype.instance_method(@method_name.to_sym)
+          end
+        else
+          recvtype.instance_method(@method_name.to_sym)
+        end
+      rescue NameError
+        nil
+      end
+    end
+
+    def convention(signature, inference_complete)
+        recvtype = @owner
+        if recvtype.respond_to? :fastruby_method and inference_complete
+
+          method_tree = nil
+          begin
+            method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
+          rescue NoMethodError, NameError
+          end
+
+          if method_tree
+            :fastruby
+          else
+            :cruby
+          end
+        else
+          :cruby
+        end
+    end
+
+    def build(signature, noreturn = false)
+      require "fastruby/translator"
+      require "rubygems"
+      require "inline"
+
+      no_cache = false
+
+      mname = FastRuby.make_str_signature(@method_name, signature)
 
       begin
         if (@owner.instance_method(mname))
-          FastRuby.logger.info "NOT Building #{self}::#{@method_name} for signature #{signature.inspect}, it's already done"
+          FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"
           return @owner.instance_method(mname)
         end
       rescue NameError
-        FastRuby.logger.info "Building #{self}::#{@method_name} for signature #{signature.inspect}"
+        FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
       end
 
       context = FastRuby::Context.new
@@ -74,7 +122,8 @@ module FastRuby
       args_tree = tree[2]
 
       # create random method name
-      context.alt_method_name = mname
+      context.snippet_hash = snippet_hash
+      context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
 
       (1..signature.size).each do |i|
         arg = args_tree[i]
@@ -82,24 +131,91 @@ module FastRuby
       end
 
       context.infer_self = signature[0]
-
       c_code = context.to_c_method(tree)
 
-      @owner.class_eval do
-        inline :C  do |builder|
-          builder.inc << context.extra_code
-          builder.include "<node.h>"
-          builder.c c_code
-        end
+      unless options[:main]
+         context.define_method_at_init(@method_name, args_tree.size+1, signature)
       end
 
-      ret = @owner.instance_method(mname)
+      so_name = nil
 
-      ret.extend MethodExtent
-      ret.yield_signature = context.yield_signature
+      old_class_self = $class_self
+      $class_self = @owner
+      $last_obj_proc = nil
 
-      ret
+      begin
 
+        @owner.class_eval do
+          inline :C  do |builder|
+            builder.inc << context.extra_code
+            builder.include "<node.h>"
+            builder.init_extra = context.init_extra
+
+              def builder.generate_ext
+                ext = []
+
+                if @include_ruby_first
+                  @inc.unshift "#include \"ruby.h\""
+                else
+                  @inc.push "#include \"ruby.h\""
+                end
+
+                ext << @inc
+                ext << nil
+                ext << @src.join("\n\n")
+                ext << nil
+                ext << nil
+                ext << "#ifdef __cplusplus"
+                ext << "extern \"C\" {"
+                ext << "#endif"
+                ext << "  void Init_#{module_name}() {"
+
+                ext << @init_extra.join("\n") unless @init_extra.empty?
+
+                ext << nil
+                ext << "  }"
+                ext << "#ifdef __cplusplus"
+                ext << "}"
+                ext << "#endif"
+                ext << nil
+
+                ext.join "\n"
+              end
+
+            builder.c c_code
+            so_name = builder.so_name
+          end
+        end
+
+        if $last_obj_proc
+          unless options[:no_cache]
+            FastRuby.cache.register_proc(so_name, $last_obj_proc)
+          end
+          $last_obj_proc.call($class_self)
+        end
+
+      ensure
+        $class_self = old_class_self
+      end
+
+      unless no_cache
+        no_cache = context.no_cache
+      end
+
+      unless options[:no_cache]
+        FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
+      end
+
+      if noreturn then
+        nil
+      else
+        ret = @owner.instance_method(mname)
+
+        ret.extend MethodExtent
+        ret.yield_signature = context.yield_signature
+
+        ret
+      end
     end
 
     module MethodExtent
@@ -108,8 +224,16 @@ module FastRuby
   end
 
   module BuilderModule
-    def build(signature, method_name)
-      fastruby_method(method_name.to_sym).build(signature)
+    def build(signature, method_name, noreturn = false)
+      fastruby_method(method_name.to_sym).build(signature, noreturn)
+    end
+
+    def convention(signature, method_name, inference_complete)
+      fastruby_method(method_name.to_sym).convention(signature, inference_complete)
+    end
+
+    def method_from_signature(signature, method_name, inference_complete)
+      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete)
     end
 
     def fastruby_method(mname_)

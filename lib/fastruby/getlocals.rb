@@ -18,8 +18,8 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "rubygems"
 require "set"
+require "fastruby/fastruby_sexp"
 
 module FastRuby
   class GetLocalsProcessor
@@ -35,7 +35,7 @@ module FastRuby
        @locals << tree[1]
       end
 
-      tree.select{|subtree| subtree.instance_of? Sexp}.each do |subtree|
+      tree.select{|subtree| subtree.instance_of? FastRuby::FastRubySexp}.each do |subtree|
         process(subtree)
       end
     end
