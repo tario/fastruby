@@ -22,6 +22,7 @@ require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
 require "fastruby/cache/cache"
+require "fastruby"
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
@@ -58,7 +59,7 @@ class Object
     objs = Array.new
 
     unless options_hash[:no_cache]
-      snippet_hash = FastRuby.cache.hash_snippet(argument,options_hash[:validate_lvar_types].to_s)
+      snippet_hash = FastRuby.cache.hash_snippet(argument,options_hash[:validate_lvar_types].to_s + "^" + FastRuby::VERSION)
       objs = FastRuby.cache.retrieve(snippet_hash)
     end
 
