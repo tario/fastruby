@@ -50,6 +50,7 @@ end
 class Object
   def fastruby(argument, *options_hashes)
     options_hash = {:validate_lvar_types => true}
+    options_hash[:no_cache] = true if ENV['FASTRUBY_NO_CACHE'] == "1"
     options_hashes.each do |opt|
       options_hash.merge!(opt)
     end
@@ -79,7 +80,7 @@ class Object
 
       return unless tree
         method_name = "_anonymous_" + rand(100000000000).to_s
-        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, :snippet_hash => snippet_hash, *options_hashes)
+        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, :snippet_hash => snippet_hash, *[options_hash])
 
     else
 
