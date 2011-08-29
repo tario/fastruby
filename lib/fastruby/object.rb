@@ -96,7 +96,7 @@ class Object
             FastRuby.cache.register_proc(obj, $last_obj_proc)
           end
           FastRuby.cache.execute(obj, self)
-        rescue
+        rescue Exception => e
         end
       end
     end

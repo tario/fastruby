@@ -1025,7 +1025,7 @@ module FastRuby
       end
     end
 
-    def define_method_at_init(method_name, size, signature)
+    def define_method_at_init(klass,method_name, size, signature)
       init_extra << "
         {
           VALUE method_name = rb_funcall(
@@ -1036,7 +1036,7 @@ module FastRuby
                 #{literal_value signature}
                 );
 
-          rb_define_method(#{to_c s(:gvar, :$class_self)}, RSTRING(method_name)->ptr, #{alt_method_name}, #{size});
+          rb_define_method(#{literal_value klass}, RSTRING(method_name)->ptr, #{alt_method_name}, #{size});
         }
       "
     end
