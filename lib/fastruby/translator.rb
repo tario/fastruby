@@ -91,6 +91,12 @@ module FastRuby
         }
         "
 
+        extra_code << "static VALUE __rb_cvar_set(VALUE recv,ID idvar, VALUE value, int warn) {
+          rb_cvar_set(recv,idvar,value,warn);
+          return value;
+        }
+        "
+
         extra_code << "static VALUE _lvar_assing(VALUE* destination,VALUE value) {
           *destination = value;
           return value;
@@ -507,6 +513,10 @@ module FastRuby
 
     def to_c_cvar(tree)
       "rb_cvar_get(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]})"
+    end
+
+    def to_c_cvasgn(tree)
+      "__rb_cvar_set(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]},#{to_c tree[2]},Qfalse)"
     end
 
     def to_c_return(tree)
