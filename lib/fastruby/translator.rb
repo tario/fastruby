@@ -505,6 +505,17 @@ module FastRuby
       inline_block str
     end
 
+    def to_c_cvar(tree)
+      inline_block "
+        VALUE klass = plocals->self;
+
+        if (CLASS_OF(klass) != rb_cClass) {
+          klass = CLASS_OF(klass);
+        }
+        return rb_cvar_get(klass,#{intern_num tree[1]});
+      "
+    end
+
     def to_c_return(tree)
       "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1); return Qnil;\n"
     end
