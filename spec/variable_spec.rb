@@ -233,4 +233,39 @@ describe FastRuby, "fastruby" do
      test_defined "defined? #{var}=0", "#{var} assignment", "assignment"
    end
 
+  it "should read class variable" do
+    class ::U17
+
+      def self.foo(a)
+        @@a = a
+      end
+
+      fastruby "
+        def foo
+          @@a
+        end
+      "
+    end
+    ::U17.foo(31)
+    ::U17.new.foo.should be === 31
+  end
+
+  it "should write class variable" do
+    class ::U18
+
+      def self.foo
+        @@a
+      end
+
+      fastruby "
+        def foo(a)
+          @@a = a
+        end
+      "
+    end
+    ::U18.new.foo(71)
+    ::U18.foo.should be == 71
+  end
+
+
 end
