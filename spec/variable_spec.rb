@@ -191,10 +191,12 @@ describe FastRuby, "fastruby" do
     ::U16.new.foo.should be == nil
   end
 
+  $u_class_number = 30
   def self.test_defined(code,title,defined_name)
     it "should call defined? to defined #{title} and return '#{defined_name}" do
-      classname = "::U"+rand(1000000).to_s
+      classname = "::U"+$u_class_number.to_s
 
+      $u_class_number = $u_class_number + 1
       code = "def foo; #{code}; end"
       eval("class #{classname}
         fastruby #{code.inspect}
@@ -205,8 +207,9 @@ describe FastRuby, "fastruby" do
 
   def self.test_defined_block(code,title,defined_name)
     it "should call defined? to defined #{title} and return '#{defined_name}'" do
-      classname = "::U"+rand(1000000).to_s
+      classname = "::U"+$u_class_number.to_s
 
+      $u_class_number = $u_class_number + 1
       code = "def foo; #{code}; end"
       eval("class #{classname}
         fastruby #{code.inspect}
