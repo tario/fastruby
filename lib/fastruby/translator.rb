@@ -506,14 +506,7 @@ module FastRuby
     end
 
     def to_c_cvar(tree)
-      inline_block "
-        VALUE klass = plocals->self;
-
-        if (CLASS_OF(klass) != rb_cClass) {
-          klass = CLASS_OF(klass);
-        }
-        return rb_cvar_get(klass,#{intern_num tree[1]});
-      "
+      "rb_cvar_get(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]})"
     end
 
     def to_c_return(tree)
