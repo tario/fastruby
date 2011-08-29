@@ -87,12 +87,12 @@ describe FastRuby, "fastruby" do
   class BahException < Exception
   end
 
-  def self.basic_unhandled_exception(*exception_names)
+  def self.basic_unhandled_exception(class_name_suffix, *exception_names)
 
     exception_names.each do |exception_name|
       it "should raise basic exception #{exception_name}" do
 
-        random_name = "::L5_" + rand(10000).to_s
+        random_name = "::L5_" + class_name_suffix
 
         fastruby "
           class #{random_name}
@@ -111,7 +111,7 @@ describe FastRuby, "fastruby" do
 
       it "should not raise basic exception #{exception_name} if rescued" do
 
-        random_name = "::L6_" + rand(10000).to_s
+        random_name = "::L6_" + class_name_suffix
 
         fastruby "
           class #{random_name}
@@ -133,7 +133,7 @@ describe FastRuby, "fastruby" do
 
       it "should raise basic exception #{exception_name} even if rescued when the rescue is for another exception" do
 
-        random_name = "::L7_" + rand(10000).to_s
+        random_name = "::L7_" + class_name_suffix
 
         fastruby "
           class #{random_name}
@@ -155,8 +155,8 @@ describe FastRuby, "fastruby" do
 
       it "should rescue basic exception #{exception_name} when raised from rubycode called from fastruby code" do
 
-        random_name = "::L8_" + rand(10000).to_s
-        random_name_2 = "::L8_" + rand(10000).to_s
+        random_name = "::L8_" + class_name_suffix
+        random_name_2 = "::L8_" + class_name_suffix + "_"
 
         eval "
           class #{random_name_2}
@@ -183,8 +183,8 @@ describe FastRuby, "fastruby" do
 
       it "should rescue basic exception #{exception_name} from fastruby code when raised from rubycode" do
 
-        random_name = "::L9_" + rand(10000).to_s
-        random_name_2 = "::L9_" + rand(10000).to_s
+        random_name = "::L9_" + class_name_suffix
+        random_name_2 = "::L9_" + class_name_suffix + "_"
 
         eval "
           class #{random_name_2}
@@ -217,7 +217,7 @@ describe FastRuby, "fastruby" do
 
       it "should raise basic exception #{exception_name} from singleton method" do
 
-        random_name = "::L5_" + rand(10000).to_s
+        random_name = "::L10_" + class_name_suffix
 
         fastruby "
           class #{random_name}
@@ -240,7 +240,7 @@ describe FastRuby, "fastruby" do
 
       it "should not raise basic exception #{exception_name} if rescued from singleton method" do
 
-        random_name = "::L6_" + rand(10000).to_s
+        random_name = "::L11_" + class_name_suffix
 
         fastruby "
           class #{random_name}
@@ -266,7 +266,7 @@ describe FastRuby, "fastruby" do
 
       it "should raise basic exception #{exception_name} even if rescued when the rescue is for another exception from singleton method" do
 
-        random_name = "::L7_" + rand(10000).to_s
+        random_name = "::L12_" + class_name_suffix
 
         fastruby "
           class #{random_name}
@@ -292,8 +292,8 @@ describe FastRuby, "fastruby" do
 
       it "should rescue basic exception #{exception_name} when raised from rubycode called from fastruby code from singleton method" do
 
-        random_name = "::L8_" + rand(10000).to_s
-        random_name_2 = "::L8_" + rand(10000).to_s
+        random_name = "::L13_" + class_name_suffix
+        random_name_2 = "::L13_" + class_name_suffix + "_"
 
         eval "
           class #{random_name_2}
@@ -324,8 +324,8 @@ describe FastRuby, "fastruby" do
 
       it "should rescue basic exception #{exception_name} from fastruby code when raised from rubycode from singleton methods" do
 
-        random_name = "::L9_" + rand(10000).to_s
-        random_name_2 = "::L9_" + rand(10000).to_s
+        random_name = "::L14_" + class_name_suffix
+        random_name_2 = "::L14_" + class_name_suffix + "_"
 
         eval "
           class #{random_name_2}
@@ -370,14 +370,14 @@ describe FastRuby, "fastruby" do
     end
   end
 
-  basic_unhandled_exception("Exception")
-  basic_unhandled_exception("RuntimeError")
-  basic_unhandled_exception("StandardError")
-  basic_unhandled_exception("Errno::ENOENT")
+  basic_unhandled_exception("2", "Exception")
+  basic_unhandled_exception("3", "RuntimeError")
+  basic_unhandled_exception("4", "StandardError")
+  basic_unhandled_exception("5", "Errno::ENOENT")
 
   it "should accept else with rescue" do
 
-    random_name = "::L11_" + rand(10000).to_s
+    random_name = "::L11_1"
     fastruby "
           class #{random_name}
               def foo
@@ -398,7 +398,7 @@ describe FastRuby, "fastruby" do
 
   it "should accept else with rescue, when no exception is raised" do
 
-    random_name = "::L12_" + rand(10000).to_s
+    random_name = "::L12_1"
     fastruby "
           class #{random_name}
               def foo
@@ -418,7 +418,7 @@ describe FastRuby, "fastruby" do
 
   it "should accept else with rescue, when no exception is raised and begin has body" do
 
-    random_name = "::L13_" + rand(10000).to_s
+    random_name = "::L13_1"
     fastruby "
           class #{random_name}
               def foo
