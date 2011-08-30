@@ -97,6 +97,7 @@ class Object
           end
           FastRuby.cache.execute(obj, self)
         rescue Exception => e
+          p e
         end
       end
     end

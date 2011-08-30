@@ -1772,14 +1772,46 @@ module FastRuby
       name = self.add_global_name("VALUE", "Qnil");
 
       begin
+
         str = Marshal.dump(value)
 
-        init_extra << "
-          #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
-          rb_funcall(#{name},#{intern_num :gc_register_object},0);
 
-        "
-      rescue TypeError
+        if value.instance_of? Module
+
+          container_str = value.to_s.split("::")[0..-2].join("::")
+
+          init_extra << "
+            #{name} = rb_define_module_under(
+                    #{container_str == "" ? "rb_cObject" : literal_value(eval(container_str))}
+                    ,\"#{value.to_s.split("::").last}\");
+
+            rb_funcall(#{name},#{intern_num :gc_register_object},0);
+          "
+        elsif value.instance_of? Class
+          container_str = value.to_s.split("::")[0..-2].join("::")
+
+          init_extra << "
+            #{name} = rb_define_class_under(
+                    #{container_str == "" ? "rb_cObject" : literal_value(eval(container_str))}
+                    ,\"#{value.to_s.split("::").last}\"
+                    ,#{value.superclass == Object ? "rb_cObject" : literal_value(value.superclass)});
+
+            rb_funcall(#{name},#{intern_num :gc_register_object},0);
+          "
+        elsif value.instance_of? Array
+          init_extra << "
+            #{name} = rb_ary_new3(#{value.size}, #{value.map{|x| literal_value x}.join(",")} );
+            rb_funcall(#{name},#{intern_num :gc_register_object},0);
+          "
+        else
+
+          init_extra << "
+            #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
+            rb_funcall(#{name},#{intern_num :gc_register_object},0);
+
+          "
+        end
+      rescue TypeError => e
         @no_cache = true
         FastRuby.logger.info "#{value} disabling cache for extension"
         init_extra << "
