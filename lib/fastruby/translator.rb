@@ -902,14 +902,14 @@ module FastRuby
       if @common_func
         init_extra << "
           #{@frame_struct} frame;
-          #{@locals_struct} locals;
+          #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
 
-          locals.return_value = Qnil;
-          locals.pframe = &frame;
-          locals.self = rb_cObject;
+          plocals->return_value = Qnil;
+          plocals->pframe = &frame;
+          plocals->self = rb_cObject;
 
           frame.target_frame = 0;
-          frame.plocals = (void*)&locals;
+          frame.plocals = (void*)plocals;
           frame.return_value = Qnil;
           frame.exception = Qnil;
           frame.rescue = 0;
@@ -940,11 +940,11 @@ module FastRuby
         #{func_frame}
 
         #{args_tree[1..-1].map { |arg|
-          "locals.#{arg} = #{arg};\n"
+          "plocals->#{arg} = #{arg};\n"
         }.join("") }
 
-        locals.block_function_address = block_address;
-        locals.block_function_param = block_param;
+        plocals->block_function_address = block_address;
+        plocals->block_function_param = block_param;
 
         return #{to_c impl_tree};
       }"
@@ -1057,8 +1057,7 @@ module FastRuby
 
         ret = "VALUE #{@alt_method_name || method_name}() {
 
-          #{@locals_struct} locals;
-          #{@locals_struct} *plocals = (void*)&locals;
+          #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
 
@@ -1069,7 +1068,7 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
 
-          locals.pframe = &frame;
+          plocals->pframe = &frame;
 
           pframe = (void*)&frame;
 
@@ -1090,14 +1089,14 @@ module FastRuby
             return plocals->return_value;
           }
 
-          locals.self = self;
+          plocals->self = self;
 
           #{args_tree[1..-1].map { |arg|
-            "locals.#{arg} = #{arg};\n"
+            "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
-          locals.block_function_address = 0;
-          locals.block_function_param = Qnil;
+          plocals->block_function_address = 0;
+          plocals->block_function_param = Qnil;
 
           return #{to_c impl_tree};
         }"
@@ -1119,16 +1118,16 @@ module FastRuby
           #{func_frame}
 
           #{args_tree[1..-1].map { |arg|
-            "locals.#{arg} = #{arg};\n"
+            "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
           pblock = (void*)block;
           if (pblock) {
-            locals.block_function_address = pblock->block_function_address;
-            locals.block_function_param = (VALUE)pblock->block_function_param;
+            plocals->block_function_address = pblock->block_function_address;
+            plocals->block_function_param = (VALUE)pblock->block_function_param;
           } else {
-            locals.block_function_address = 0;
-            locals.block_function_param = Qnil;
+            plocals->block_function_address = 0;
+            plocals->block_function_param = Qnil;
           }
 
           return #{to_c impl_tree};
@@ -1428,9 +1427,8 @@ module FastRuby
         fun = anonymous_function { |method_name| "static VALUE #{method_name}(VALUE self) {
 
             #{@frame_struct} frame;
-            #{@locals_struct} locals;
             typeof(&frame) pframe = &frame;
-            typeof(&locals) plocals = &locals;
+            #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
 
             frame.plocals = plocals;
             frame.parent_frame = 0;
@@ -1439,7 +1437,7 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
 
-            locals.self = self;
+            plocals->self = self;
 
             #{to_c tree};
             return Qnil;
@@ -1720,8 +1718,7 @@ module FastRuby
 
     def func_frame
       "
-        #{@locals_struct} locals;
-        #{@locals_struct} *plocals = (void*)&locals;
+        #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
         #{@frame_struct} frame;
         #{@frame_struct} *pframe;
 
@@ -1732,7 +1729,7 @@ module FastRuby
         frame.exception = Qnil;
         frame.rescue = 0;
 
-        locals.pframe = &frame;
+        plocals->pframe = &frame;
 
         pframe = (void*)&frame;
 
@@ -1757,7 +1754,7 @@ module FastRuby
           return plocals->return_value;
         }
 
-        locals.self = self;
+        plocals->self = self;
       "
     end
 
