@@ -83,10 +83,22 @@ VALUE rb_stack_chunk_create(VALUE self) {
 	return Data_Make_Struct(rb_cStackChunk,struct STACKCHUNK,stack_chunk_mark,stack_chunk_free,sc);
 }
 
+VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
+	
+	struct STACKCHUNK* data;
+	Data_Get_Struct(self,struct STACKCHUNK*,data);
+	
+	stack_chunk_alloc(data,FIX2INT(rb_size));
+	return self;
+}
+
 void Init_fastruby_base() {
 	
 	rb_mFastRuby = rb_define_module("FastRuby");
 	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
 	
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
+	
+	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
+	
 }
