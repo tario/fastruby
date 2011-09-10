@@ -32,6 +32,10 @@ void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	
 	if (position_in_page+size >= PAGE_SIZE) {
 		int new_page = page+1;
+		
+		if (new_page >= NUM_PAGES) {
+			rb_raise(rb_eSysStackError,"stack level too deep");
+		}
 	
 		if (sc->pages[new_page ] == 0) {
 			// alloc the page corresponding for the new stack position
@@ -45,6 +49,11 @@ void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	} else {
 		sc->current_position += size;
 		int new_page = sc->current_position / PAGE_SIZE;
+		
+		if (new_page >= NUM_PAGES) {
+			rb_raise(rb_eSysStackError,"stack level too deep");
+		}
+		
 		if (sc->pages[new_page ] == 0) {
 			// alloc the page corresponding for the new stack position
 			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(void*));
