@@ -695,13 +695,16 @@ module FastRuby
         "sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(#{arg}))));\n"
       }.join
 
-      anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(#{(["self"]+args_tree[1..-1]).map{|arg| "VALUE #{arg}" }.join(",")}) {
+      anonymous_method_name = anonymous_function{ |name| "VALUE #{name}(#{(["self"]+args_tree[1..-1]).map{|arg| "VALUE #{arg}" }.join(",")}) {
 
           VALUE klass = #{global_klass_variable};
           char method_name[0x100];
 
           method_name[0] = '_';
           method_name[1] = 0;
+
+          rb_dvar_push(#{intern_num :__stack_chunk}, Qnil);
+          rb_newobj();
 
           sprintf(method_name+1, \"#{method_name}\");
           #{strmethod_signature}
@@ -812,6 +815,22 @@ module FastRuby
       alt_options.delete(:self)
       alt_options.delete(:main)
 
+      real_method_name = "_" + method_name.to_s + "_real__"
+      ruby_wrapper_code = "lambda {|x|
+      x.class_eval do
+        def #{method_name}(*args)
+          __stack_chunks = []
+          if block_given?
+            #{real_method_name}(*args) do |*x|
+              yield(*x)
+            end
+          else
+            #{real_method_name}(*args)
+          end
+        end
+      end
+    }"
+
       inline_block "
         #{global_klass_variable} = plocals->self;
 
@@ -825,7 +844,11 @@ module FastRuby
 
                 );
 
-        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, #{args_tree.size-1} );
+        rb_define_method(plocals->self, #{real_method_name.to_s.inspect}, #{anonymous_method_name}, #{args_tree.size-1} );
+
+        VALUE wrap_lambda = rb_eval_string(#{ruby_wrapper_code.inspect});
+        rb_funcall(wrap_lambda, #{intern_num :call},1,plocals->self);
+
         "
 
     end
