@@ -915,7 +915,6 @@ module FastRuby
       @locals_struct = "struct {
         void* block_function_address;
         VALUE block_function_param;
-        jmp_buf jmp;
         VALUE return_value;
         void* pframe;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
