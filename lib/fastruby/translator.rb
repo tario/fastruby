@@ -53,6 +53,7 @@ module FastRuby
         VALUE exception;
         int rescue;
         VALUE last_error;
+        void* stack_chunk;
       }"
 
       @block_struct = "struct {
@@ -299,6 +300,7 @@ module FastRuby
             #{@locals_struct} *plocals = (void*)_plocals;
 
             frame.plocals = plocals;
+            frame.stack_chunk = 0;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
@@ -360,6 +362,7 @@ module FastRuby
 
             frame.plocals = (void*)_locals;
             frame.parent_frame = parent_frame;
+            frame.stack_chunk = parent_frame->stack_chunk;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
             frame.exception = Qnil;
@@ -747,8 +750,10 @@ module FastRuby
                 VALUE return_value;
                 VALUE exception;
                 int rescue;
+                void* stack_chunk;
               } frame;
 
+              frame.stack_chunk = 0;
               frame.target_frame = 0;
               frame.parent_frame = 0;
               frame.rescue = 0;
@@ -936,6 +941,8 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
           frame.last_error = Qnil;
+          frame.stack_chunk = 0;
+
 
           typeof(&frame) pframe = &frame;
         "
@@ -993,7 +1000,7 @@ module FastRuby
           void* block_address = 0;
           VALUE block_param = Qnil;
 
-
+          frame.stack_chunk = 0;
           frame.plocals = 0;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
@@ -1083,6 +1090,7 @@ module FastRuby
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
 
+          frame.stack_chunk = 0;
           frame.plocals = plocals;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
@@ -1452,6 +1460,7 @@ module FastRuby
             typeof(&frame) pframe = &frame;
             #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
 
+            frame.stack_chunk = 0;
             frame.plocals = plocals;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
@@ -1746,6 +1755,7 @@ module FastRuby
 
         frame.plocals = plocals;
         frame.parent_frame = (void*)_parent_frame;
+        frame.stack_chunk = ((typeof(pframe))_parent_frame)->stack_chunk;
         frame.return_value = Qnil;
         frame.target_frame = &frame;
         frame.exception = Qnil;
@@ -2033,6 +2043,7 @@ module FastRuby
 
           parent_frame = (void*)param;
 
+          frame.stack_chunk = parent_frame->stack_chunk;
           frame.parent_frame = (void*)param;
           frame.plocals = parent_frame->plocals;
           frame.target_frame = &frame;
