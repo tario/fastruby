@@ -750,6 +750,7 @@ module FastRuby
                 VALUE return_value;
                 VALUE exception;
                 int rescue;
+                VALUE last_error;
                 void* stack_chunk;
               } frame;
 
@@ -1145,7 +1146,56 @@ module FastRuby
 
         ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
 
-          #{func_frame}
+          #{@frame_struct} frame;
+          #{@frame_struct} *pframe;
+
+          frame.parent_frame = (void*)_parent_frame;
+          frame.stack_chunk = ((typeof(pframe))_parent_frame)->stack_chunk;
+          frame.return_value = Qnil;
+          frame.target_frame = &frame;
+          frame.exception = Qnil;
+          frame.rescue = 0;
+
+          if (frame.stack_chunk == 0) {
+
+            VALUE current_thread = rb_thread_current();
+            VALUE rb_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
+
+            if (rb_stack_chunk == Qnil) {
+              rb_stack_chunk = rb_stack_chunk_create(Qnil);
+              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+              rb_dvar_push(#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+            }
+          }
+
+          #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
+          frame.plocals = plocals;
+          plocals->pframe = &frame;
+
+          pframe = (void*)&frame;
+
+          #{@block_struct} *pblock;
+          VALUE last_expression = Qnil;
+
+          int aux = setjmp(pframe->jmp);
+          if (aux != 0) {
+
+            if (pframe->target_frame == (void*)-2) {
+              return pframe->return_value;
+            }
+
+            if (pframe->target_frame != pframe) {
+              // raise exception
+              ((typeof(pframe))_parent_frame)->exception = pframe->exception;
+              ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+              ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
+              longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+            }
+
+            return plocals->return_value;
+          }
+
+          plocals->self = self;
 
           #{args_tree[1..-1].map { |arg|
             "plocals->#{arg} = #{arg};\n"
