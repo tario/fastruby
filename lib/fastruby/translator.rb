@@ -1227,7 +1227,9 @@ module FastRuby
             plocals->block_function_param = Qnil;
           }
 
-          return #{to_c impl_tree};
+          VALUE __ret = #{to_c impl_tree};
+          stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+          return __ret;
         }"
 
         add_main
