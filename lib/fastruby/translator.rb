@@ -67,6 +67,9 @@ module FastRuby
       struct STACKCHUNK;
       void* stack_chunk_alloc(struct STACKCHUNK* sc, int size);
       VALUE rb_stack_chunk_create(VALUE self);
+      int stack_chunk_get_current_position(struct STACKCHUNK* sc);
+      void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position);
+
       '
 
       ruby_code = "
@@ -1178,6 +1181,8 @@ module FastRuby
 
           #{@locals_struct} *plocals;
 
+          int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+
           plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
           plocals->pframe = &frame;
@@ -1189,6 +1194,7 @@ module FastRuby
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
+            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
 
             if (pframe->target_frame == (void*)-2) {
               return pframe->return_value;
@@ -1199,6 +1205,7 @@ module FastRuby
               ((typeof(pframe))_parent_frame)->exception = pframe->exception;
               ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
               ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
+
               longjmp(((typeof(pframe))_parent_frame)->jmp,1);
             }
 

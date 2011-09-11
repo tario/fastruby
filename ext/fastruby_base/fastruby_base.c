@@ -25,6 +25,15 @@ struct STACKCHUNK* stack_chunk_create() {
 	return sc;
 }
 
+int stack_chunk_get_current_position(struct STACKCHUNK* sc) {
+	return sc->current_position;
+}
+
+ void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position) {
+	sc->current_position = position; 
+ }
+
+
 void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	void *address = 0;
 	int position_in_page = sc->current_position & PAGE_MASK;
