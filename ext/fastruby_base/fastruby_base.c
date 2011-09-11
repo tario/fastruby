@@ -10,7 +10,7 @@ VALUE rb_mFastRuby;
 #define PAGE_MASK 0xFFF
 
 struct STACKCHUNK {
-	void** pages[NUM_PAGES];
+	VALUE* pages[NUM_PAGES];
 	int current_position;
 };
 
@@ -39,7 +39,7 @@ void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	
 		if (sc->pages[new_page ] == 0) {
 			// alloc the page corresponding for the new stack position
-			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(void*));
+			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(VALUE));
 		}
 		// alloc new page
 		sc->current_position = new_page*PAGE_SIZE + size;
@@ -56,7 +56,7 @@ void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 		
 		if (sc->pages[new_page ] == 0) {
 			// alloc the page corresponding for the new stack position
-			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(void*));
+			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(VALUE));
 		}
 		
 		address = &sc->pages[page][position_in_page];
@@ -70,16 +70,22 @@ static void stack_chunk_mark(struct STACKCHUNK* sc) {
 	// Do nothing, local variables will be marked by GC following reigistered address
 }
 
+static void stack_chunk_page_unregister(VALUE* page) {
+	int i;
+	for (i=0; i<PAGE_SIZE;i++) {
+		rb_gc_unregister_address(page+i);
+	}
+}
+
 static void stack_chunk_free(struct STACKCHUNK* sc) {
 	
 	int i;
 	for (i=0; i<NUM_PAGES;i++) {
 		if (sc->pages[i] != 0) {
+			stack_chunk_page_unregister(sc->pages[i]);
 			free(sc->pages[i]);
 		}
 	}
-	
-	// TODO: Unregister all locals addresses
 	
 	free(sc);
 }
