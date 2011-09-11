@@ -98,10 +98,18 @@ VALUE rb_stack_chunk_create(VALUE self) {
 	return Data_Make_Struct(rb_cStackChunk,struct STACKCHUNK,stack_chunk_mark,stack_chunk_free,sc);
 }
 
+struct STACKCHUNK* stack_chunk_get_struct(VALUE self) {
+	struct STACKCHUNK* data;
+	Data_Get_Struct(self,struct STACKCHUNK,data);
+
+	return data;
+}
+
+
 VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
 	
 	struct STACKCHUNK* data;
-	Data_Get_Struct(self,struct STACKCHUNK*,data);
+	Data_Get_Struct(self,struct STACKCHUNK,data);
 	
 	stack_chunk_alloc(data,FIX2INT(rb_size));
 	return self;

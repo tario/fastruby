@@ -63,6 +63,10 @@ module FastRuby
 
 
       extra_code << '#include "node.h"
+
+      struct STACKCHUNK;
+      void* stack_chunk_alloc(struct STACKCHUNK* sc, int size);
+      VALUE rb_stack_chunk_create(VALUE self);
       '
 
       ruby_code = "
@@ -73,6 +77,8 @@ module FastRuby
       init_extra << "
         rb_eval_string(#{ruby_code.inspect});
     	"
+
+
 
       @common_func = common_func
       if common_func
@@ -1166,9 +1172,13 @@ module FastRuby
               rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
               rb_dvar_push(#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
             }
+
+            Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
           }
 
-          #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
+          #{@locals_struct} *plocals;
+
+          plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
           plocals->pframe = &frame;
 
