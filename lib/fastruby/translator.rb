@@ -904,6 +904,8 @@ module FastRuby
           #{@frame_struct} frame;
           #{@locals_struct} locals;
 
+          rb_newobj();
+
           locals.return_value = Qnil;
           locals.pframe = &frame;
           locals.self = rb_cObject;
@@ -1061,6 +1063,8 @@ module FastRuby
           #{@locals_struct} *plocals = (void*)&locals;
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
+
+          rb_newobj();
 
           frame.plocals = plocals;
           frame.parent_frame = 0;
@@ -1432,6 +1436,8 @@ module FastRuby
             typeof(&frame) pframe = &frame;
             typeof(&locals) plocals = &locals;
 
+            rb_newobj();
+
             frame.plocals = plocals;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
@@ -1724,6 +1730,8 @@ module FastRuby
         #{@locals_struct} *plocals = (void*)&locals;
         #{@frame_struct} frame;
         #{@frame_struct} *pframe;
+
+        rb_newobj();
 
         frame.plocals = plocals;
         frame.parent_frame = (void*)_parent_frame;
