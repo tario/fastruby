@@ -1170,13 +1170,11 @@ module FastRuby
           VALUE current_thread = Qnil;
           VALUE rb_stack_chunk = Qnil;
 
-
           if (frame.stack_chunk == 0) {
 
+            current_thread = rb_thread_current();
             previous_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
             rb_stack_chunk = previous_stack_chunk;
-
-            current_thread = rb_thread_current();
 
             if (rb_stack_chunk == Qnil) {
               rb_stack_chunk = rb_stack_chunk_create(Qnil);
