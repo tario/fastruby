@@ -65,6 +65,8 @@ module FastRuby
       extra_code << '#include "node.h"
 
       struct STACKCHUNK;
+      int stack_chunk_frozen(struct STACKCHUNK* sc);
+      void stack_chunk_freeze(struct STACKCHUNK* sc);
       void* stack_chunk_alloc(struct STACKCHUNK* sc, int size);
       VALUE rb_stack_chunk_create(VALUE self);
       int stack_chunk_get_current_position(struct STACKCHUNK* sc);
@@ -1171,20 +1173,23 @@ module FastRuby
           VALUE rb_stack_chunk = Qnil;
 
           if (frame.stack_chunk == 0) {
-
             current_thread = rb_thread_current();
             previous_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
             rb_stack_chunk = previous_stack_chunk;
 
-            if (rb_stack_chunk == Qnil) {
-              rb_stack_chunk = rb_stack_chunk_create(Qnil);
-              rb_gc_register_address(&rb_stack_chunk);
-              stack_chunk_instantiated = 1;
-              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+            if (rb_stack_chunk != Qnil) {
+              Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
             }
+          }
 
+          if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+            rb_stack_chunk = rb_stack_chunk_create(Qnil);
+            rb_gc_register_address(&rb_stack_chunk);
+            stack_chunk_instantiated = 1;
+            rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
             Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
           }
+
 
           #{@locals_struct} *plocals;
 

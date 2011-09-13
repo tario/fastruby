@@ -12,6 +12,7 @@ VALUE rb_mFastRuby;
 struct STACKCHUNK {
 	VALUE* pages[NUM_PAGES];
 	int current_position;
+	int frozen;
 };
 
 struct STACKCHUNK* stack_chunk_create() {
@@ -21,8 +22,18 @@ struct STACKCHUNK* stack_chunk_create() {
 	memset(sc->pages, 0, sizeof(sc->pages));
 	
 	sc->current_position = 0;
+	sc->frozen = 0;
 	
 	return sc;
+}
+
+int stack_chunk_frozen(struct STACKCHUNK* sc) {
+	return sc->frozen;
+}
+
+
+void stack_chunk_freeze(struct STACKCHUNK* sc) {
+	sc->frozen = 1;
 }
 
 int stack_chunk_get_current_position(struct STACKCHUNK* sc) {
