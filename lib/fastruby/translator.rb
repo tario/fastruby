@@ -1165,15 +1165,24 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
 
+          int stack_chunk_instantiated = 0;
+          VALUE previous_stack_chunk;
+          VALUE current_thread = Qnil;
+          VALUE rb_stack_chunk = Qnil;
+
+
           if (frame.stack_chunk == 0) {
 
-            VALUE current_thread = rb_thread_current();
-            VALUE rb_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
+            previous_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
+            rb_stack_chunk = previous_stack_chunk;
+
+            current_thread = rb_thread_current();
 
             if (rb_stack_chunk == Qnil) {
               rb_stack_chunk = rb_stack_chunk_create(Qnil);
+              rb_gc_register_address(&rb_stack_chunk);
+              stack_chunk_instantiated = 1;
               rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
-              rb_dvar_push(#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
             }
 
             Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
@@ -1195,6 +1204,11 @@ module FastRuby
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
             stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+            if (stack_chunk_instantiated) {
+              rb_gc_unregister_address(&rb_stack_chunk);
+              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},previous_stack_chunk);
+            }
 
             if (pframe->target_frame == (void*)-2) {
               return pframe->return_value;
@@ -1229,6 +1243,12 @@ module FastRuby
 
           VALUE __ret = #{to_c impl_tree};
           stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+          if (stack_chunk_instantiated) {
+            rb_gc_unregister_address(&rb_stack_chunk);
+            rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},previous_stack_chunk);
+          }
+
           return __ret;
         }"
 
