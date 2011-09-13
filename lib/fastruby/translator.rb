@@ -290,11 +290,36 @@ module FastRuby
           str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
+            execute_code = if mname == :lambda
+              "VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+
+              // freeze all stacks
+              VALUE current_thread = rb_thread_current();
+              VALUE rb_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
+
+              // add reference to stack chunk to lambda object
+              rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+
+              while (rb_stack_chunk != Qnil) {
+                struct STACKCHUNK* stack_chunk;
+                Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+
+                stack_chunk_freeze(stack_chunk);
+
+                rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+              }
+
+              return ret;
+              "
+            else
+              "return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);"
+            end
+
             rb_funcall_caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+                #{execute_code}
               }
             "
             }
