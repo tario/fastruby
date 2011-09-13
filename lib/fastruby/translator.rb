@@ -1187,6 +1187,7 @@ module FastRuby
             rb_gc_register_address(&rb_stack_chunk);
             stack_chunk_instantiated = 1;
             rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+            rb_ivar_set(rb_stack_chunk,#{intern_num :_parent_stack_chunk},previous_stack_chunk);
             Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
           }
 
