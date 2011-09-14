@@ -62,22 +62,10 @@ module FastRuby
       }"
 
 
-      extra_code << '#include "node.h"
-
-      struct STACKCHUNK;
-      int stack_chunk_frozen(struct STACKCHUNK* sc);
-      void stack_chunk_freeze(struct STACKCHUNK* sc);
-      void* stack_chunk_alloc(struct STACKCHUNK* sc, int size);
-      VALUE rb_stack_chunk_create(VALUE self);
-      int stack_chunk_get_current_position(struct STACKCHUNK* sc);
-      void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position);
-
-      struct STACKCHUNKREFERENCE;
-      VALUE rb_stack_chunk_reference_create();
-      struct STACKCHUNKREFERENCE* stack_chunk_reference_create();
-      void stack_chunk_reference_assign(struct STACKCHUNKREFERENCE* scr, VALUE value);
-      VALUE stack_chunk_reference_retrieve(struct STACKCHUNKREFERENCE* scr);
-      '
+      extra_code << "
+        #include \"node.h\"
+        #include \"#{FastRuby.fastruby_load_path}/../ext/fastruby_base/fastruby_base.inl\"
+      "
 
       ruby_code = "
         $LOAD_PATH << #{FastRuby.fastruby_load_path.inspect}

@@ -20,7 +20,7 @@ struct STACKCHUNKREFERENCE {
 	VALUE rb_stack_chunk;
 };
 
-static void stack_chunk_initialize(struct STACKCHUNK* sc) {
+static inline void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	// initialize pointers with zeros
 	memset(sc->pages, 0, sizeof(sc->pages));
 	
@@ -28,25 +28,25 @@ static void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	sc->frozen = 0;
 }
 
-int stack_chunk_frozen(struct STACKCHUNK* sc) {
+static inline int stack_chunk_frozen(struct STACKCHUNK* sc) {
 	return sc->frozen;
 }
 
 
-void stack_chunk_freeze(struct STACKCHUNK* sc) {
+static inline void stack_chunk_freeze(struct STACKCHUNK* sc) {
 	sc->frozen = 1;
 }
 
-int stack_chunk_get_current_position(struct STACKCHUNK* sc) {
+static inline int stack_chunk_get_current_position(struct STACKCHUNK* sc) {
 	return sc->current_position;
 }
 
- void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position) {
+ static inline void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position) {
 	sc->current_position = position; 
  }
 
 
-void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
+static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	void *address = 0;
 	int position_in_page = sc->current_position & PAGE_MASK;
 	int page = sc->current_position / PAGE_SIZE;
@@ -87,18 +87,18 @@ void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	
 }
 
-static void stack_chunk_mark(struct STACKCHUNK* sc) {
+static inline void stack_chunk_mark(struct STACKCHUNK* sc) {
 	// Do nothing, local variables will be marked by GC following reigistered address
 }
 
-static void stack_chunk_page_unregister(VALUE* page) {
+static inline void stack_chunk_page_unregister(VALUE* page) {
 	int i;
 	for (i=0; i<PAGE_SIZE;i++) {
 		rb_gc_unregister_address(page+i);
 	}
 }
 
-static void stack_chunk_free(struct STACKCHUNK* sc) {
+static inline void stack_chunk_free(struct STACKCHUNK* sc) {
 	
 	int i;
 	for (i=0; i<NUM_PAGES;i++) {
@@ -111,7 +111,7 @@ static void stack_chunk_free(struct STACKCHUNK* sc) {
 	free(sc);
 }
 
-VALUE rb_stack_chunk_create(VALUE self) {
+static inline VALUE rb_stack_chunk_create(VALUE self) {
 	// alloc memory for struct
 	struct STACKCHUNK* sc;
 	
@@ -123,7 +123,7 @@ VALUE rb_stack_chunk_create(VALUE self) {
 	return ret;
 }
 
-struct STACKCHUNK* stack_chunk_get_struct(VALUE self) {
+static inline struct STACKCHUNK* stack_chunk_get_struct(VALUE self) {
 	struct STACKCHUNK* data;
 	Data_Get_Struct(self,struct STACKCHUNK,data);
 
@@ -131,7 +131,7 @@ struct STACKCHUNK* stack_chunk_get_struct(VALUE self) {
 }
 
 
-VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
+static inline VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
 	
 	struct STACKCHUNK* data;
 	Data_Get_Struct(self,struct STACKCHUNK,data);
@@ -140,28 +140,28 @@ VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
 	return self;
 }
 
-struct STACKCHUNKREFERENCE* stack_chunk_reference_initialize(struct STACKCHUNKREFERENCE *scr) {
+static inline struct STACKCHUNKREFERENCE* stack_chunk_reference_initialize(struct STACKCHUNKREFERENCE *scr) {
 	scr->rb_stack_chunk = Qnil;
 	return scr;
 }
 
-void stack_chunk_reference_assign(struct STACKCHUNKREFERENCE* scr, VALUE value) {
+static inline void stack_chunk_reference_assign(struct STACKCHUNKREFERENCE* scr, VALUE value) {
 	scr->rb_stack_chunk = value;
 }
 
-VALUE stack_chunk_reference_retrieve(struct STACKCHUNKREFERENCE* scr) {
+static inline VALUE stack_chunk_reference_retrieve(struct STACKCHUNKREFERENCE* scr) {
 	return scr->rb_stack_chunk;
 }
 
-static void stack_chunk_reference_mark(struct STACKCHUNKREFERENCE* scr) {
+static inline void stack_chunk_reference_mark(struct STACKCHUNKREFERENCE* scr) {
 	rb_gc_mark(scr->rb_stack_chunk);
 }
 
-static void stack_chunk_reference_free(struct STACKCHUNKREFERENCE* scr) {
+static inline void stack_chunk_reference_free(struct STACKCHUNKREFERENCE* scr) {
 	free(scr);
 }
 
-VALUE rb_stack_chunk_reference_assign(VALUE self, VALUE value) {
+static inline VALUE rb_stack_chunk_reference_assign(VALUE self, VALUE value) {
 	struct STACKCHUNKREFERENCE* scr;
 	Data_Get_Struct(self,struct STACKCHUNKREFERENCE,scr);
 	
@@ -169,14 +169,14 @@ VALUE rb_stack_chunk_reference_assign(VALUE self, VALUE value) {
 	return scr->rb_stack_chunk;
 }
 
-VALUE rb_stack_chunk_reference_retrieve(VALUE self) {
+static inline VALUE rb_stack_chunk_reference_retrieve(VALUE self) {
 	struct STACKCHUNKREFERENCE* scr;
 	Data_Get_Struct(self,struct STACKCHUNKREFERENCE,scr);
 	
 	return scr->rb_stack_chunk;
 }
 
-VALUE rb_stack_chunk_reference_create() {
+static inline VALUE rb_stack_chunk_reference_create() {
 	// alloc memory for struct
 	struct STACKCHUNKREFERENCE* scr;
 	
