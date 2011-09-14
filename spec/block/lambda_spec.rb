@@ -84,4 +84,21 @@ describe FastRuby, "fastruby" do
     ll4 = ::LL4.new
     ll4.xt.should be == 100
   end
+
+  it "lambda must be able to access local variables of parent scopes through yield" do
+    ll4 = ::LL4.new
+    lambda_object = ll4.bar
+    lambda_object.call(1).should be == 100
+  end
+
+  it "lambda must be able to access local variables of parent scopes through yield on ruby" do
+    ll4 = ::LL4.new
+
+    a = 99
+
+    lambda_object = ll4.foo do |x|
+      x+a
+    end
+    lambda_object.call(1).should be == 100
+  end
 end
