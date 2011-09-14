@@ -72,6 +72,11 @@ module FastRuby
       int stack_chunk_get_current_position(struct STACKCHUNK* sc);
       void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position);
 
+      struct STACKCHUNKREFERENCE;
+      VALUE rb_stack_chunk_reference_create();
+      struct STACKCHUNKREFERENCE* stack_chunk_reference_create();
+      void stack_chunk_reference_assign(struct STACKCHUNKREFERENCE* scr, VALUE value);
+      VALUE stack_chunk_reference_retrieve(struct STACKCHUNKREFERENCE* scr);
       '
 
       ruby_code = "
@@ -295,18 +300,26 @@ module FastRuby
 
               // freeze all stacks
               VALUE current_thread = rb_thread_current();
-              VALUE rb_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
+              VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
 
-              // add reference to stack chunk to lambda object
-              rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+              if (rb_stack_chunk_reference != Qnil) {
+                struct STACKCHUNKREFERENCE* stack_chunk_reference;
+                Data_Get_Struct(rb_stack_chunk_reference, struct STACKCHUNKREFERENCE, stack_chunk_reference);
 
-              while (rb_stack_chunk != Qnil) {
-                struct STACKCHUNK* stack_chunk;
-                Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+                VALUE rb_stack_chunk = stack_chunk_reference_retrieve(stack_chunk_reference);
 
-                stack_chunk_freeze(stack_chunk);
+                // add reference to stack chunk to lambda object
+                rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
 
-                rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                // freeze the complete chain of stack chunks
+                while (rb_stack_chunk != Qnil) {
+                  struct STACKCHUNK* stack_chunk;
+                  Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+
+                  stack_chunk_freeze(stack_chunk);
+
+                  rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                }
               }
 
               return ret;
@@ -1170,26 +1183,43 @@ module FastRuby
           frame.rescue = 0;
 
           int stack_chunk_instantiated = 0;
-          VALUE previous_stack_chunk;
+          VALUE rb_previous_stack_chunk = Qnil;
           VALUE current_thread = Qnil;
           VALUE rb_stack_chunk = Qnil;
+          struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
 
           if (frame.stack_chunk == 0) {
             current_thread = rb_thread_current();
-            previous_stack_chunk = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk});
-            rb_stack_chunk = previous_stack_chunk;
+            VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
+            if (rb_stack_chunk_reference == Qnil) {
+              rb_stack_chunk_reference = rb_stack_chunk_reference_create();
+              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk_reference},rb_stack_chunk_reference);
+            }
 
+            Data_Get_Struct(rb_stack_chunk_reference,struct STACKCHUNKREFERENCE,stack_chunk_reference);
+            rb_stack_chunk = stack_chunk_reference_retrieve(stack_chunk_reference);
             if (rb_stack_chunk != Qnil) {
               Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
             }
           }
 
           if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+            rb_previous_stack_chunk = rb_stack_chunk;
             rb_stack_chunk = rb_stack_chunk_create(Qnil);
             rb_gc_register_address(&rb_stack_chunk);
             stack_chunk_instantiated = 1;
-            rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
-            rb_ivar_set(rb_stack_chunk,#{intern_num :_parent_stack_chunk},previous_stack_chunk);
+
+            if (stack_chunk_reference == 0) {
+              current_thread = rb_thread_current();
+              VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
+              if (rb_stack_chunk_reference == Qnil) {
+                rb_stack_chunk_reference = rb_stack_chunk_reference_create();
+                rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk_reference},rb_stack_chunk_reference);
+              }
+              Data_Get_Struct(rb_stack_chunk_reference,struct STACKCHUNKREFERENCE,stack_chunk_reference);
+            }
+
+            stack_chunk_reference_assign(stack_chunk_reference, rb_stack_chunk);
             Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
           }
 
@@ -1213,7 +1243,7 @@ module FastRuby
 
             if (stack_chunk_instantiated) {
               rb_gc_unregister_address(&rb_stack_chunk);
-              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},previous_stack_chunk);
+              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
             }
 
             if (pframe->target_frame == (void*)-2) {
@@ -1252,7 +1282,7 @@ module FastRuby
 
           if (stack_chunk_instantiated) {
             rb_gc_unregister_address(&rb_stack_chunk);
-            rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk},previous_stack_chunk);
+            stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
           }
 
           return __ret;
