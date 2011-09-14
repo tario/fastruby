@@ -57,4 +57,31 @@ describe FastRuby, "fastruby" do
     ll3 = ::LL3.new
     ll3.bar(1).should be == 17
   end
+
+    fastruby "
+  class ::LL4
+      def foo
+        lambda {|x|
+          yield(x)
+        }
+      end
+
+      def bar
+        z = 99
+        foo do |x|
+          x+z
+        end
+      end
+
+      def xt
+        lambda_object = bar()
+        lambda_object.call(1)
+      end
+  end
+    "
+
+  it "lambda must be able to access local variables of parent scopes through yield (from fastruby)" do
+    ll4 = ::LL4.new
+    ll4.xt.should be == 100
+  end
 end
