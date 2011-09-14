@@ -3,6 +3,7 @@
 #include "env.h"
 
 VALUE rb_cStackChunk;
+VALUE rb_cStackChunkReference;
 VALUE rb_mFastRuby;
 
 #define PAGE_SIZE 0x1000
@@ -13,6 +14,10 @@ struct STACKCHUNK {
 	VALUE* pages[NUM_PAGES];
 	int current_position;
 	int frozen;
+};
+
+struct STACKCHUNKREFERENCE {
+	VALUE rb_stack_chunk;
 };
 
 struct STACKCHUNK* stack_chunk_create() {
@@ -135,13 +140,64 @@ VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
 	return self;
 }
 
+struct STACKCHUNKREFERENCE* stack_chunk_reference_create() {
+	struct STACKCHUNKREFERENCE *scr = malloc(sizeof(struct STACKCHUNKREFERENCE));
+	
+	scr->rb_stack_chunk = Qnil;
+	return scr;
+}
+
+void stack_chunk_reference_assign(struct STACKCHUNKREFERENCE* scr, VALUE value) {
+	scr->rb_stack_chunk = value;
+}
+
+VALUE stack_chunk_reference_retrieve(struct STACKCHUNKREFERENCE* scr) {
+	return scr->rb_stack_chunk;
+}
+
+static void stack_chunk_reference_mark(struct STACKCHUNKREFERENCE* scr) {
+	rb_gc_mark(scr->rb_stack_chunk);
+}
+
+static void stack_chunk_reference_free(struct STACKCHUNKREFERENCE* scr) {
+	free(scr);
+}
+
+VALUE rb_stack_chunk_reference_assign(VALUE self, VALUE value) {
+	struct STACKCHUNKREFERENCE* scr;
+	Data_Get_Struct(self,struct STACKCHUNKREFERENCE,scr);
+	
+	scr->rb_stack_chunk = value;
+	return scr->rb_stack_chunk;
+}
+
+VALUE rb_stack_chunk_reference_retrieve(VALUE self) {
+	struct STACKCHUNKREFERENCE* scr;
+	Data_Get_Struct(self,struct STACKCHUNKREFERENCE,scr);
+	
+	return scr->rb_stack_chunk;
+}
+
+VALUE rb_stack_chunk_reference_create() {
+	// alloc memory for struct
+	struct STACKCHUNKREFERENCE* scr = stack_chunk_reference_create();
+	
+	// make ruby object to wrap the stack and let the ruby GC do his work
+	return Data_Make_Struct(rb_cStackChunkReference,struct STACKCHUNKREFERENCE,stack_chunk_reference_mark,stack_chunk_reference_free,scr);
+}
+
 void Init_fastruby_base() {
 	
 	rb_mFastRuby = rb_define_module("FastRuby");
 	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
 	
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
-	
 	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
+
+	rb_cStackChunkReference = rb_define_class_under(rb_mFastRuby, "StackChunkReference", rb_cObject);
+	
+	rb_define_singleton_method(rb_cStackChunkReference, "create", rb_stack_chunk_reference_create,0);
+	rb_define_method(rb_cStackChunkReference, "stack_chunk=", rb_stack_chunk_reference_assign,1);
+	rb_define_method(rb_cStackChunkReference, "stack_chunk", rb_stack_chunk_reference_retrieve, 0);
 	
 }
