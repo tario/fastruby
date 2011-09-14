@@ -20,16 +20,12 @@ struct STACKCHUNKREFERENCE {
 	VALUE rb_stack_chunk;
 };
 
-struct STACKCHUNK* stack_chunk_create() {
-	struct STACKCHUNK *sc = malloc(sizeof(struct STACKCHUNK));
-	
+static void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	// initialize pointers with zeros
 	memset(sc->pages, 0, sizeof(sc->pages));
 	
 	sc->current_position = 0;
 	sc->frozen = 0;
-	
-	return sc;
 }
 
 int stack_chunk_frozen(struct STACKCHUNK* sc) {
@@ -117,10 +113,14 @@ static void stack_chunk_free(struct STACKCHUNK* sc) {
 
 VALUE rb_stack_chunk_create(VALUE self) {
 	// alloc memory for struct
-	struct STACKCHUNK* sc = stack_chunk_create();
+	struct STACKCHUNK* sc;
 	
 	// make ruby object to wrap the stack and let the ruby GC do his work
-	return Data_Make_Struct(rb_cStackChunk,struct STACKCHUNK,stack_chunk_mark,stack_chunk_free,sc);
+	VALUE ret = Data_Make_Struct(rb_cStackChunk,struct STACKCHUNK,stack_chunk_mark,stack_chunk_free,sc);
+	
+	stack_chunk_initialize(sc);
+	
+	return ret;
 }
 
 struct STACKCHUNK* stack_chunk_get_struct(VALUE self) {
@@ -140,9 +140,7 @@ VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
 	return self;
 }
 
-struct STACKCHUNKREFERENCE* stack_chunk_reference_create() {
-	struct STACKCHUNKREFERENCE *scr = malloc(sizeof(struct STACKCHUNKREFERENCE));
-	
+struct STACKCHUNKREFERENCE* stack_chunk_reference_initialize(struct STACKCHUNKREFERENCE *scr) {
 	scr->rb_stack_chunk = Qnil;
 	return scr;
 }
@@ -180,10 +178,14 @@ VALUE rb_stack_chunk_reference_retrieve(VALUE self) {
 
 VALUE rb_stack_chunk_reference_create() {
 	// alloc memory for struct
-	struct STACKCHUNKREFERENCE* scr = stack_chunk_reference_create();
+	struct STACKCHUNKREFERENCE* scr;
 	
 	// make ruby object to wrap the stack and let the ruby GC do his work
-	return Data_Make_Struct(rb_cStackChunkReference,struct STACKCHUNKREFERENCE,stack_chunk_reference_mark,stack_chunk_reference_free,scr);
+	VALUE ret = Data_Make_Struct(rb_cStackChunkReference,struct STACKCHUNKREFERENCE,stack_chunk_reference_mark,stack_chunk_reference_free,scr);
+	
+	stack_chunk_reference_initialize(scr);
+	
+	return ret;
 }
 
 void Init_fastruby_base() {
