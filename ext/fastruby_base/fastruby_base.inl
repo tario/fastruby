@@ -65,7 +65,7 @@ static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 		// alloc new page
 		sc->current_position = new_page*PAGE_SIZE + size;
 		
-		address = &sc->pages[new_page][0];
+		address = sc->pages[new_page];
 		
 	} else {
 		sc->current_position += size;
@@ -80,11 +80,10 @@ static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(VALUE));
 		}
 		
-		address = &sc->pages[page][position_in_page];
+		address = sc->pages[page]+position_in_page;
 	}
 	
 	return address;
-	
 }
 
 static inline void stack_chunk_mark(struct STACKCHUNK* sc) {
