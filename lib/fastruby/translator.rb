@@ -64,7 +64,11 @@ module FastRuby
 
       extra_code << "
         #include \"node.h\"
+
+        #ifndef __INLINE_FASTRUBY_BASE
         #include \"#{FastRuby.fastruby_load_path}/../ext/fastruby_base/fastruby_base.inl\"
+        #define __INLINE_FASTRUBY_BASE
+        #endif
       "
 
       ruby_code = "

@@ -187,7 +187,7 @@ static inline VALUE rb_stack_chunk_reference_create() {
 	return ret;
 }
 
-void init_stack_chunk() {
+static void init_stack_chunk() {
 	
 	rb_mFastRuby = rb_define_module("FastRuby");
 	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
