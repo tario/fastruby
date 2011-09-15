@@ -937,12 +937,12 @@ module FastRuby
 
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
-        void* block_function_address;
-        VALUE block_function_param;
         VALUE return_value;
-        void* pframe;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
+        void* pframe;
+        void* block_function_address;
+        VALUE block_function_param;
         }"
 
       if @common_func
