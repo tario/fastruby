@@ -500,10 +500,10 @@ module FastRuby
           pframe = (void*)frame_param;
           plocals = (void*)pframe->plocals;
 
-          if (plocals->block_function_address == 0) {
+          if (FIX2LONG(plocals->block_function_address) == 0) {
             rb_raise(rb_eLocalJumpError, \"no block given\");
           } else {
-            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))plocals->block_function_address)(#{tree.size-1}, block_args, plocals->block_function_param, (VALUE)pframe);
+            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))FIX2LONG(plocals->block_function_address))(#{tree.size-1}, block_args, FIX2LONG(plocals->block_function_param), (VALUE)pframe);
           }
         }
       "
@@ -941,7 +941,7 @@ module FastRuby
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         void* pframe;
-        void* block_function_address;
+        VALUE block_function_address;
         VALUE block_function_param;
         }"
 
@@ -991,8 +991,8 @@ module FastRuby
           "plocals->#{arg} = #{arg};\n"
         }.join("") }
 
-        plocals->block_function_address = block_address;
-        plocals->block_function_param = block_param;
+        plocals->block_function_address = LONG2FIX(block_address);
+        plocals->block_function_param = LONG2FIX(block_param);
 
         return #{to_c impl_tree};
       }"
@@ -1144,8 +1144,8 @@ module FastRuby
             "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
-          plocals->block_function_address = 0;
-          plocals->block_function_param = Qnil;
+          plocals->block_function_address = LONG2FIX(0);
+          plocals->block_function_param = LONG2FIX(Qnil);
 
           return #{to_c impl_tree};
         }"
@@ -1262,11 +1262,11 @@ module FastRuby
 
           pblock = (void*)block;
           if (pblock) {
-            plocals->block_function_address = pblock->block_function_address;
-            plocals->block_function_param = (VALUE)pblock->block_function_param;
+            plocals->block_function_address = LONG2FIX(pblock->block_function_address);
+            plocals->block_function_param = LONG2FIX(pblock->block_function_param);
           } else {
-            plocals->block_function_address = 0;
-            plocals->block_function_param = Qnil;
+            plocals->block_function_address = LONG2FIX(0);
+            plocals->block_function_param = LONG2FIX(Qnil);
           }
 
           VALUE __ret = #{to_c impl_tree};
@@ -1705,7 +1705,7 @@ module FastRuby
         @infer_lvar_map[lvar_name] = lvar_type
         return ""
       elsif mname == :block_given?
-        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
+        return "FIX2LONG(plocals->block_function_address) == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
 
         code = args[1][1]
