@@ -52,6 +52,7 @@ static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 	int page = sc->current_position / PAGE_SIZE;
 
 	if (position_in_page+size >= PAGE_SIZE) {
+
 		int new_page = page+1;
 
 		if (new_page >= NUM_PAGES) {
@@ -63,11 +64,32 @@ static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 			sc->pages[new_page] = malloc(PAGE_SIZE*sizeof(VALUE));
 		}
 		// alloc new page
+		int i;
+
+		for (i=position_in_page; i<PAGE_SIZE; i++) {
+		 sc->pages[page][i] = Qfalse;
+		}
+
+		for (i=0; i<size; i++) {
+		 sc->pages[new_page][i] = Qfalse;
+		}
+
 		sc->current_position = new_page*PAGE_SIZE + size;
 
 		address = sc->pages[new_page];
 
 	} else {
+
+		if (sc->pages[page ] == 0) {
+			// alloc the page corresponding to current stack position
+			sc->pages[page] = malloc(PAGE_SIZE*sizeof(VALUE));
+		}
+
+		int i;
+		for (i=position_in_page; i<position_in_page+size; i++) {
+		 sc->pages[page][i] = Qfalse;
+		}
+
 		sc->current_position += size;
 		int new_page = sc->current_position / PAGE_SIZE;
 
@@ -87,7 +109,15 @@ static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 }
 
 static inline void stack_chunk_mark(struct STACKCHUNK* sc) {
-	// Do nothing, local variables will be marked by GC following reigistered address
+	// Mark local variables on each allocated page up to current_position
+	int i;
+
+	for (i=0; i<sc->current_position; i++) {
+		int position_in_page = i & PAGE_MASK;
+		int page = i / PAGE_SIZE;
+
+		rb_gc_mark(sc->pages[page][position_in_page]);
+	}
 }
 
 static inline void stack_chunk_free(struct STACKCHUNK* sc) {
