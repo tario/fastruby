@@ -564,7 +564,7 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1); return Qnil;\n"
+      "pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe)); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1); return Qnil;\n"
     end
 
     def to_c_break(tree)
@@ -940,7 +940,7 @@ module FastRuby
         VALUE return_value;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
-        void* pframe;
+        VALUE pframe;
         VALUE block_function_address;
         VALUE block_function_param;
         }"
@@ -951,7 +951,7 @@ module FastRuby
           #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
 
           plocals->return_value = Qnil;
-          plocals->pframe = &frame;
+          plocals->pframe = LONG2FIX(&frame);
           plocals->self = rb_cObject;
 
           frame.target_frame = 0;
@@ -1117,7 +1117,7 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
 
-          plocals->pframe = &frame;
+          plocals->pframe = LONG2FIX(&frame);
 
           pframe = (void*)&frame;
 
@@ -1222,7 +1222,7 @@ module FastRuby
 
           plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
-          plocals->pframe = &frame;
+          plocals->pframe = LONG2FIX(&frame);
 
           pframe = (void*)&frame;
 
@@ -1878,7 +1878,7 @@ module FastRuby
         frame.exception = Qnil;
         frame.rescue = 0;
 
-        plocals->pframe = &frame;
+        plocals->pframe = LONG2FIX(&frame);
 
         pframe = (void*)&frame;
 
