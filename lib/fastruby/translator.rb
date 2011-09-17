@@ -144,6 +144,26 @@ module FastRuby
           return stack_chunk;
         }
 
+        static struct STACKCHUNK* create_stack_chunk_from_context(
+              struct STACKCHUNKREFERENCE** stack_chunk_reference,
+              VALUE* rb_stack_chunk_p
+          ) {
+
+            struct STACKCHUNK* stack_chunk;
+            VALUE rb_stack_chunk = rb_stack_chunk_create(Qnil);
+
+            if (*stack_chunk_reference == 0) {
+              *stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
+            }
+
+            stack_chunk_reference_assign(*stack_chunk_reference, rb_stack_chunk);
+            Data_Get_Struct(rb_stack_chunk,void,stack_chunk);
+
+            *rb_stack_chunk_p = rb_stack_chunk;
+
+            return stack_chunk;
+        }
+
         "
       end
     end
@@ -1193,16 +1213,10 @@ module FastRuby
 
           if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
             rb_previous_stack_chunk = rb_stack_chunk;
-            rb_stack_chunk = rb_stack_chunk_create(Qnil);
             rb_gc_register_address(&rb_stack_chunk);
             stack_chunk_instantiated = 1;
 
-            if (stack_chunk_reference == 0) {
-              stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
-            }
-
-            stack_chunk_reference_assign(stack_chunk_reference, rb_stack_chunk);
-            Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
+            frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
           }
 
 
