@@ -1615,19 +1615,49 @@ module FastRuby
 
             #{@frame_struct} frame;
             typeof(&frame) pframe = &frame;
-            #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
+            #{@locals_struct} *plocals;
 
             frame.stack_chunk = 0;
-            frame.plocals = plocals;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
 
+            int stack_chunk_instantiated = 0;
+            VALUE rb_previous_stack_chunk = Qnil;
+            VALUE current_thread = rb_thread_current();
+            VALUE rb_stack_chunk = Qnil;
+            struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+
+            if (frame.stack_chunk == 0) {
+              frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            }
+
+            if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+              rb_previous_stack_chunk = rb_stack_chunk;
+              rb_gc_register_address(&rb_stack_chunk);
+              stack_chunk_instantiated = 1;
+
+              frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            }
+
+            int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+
+            plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+
+            frame.plocals = plocals;
             plocals->self = self;
 
             #{to_c tree};
+
+            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+            if (stack_chunk_instantiated) {
+              rb_gc_unregister_address(&rb_stack_chunk);
+              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+            }
+
             return Qnil;
           }
         "
@@ -2117,6 +2147,8 @@ module FastRuby
               len = data->body->nd_argc;
               }
             }
+
+            if (address==0) convention = #{literal_value :ruby};
 
             #{convention_global_name ? convention_global_name + " = 0;" : ""}
             if (recvtype != Qnil) {
