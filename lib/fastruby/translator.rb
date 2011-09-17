@@ -1132,19 +1132,41 @@ module FastRuby
 
         ret = "VALUE #{@alt_method_name || method_name}() {
 
-          #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
+          #{@locals_struct} *plocals;
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
 
           frame.stack_chunk = 0;
-          frame.plocals = plocals;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
           frame.target_frame = &frame;
           frame.exception = Qnil;
           frame.rescue = 0;
 
+
+          int stack_chunk_instantiated = 0;
+          VALUE rb_previous_stack_chunk = Qnil;
+          VALUE current_thread = rb_thread_current();
+          VALUE rb_stack_chunk = Qnil;
+          struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+
+          if (frame.stack_chunk == 0) {
+            frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          }
+
+          if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+            rb_previous_stack_chunk = rb_stack_chunk;
+            rb_gc_register_address(&rb_stack_chunk);
+            stack_chunk_instantiated = 1;
+
+            frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          }
+
+          int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+
+          plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           plocals->pframe = LONG2FIX(&frame);
+          frame.plocals = plocals;
 
           pframe = (void*)&frame;
 
@@ -1152,6 +1174,12 @@ module FastRuby
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
+            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+            if (stack_chunk_instantiated) {
+              rb_gc_unregister_address(&rb_stack_chunk);
+              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+            }
 
             if (pframe->target_frame == (void*)-2) {
               return pframe->return_value;
@@ -1174,7 +1202,16 @@ module FastRuby
           plocals->block_function_address = LONG2FIX(0);
           plocals->block_function_param = LONG2FIX(Qnil);
 
-          return #{to_c impl_tree};
+          VALUE ret = #{to_c impl_tree};
+          stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+          if (stack_chunk_instantiated) {
+            rb_gc_unregister_address(&rb_stack_chunk);
+            stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+          }
+
+          return ret;
+
         }"
 
         add_main
