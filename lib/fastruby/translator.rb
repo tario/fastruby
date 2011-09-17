@@ -945,28 +945,6 @@ module FastRuby
         VALUE block_function_param;
         }"
 
-      if @common_func
-        init_extra << "
-          #{@frame_struct} frame;
-          #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
-
-          plocals->return_value = Qnil;
-          plocals->pframe = LONG2FIX(&frame);
-          plocals->self = rb_cObject;
-
-          frame.target_frame = 0;
-          frame.plocals = (void*)plocals;
-          frame.return_value = Qnil;
-          frame.exception = Qnil;
-          frame.rescue = 0;
-          frame.last_error = Qnil;
-          frame.stack_chunk = 0;
-
-
-          typeof(&frame) pframe = &frame;
-        "
-      end
-
     end
 
     def to_c_method_defs(tree)
