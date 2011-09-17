@@ -130,6 +130,20 @@ module FastRuby
             return (void*)stack_chunk_reference;
         }
 
+        static struct STACKCHUNK* get_stack_chunk_from_context(
+                  struct STACKCHUNKREFERENCE** stack_chunk_reference,
+                  VALUE* rb_stack_chunk
+              ) {
+          struct STACKCHUNK* stack_chunk = 0;
+          *stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
+          *rb_stack_chunk = stack_chunk_reference_retrieve(*stack_chunk_reference);
+          if (*rb_stack_chunk != Qnil) {
+            Data_Get_Struct(*rb_stack_chunk,void,stack_chunk);
+          }
+
+          return stack_chunk;
+        }
+
         "
       end
     end
@@ -1174,11 +1188,7 @@ module FastRuby
           struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
 
           if (frame.stack_chunk == 0) {
-            stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
-            rb_stack_chunk = stack_chunk_reference_retrieve(stack_chunk_reference);
-            if (rb_stack_chunk != Qnil) {
-              Data_Get_Struct(rb_stack_chunk,void,frame.stack_chunk);
-            }
+            frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
           }
 
           if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
