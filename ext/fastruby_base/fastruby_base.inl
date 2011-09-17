@@ -42,11 +42,18 @@ static inline int stack_chunk_get_current_position(struct STACKCHUNK* sc) {
 }
 
  static inline void stack_chunk_set_current_position(struct STACKCHUNK* sc, int position) {
-	sc->current_position = position;
+	if (sc->frozen == 0) {
+		sc->current_position = position;
+	}
  }
 
 
 static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
+
+	if (sc->frozen) {
+		rb_raise(rb_eSysStackError,"Trying to alloc frozen object");
+	}
+
 	void *address = 0;
 	int position_in_page = sc->current_position & PAGE_MASK;
 	int page = sc->current_position / PAGE_SIZE;
