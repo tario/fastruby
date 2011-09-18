@@ -101,4 +101,24 @@ describe FastRuby, "fastruby" do
     end
     lambda_object.call(1).should be == 100
   end
+
+  def self.next_sentence(sname)
+    fastruby "
+      class ::LL5#{sname}
+          def foo
+            lambda {
+              #{sname} 100
+            }
+          end
+      end
+    "
+
+    it "lambda #{sname}'s must act as block next" do
+      eval("LL5"+sname).new.foo.call.should be == 100
+    end
+  end
+
+  next_sentence("next")
+  next_sentence("break")
+  next_sentence("return")
 end
