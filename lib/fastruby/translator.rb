@@ -381,9 +381,26 @@ module FastRuby
 
         target_escape_code = if mname == :lambda or mname == :proc
         "
+                if (pframe->target_frame == (void*)-3) {
+                   return pframe->return_value;
+                } else if (pframe->target_frame == (void*)-2) {
+                   return pframe->return_value;
+                } else if (pframe->target_frame == (void*)-1) {
+                   return pframe->return_value;
+                } else {
+                  if (pframe->target_frame != (void*)FIX2LONG(plocals->pframe)) {
+                    rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                  } else {
+                    return pframe->return_value;
+                  }
+                }
         "
         else
         "
+                if (pframe->target_frame == (void*)-3) {
+                   return pframe->return_value;
+                }
+
                 VALUE ex = rb_funcall(
                         #{literal_value FastRuby::Context::UnwindFastrubyFrame},
                         #{intern_num :new},
@@ -416,10 +433,6 @@ module FastRuby
 
             if (setjmp(frame.jmp) != 0) {
               if (pframe->target_frame != pframe) {
-                if (pframe->target_frame == (void*)-3) {
-                   return pframe->return_value;
-                }
-
                 #{target_escape_code}
               }
               return frame.return_value;
