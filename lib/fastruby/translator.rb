@@ -283,13 +283,13 @@ module FastRuby
                 to_c(subtree)
               }.join(";")
 
-              if anonymous_impl[-1][0] != :return
+              if anonymous_impl[-1][0] != :return and anonymous_impl[-1][0] != :break and anonymous_impl[-1][0] != :next
                 str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl[-1])});"
               else
                 str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
               end
             else
-              if anonymous_impl[0] != :return
+              if anonymous_impl[0] != :return and anonymous_impl[0] != :break and anonymous_impl[0] != :next
                 str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl)});"
               else
                 str_impl = str_impl + ";#{to_c(anonymous_impl)};"
