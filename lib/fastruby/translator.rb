@@ -621,7 +621,7 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe)); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1); return Qnil;\n"
+      "pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe)); plocals->return_value = #{to_c(tree[1])}; pframe->return_value = plocals->return_value; longjmp(pframe->jmp, 1); return Qnil;\n"
     end
 
     def to_c_break(tree)
