@@ -379,6 +379,23 @@ module FastRuby
             }
         end
 
+        target_escape_code = if mname == :lambda
+        "
+        "
+        else
+        "
+                VALUE ex = rb_funcall(
+                        #{literal_value FastRuby::Context::UnwindFastrubyFrame},
+                        #{intern_num :new},
+                        3,
+                        pframe->exception,
+                        LONG2FIX(pframe->target_frame),
+                        pframe->return_value
+                        );
+
+                rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+        "
+        end
 
         rb_funcall_block_code = proc { |name| "
           static VALUE #{name}(VALUE arg, VALUE _plocals) {
@@ -403,16 +420,7 @@ module FastRuby
                    return pframe->return_value;
                 }
 
-                VALUE ex = rb_funcall(
-                        #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                        #{intern_num :new},
-                        3,
-                        pframe->exception,
-                        LONG2FIX(pframe->target_frame),
-                        pframe->return_value
-                        );
-
-                rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                #{target_escape_code}
               }
               return frame.return_value;
             }
