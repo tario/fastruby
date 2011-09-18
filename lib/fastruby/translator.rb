@@ -336,7 +336,7 @@ module FastRuby
           str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
-            execute_code = if mname == :lambda
+            execute_code = if mname == :lambda or mname == :proc
               "VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
 
               // freeze all stacks
@@ -379,7 +379,7 @@ module FastRuby
             }
         end
 
-        target_escape_code = if mname == :lambda
+        target_escape_code = if mname == :lambda or mname == :proc
         "
         "
         else
