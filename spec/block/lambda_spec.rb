@@ -121,4 +121,33 @@ describe FastRuby, "fastruby" do
   next_sentence("next")
   next_sentence("break")
   next_sentence("return")
+
+  def self.illegal_jump(sname)
+    fastruby "
+      class ::LL6#{sname}
+          def foo
+            lambda {
+              yield
+            }
+          end
+
+          def bar
+            foo do
+              #{sname} 9
+            end
+          end
+      end
+    "
+
+    it "#{sname} inside block should raise LocalJumpError" do
+       ll6 = eval("::LL6"+sname).new
+       lambda {
+         ll6.bar.call
+         }.should raise_error(LocalJumpError)
+    end
+  end
+
+  illegal_jump("return")
+  illegal_jump("break")
+
 end
