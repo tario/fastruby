@@ -496,6 +496,7 @@ module FastRuby
                   ((typeof(pframe))_parent_frame)->exception = pframe->exception;
                   ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
                   ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
+
                   longjmp(((typeof(pframe))_parent_frame)->jmp,1);
                 }
 
@@ -1903,6 +1904,10 @@ module FastRuby
                   return Qnil;
               }
 
+          } else {
+             if (pframe->target_frame != pframe) {
+               longjmp(pframe->jmp, 1);
+             }
           }
       "
 
@@ -1916,6 +1921,7 @@ module FastRuby
             #{@frame_struct} frame;
 
             typeof(frame)* pframe;
+            typeof(frame)* parent_frame = ((typeof(pframe))((void**)param)[0]);
 
             frame.parent_frame = 0;
             frame.target_frame = 0;
@@ -1928,12 +1934,16 @@ module FastRuby
             pframe = &frame;
 
             #{
-            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = ((void**)param)[0];
+            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = parent_frame->plocals;
             frame.plocals = plocals;
             "
             }
 
             if (setjmp(frame.jmp) != 0) {
+              parent_frame->target_frame = frame.target_frame;
+              parent_frame->exception = frame.exception;
+              parent_frame->return_value = frame.return_value;
+
               return frame.return_value;
             }
 
@@ -1944,7 +1954,7 @@ module FastRuby
         }
 
         rescue_args = ""
-        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe->plocals,(VALUE)#{repass_var}}"
+        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
       else
 
         body = anonymous_function{ |name| "
@@ -1952,6 +1962,7 @@ module FastRuby
             #{@frame_struct} frame;
 
             typeof(frame)* pframe;
+            typeof(frame)* parent_frame = (typeof(pframe))param;
 
             frame.parent_frame = 0;
             frame.target_frame = 0;
@@ -1964,12 +1975,16 @@ module FastRuby
             pframe = &frame;
 
             #{
-            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = ((void*)param);
+            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = parent_frame->plocals;
             frame.plocals = plocals;
             "
             }
 
             if (setjmp(frame.jmp) != 0) {
+              parent_frame->target_frame = frame.target_frame;
+              parent_frame->exception = frame.exception;
+              parent_frame->return_value = frame.return_value;
+
               return frame.return_value;
             }
 
@@ -1978,7 +1993,7 @@ module FastRuby
           "
         }
 
-        rescue_args = "(VALUE)pframe->plocals"
+        rescue_args = "(VALUE)pframe"
       end
 
       rescue_code = "rb_rescue2(#{body},#{rescue_args},#{anonymous_function{|name| "
@@ -2320,6 +2335,7 @@ module FastRuby
           frame.parent_frame = (void*)param;
           frame.plocals = parent_frame->plocals;
           frame.target_frame = &frame;
+          frame.exception = Qnil;
           frame.rescue = #{rescued ? rescued : "parent_frame->rescue"};
 
           plocals = frame.plocals;
@@ -2339,6 +2355,7 @@ module FastRuby
               pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
               pframe->return_value = original_frame->return_value;
+
               longjmp(pframe->jmp,1);
             }
 
