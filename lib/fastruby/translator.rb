@@ -91,7 +91,13 @@ module FastRuby
         "
 
         extra_code << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
-        return rb_yield_splat(rb_ary_new4(argc,argv));
+         VALUE yield_args = rb_ary_new4(argc,argv);
+         VALUE* yield_args_p = &yield_args;
+
+         #{@frame_struct}* pframe;
+         pframe = (typeof(pframe))_parent_frame;
+
+         return #{protected_block("rb_yield_splat(*(VALUE*)yield_args_p)",true,"yield_args_p",true)};
         }"
 
         extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
@@ -1820,7 +1826,7 @@ module FastRuby
       end
     end
 
-    def inline_block_reference(arg)
+    def inline_block_reference(arg, nolocals = false)
       code = nil
 
       if arg.instance_of? FastRuby::FastRubySexp
@@ -1832,7 +1838,8 @@ module FastRuby
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
           #{@frame_struct} *pframe = (void*)param;
-          #{@locals_struct} *plocals = (void*)pframe->plocals;
+
+          #{nolocals ? "" : "#{@locals_struct} *plocals = (void*)pframe->plocals;"}
           VALUE last_expression = Qnil;
 
           #{code};
@@ -1842,11 +1849,12 @@ module FastRuby
       }
     end
 
-    def inline_block(code, repass_var = nil)
+    def inline_block(code, repass_var = nil, nolocals = false)
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
           #{@frame_struct} *pframe = (void*)param;
-          #{@locals_struct} *plocals = (void*)pframe->plocals;
+
+          #{nolocals ? "" : "#{@locals_struct} *plocals = (void*)pframe->plocals;"}
           VALUE last_expression = Qnil;
 
           #{code}
@@ -1867,11 +1875,12 @@ module FastRuby
             ")
     end
 
-    def protected_block(inner_code, always_rescue = false,repass_var = nil)
+    def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
+
               if (CLASS_OF(pframe->last_error)==#{literal_value FastRuby::Context::UnwindFastrubyFrame}) {
-              #{@frame_struct} *pframe = (void*)param;
+                #{@frame_struct} *pframe = (void*)param;
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
                 pframe->exception = rb_ivar_get(pframe->last_error, #{intern_num :@ex});
@@ -1904,7 +1913,7 @@ module FastRuby
         body =  anonymous_function{ |name| "
           static VALUE #{name}(VALUE param) {
             #{@frame_struct} *pframe = ((void**)param)[0];
-            #{@locals_struct} *plocals = pframe->plocals;
+            #{nolocals ? "" : "#{@locals_struct} *plocals = pframe->plocals;"}
             VALUE #{repass_var} = (VALUE)((void**)param)[1];
             return #{inner_code};
             }
@@ -1914,7 +1923,7 @@ module FastRuby
         rescue_args = ""
         rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
       else
-        body = inline_block_reference("return #{inner_code}")
+        body = inline_block_reference("return #{inner_code}", nolocals)
         rescue_args = "(VALUE)pframe"
       end
 
@@ -1934,7 +1943,7 @@ module FastRuby
           #{wrapper_code}
 
           return result;
-        ", repass_var
+        ", repass_var, nolocals
       else
         inline_block "
           VALUE result;
@@ -1949,7 +1958,7 @@ module FastRuby
           #{wrapper_code}
 
           return result;
-        ", repass_var
+        ", repass_var, nolocals
       end
 
     end
