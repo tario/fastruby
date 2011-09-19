@@ -1912,8 +1912,31 @@ module FastRuby
       if repass_var
         body =  anonymous_function{ |name| "
           static VALUE #{name}(VALUE param) {
-            #{@frame_struct} *pframe = ((void**)param)[0];
-            #{nolocals ? "" : "#{@locals_struct} *plocals = pframe->plocals;"}
+
+            #{@frame_struct} frame;
+
+            typeof(frame)* pframe;
+
+            frame.parent_frame = 0;
+            frame.target_frame = 0;
+            frame.return_value = Qnil;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+            frame.last_error = Qnil;
+            frame.stack_chunk = 0;
+
+            pframe = &frame;
+
+            #{
+            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = ((void**)param)[0];
+            frame.plocals = plocals;
+            "
+            }
+
+            if (setjmp(frame.jmp) != 0) {
+              return frame.return_value;
+            }
+
             VALUE #{repass_var} = (VALUE)((void**)param)[1];
             return #{inner_code};
             }
@@ -1921,10 +1944,41 @@ module FastRuby
         }
 
         rescue_args = ""
-        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
+        rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe->plocals,(VALUE)#{repass_var}}"
       else
-        body = inline_block_reference("return #{inner_code}", nolocals)
-        rescue_args = "(VALUE)pframe"
+
+        body = anonymous_function{ |name| "
+          static VALUE #{name}(VALUE param) {
+            #{@frame_struct} frame;
+
+            typeof(frame)* pframe;
+
+            frame.parent_frame = 0;
+            frame.target_frame = 0;
+            frame.return_value = Qnil;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+            frame.last_error = Qnil;
+            frame.stack_chunk = 0;
+
+            pframe = &frame;
+
+            #{
+            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = ((void*)param);
+            frame.plocals = plocals;
+            "
+            }
+
+            if (setjmp(frame.jmp) != 0) {
+              return frame.return_value;
+            }
+
+            return #{inner_code};
+            }
+          "
+        }
+
+        rescue_args = "(VALUE)pframe->plocals"
       end
 
       rescue_code = "rb_rescue2(#{body},#{rescue_args},#{anonymous_function{|name| "
