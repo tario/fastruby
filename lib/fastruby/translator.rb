@@ -654,14 +654,21 @@ module FastRuby
          typeof(pframe) target_frame_ = pframe->parent_frame;
          typeof(plocals) plocals_;
 
+         if (target_frame_ == 0) {
+           rb_raise(rb_eLocalJumpError, \"deprecated break\");
+         }
+
          while (target_frame_->plocals == plocals) {
           target_frame_ = target_frame_->parent_frame;
+          if (target_frame_ == 0) {
+              rb_raise(rb_eLocalJumpError, \"deprecated break\");
+            }
          }
 
          plocals_ = target_frame_->plocals;
-         target_frame_ = FIX2LONG(plocals_->pframe);
+         target_frame_ = (void*)FIX2LONG(plocals_->pframe);
          target_frame_->return_value = value;
-         plocals->return_value = value;
+         plocals_->return_value = value;
 
          pframe->target_frame = target_frame_;
          pframe->return_value = value;
