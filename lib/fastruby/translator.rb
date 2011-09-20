@@ -648,8 +648,23 @@ module FastRuby
       if @on_block
         inline_block(
          "
-         pframe->target_frame = (void*)-2;
-         pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
+
+         VALUE value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
+
+         typeof(pframe) target_frame_ = pframe->parent_frame;
+         typeof(plocals) plocals_;
+
+         while (target_frame_->plocals == plocals) {
+          target_frame_ = target_frame_->parent_frame;
+         }
+
+         plocals_ = target_frame_->plocals;
+         target_frame_ = FIX2LONG(plocals_->pframe);
+         target_frame_->return_value = value;
+         plocals->return_value = value;
+
+         pframe->target_frame = target_frame_;
+         pframe->return_value = value;
          pframe->exception = Qnil;
          longjmp(pframe->jmp,1);"
          )
@@ -1015,11 +1030,11 @@ module FastRuby
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
         VALUE return_value;
-        #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         VALUE pframe;
         VALUE block_function_address;
         VALUE block_function_param;
+        #{@locals.map{|l| "VALUE #{l};\n"}.join}
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
 
     end
