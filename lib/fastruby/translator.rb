@@ -387,22 +387,43 @@ module FastRuby
 
         target_escape_code = if mname == :lambda or mname == :proc
         "
-                if (pframe->target_frame == (void*)-3) {
-                   return pframe->return_value;
-                } else if (pframe->target_frame == (void*)-2) {
-                   return pframe->return_value;
-                } else if (pframe->target_frame == (void*)-1) {
-                   return pframe->return_value;
-                } else {
-                  if (pframe->target_frame != (void*)FIX2LONG(plocals->pframe)) {
-                    rb_raise(rb_eLocalJumpError, \"unexpected return\");
+              // create a fake parent frame representing the lambda method frame and a fake locals scope
+              #{@locals_struct} fake_locals;
+              #{@frame_struct} fake_frame;
+
+              fake_frame.plocals = (void*)&fake_locals;
+              fake_frame.parent_frame = 0;
+
+              fake_locals.pframe = LONG2FIX(&fake_frame);
+
+              frame.parent_frame = (void*)&fake_frame;
+
+              if (setjmp(frame.jmp) != 0) {
+                if (pframe->target_frame != pframe) {
+                  if (pframe->target_frame == (void*)-3) {
+                     return pframe->return_value;
+                  } else if (pframe->target_frame == (void*)-2) {
+                     return pframe->return_value;
+                  } else if (pframe->target_frame == (void*)-1) {
+                     return pframe->return_value;
                   } else {
-                    return pframe->return_value;
+                    if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
+                      return pframe->return_value;
+                    } else if (pframe->target_frame == (void*)&fake_frame) {
+                      return fake_locals.return_value;
+                    } else {
+                      rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                    }
                   }
                 }
+                return frame.return_value;
+              }
+
         "
         else
         "
+            if (setjmp(frame.jmp) != 0) {
+              if (pframe->target_frame != pframe) {
                 if (pframe->target_frame == (void*)-3) {
                    return pframe->return_value;
                 }
@@ -417,6 +438,10 @@ module FastRuby
                         );
 
                 rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                }
+                return frame.return_value;
+              }
+
         "
         end
 
@@ -437,12 +462,7 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
 
-            if (setjmp(frame.jmp) != 0) {
-              if (pframe->target_frame != pframe) {
-                #{target_escape_code}
-              }
-              return frame.return_value;
-            }
+            #{target_escape_code}
 
 
             #{str_arg_initialization}
