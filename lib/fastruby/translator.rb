@@ -671,24 +671,14 @@ module FastRuby
 
          VALUE value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
 
-         typeof(pframe) target_frame_ = pframe->parent_frame;
-         typeof(plocals) plocals_;
+         typeof(pframe) target_frame_;
+         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
 
          if (target_frame_ == 0) {
-           rb_raise(rb_eLocalJumpError, \"deprecated break\");
+           rb_raise(rb_eLocalJumpError, \"illegal break\");
          }
 
-         while (target_frame_->plocals == plocals) {
-          target_frame_ = target_frame_->parent_frame;
-          if (target_frame_ == 0) {
-              rb_raise(rb_eLocalJumpError, \"deprecated break\");
-            }
-         }
-
-         plocals_ = target_frame_->plocals;
-         target_frame_ = (void*)FIX2LONG(plocals_->pframe);
-         target_frame_->return_value = value;
-         plocals_->return_value = value;
+         plocals->call_frame = LONG2FIX(0);
 
          pframe->target_frame = target_frame_;
          pframe->return_value = value;
@@ -1060,6 +1050,7 @@ module FastRuby
         VALUE pframe;
         VALUE block_function_address;
         VALUE block_function_param;
+        VALUE call_frame;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
@@ -1271,6 +1262,7 @@ module FastRuby
 
           plocals->block_function_address = LONG2FIX(0);
           plocals->block_function_param = LONG2FIX(Qnil);
+          plocals->call_frame = LONG2FIX(0);
 
           VALUE ret = #{to_c impl_tree};
           stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
@@ -1334,6 +1326,7 @@ module FastRuby
           plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
           plocals->pframe = LONG2FIX(&frame);
+          plocals->call_frame = LONG2FIX(0);
 
           pframe = (void*)&frame;
 
@@ -1653,11 +1646,12 @@ module FastRuby
        old_locals_struct = @locals_struct
 
        @locals = locals
-       @locals_struct = "struct {
-        VALUE block_function_address;
-        VALUE block_function_param;
+        @locals_struct = "struct {
         VALUE return_value;
         VALUE pframe;
+        VALUE block_function_address;
+        VALUE block_function_param;
+        VALUE call_frame;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -1718,6 +1712,7 @@ module FastRuby
 
             frame.plocals = plocals;
             plocals->self = self;
+            plocals->call_frame = LONG2FIX(0);
 
             #{to_c tree};
 
