@@ -607,9 +607,47 @@ module FastRuby
           return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
         } else {
           return #{
-            protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+            frame_call(
+              protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+            )
           };
         }
+      "
+    end
+
+    def frame_call(inner_code)
+      inline_block "
+
+
+        // create a call_frame
+        #{@frame_struct} call_frame;
+        typeof(call_frame)* old_pframe = (void*)pframe;
+
+        pframe = (typeof(pframe))&call_frame;
+
+        call_frame.parent_frame = (void*)pframe;
+        call_frame.target_frame = 0;
+        call_frame.plocals = plocals;
+        call_frame.return_value = Qnil;
+        call_frame.exception = Qnil;
+        call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
+
+        plocals->call_frame = LONG2FIX(&call_frame);
+
+                if (setjmp(call_frame.jmp) != 0) {
+                  if (call_frame.target_frame != &call_frame) {
+                    old_pframe->target_frame = call_frame.target_frame;
+                    old_pframe->exception = call_frame.exception;
+                    longjmp(old_pframe->jmp,1);
+                  }
+
+                  plocals->call_frame = LONG2FIX(0);
+                  return call_frame.return_value;
+                }
+
+        VALUE ret = #{inner_code};
+        plocals->call_frame = LONG2FIX(0);
+        return ret;
       "
     end
 
@@ -1942,7 +1980,6 @@ module FastRuby
     def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
-
               if (CLASS_OF(pframe->last_error)==#{literal_value FastRuby::Context::UnwindFastrubyFrame}) {
                 #{@frame_struct} *pframe = (void*)param;
 
