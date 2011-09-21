@@ -396,6 +396,9 @@ module FastRuby
 
               fake_locals.pframe = LONG2FIX(&fake_frame);
 
+              ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
+
+
               frame.parent_frame = (void*)&fake_frame;
 
               if (setjmp(frame.jmp) != 0) {
@@ -2107,6 +2110,7 @@ module FastRuby
       if always_rescue
         inline_block "
           pframe->last_error = Qnil;
+          pframe->target_frame = pframe;
           VALUE result = #{rescue_code};
 
           #{wrapper_code}
