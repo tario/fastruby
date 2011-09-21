@@ -568,9 +568,35 @@ module FastRuby
                 block.block_function_address = (void*)#{anonymous_function(&block_code)};
                 block.block_function_param = (void*)param;
 
-                // call to #{call_tree[2]}
+                // create a call_frame
+                #{@frame_struct} call_frame;
 
-                return ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
+                call_frame.parent_frame = (void*)pframe;
+                call_frame.target_frame = 0;
+                call_frame.plocals = plocals;
+                call_frame.return_value = Qnil;
+                call_frame.exception = Qnil;
+                call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
+
+                plocals->call_frame = LONG2FIX(&call_frame);
+
+                if (setjmp(call_frame.jmp) != 0) {
+                  #{@frame_struct}* pframe_ = (void*)pframe;
+
+                  if (call_frame.target_frame != &call_frame) {
+                    pframe_->target_frame = call_frame.target_frame;
+                    pframe_->exception = call_frame.exception;
+                    longjmp(pframe_->jmp,1);
+                  }
+
+                  plocals->call_frame = LONG2FIX(0);
+                  return call_frame.return_value;
+                }
+
+                // call to #{call_tree[2]}
+                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
+                plocals->call_frame = LONG2FIX(0);
+                return ret;
               }
             "
             }
