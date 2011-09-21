@@ -150,4 +150,32 @@ describe FastRuby, "fastruby" do
   illegal_jump("return")
   illegal_jump("break")
 
+
+    fastruby "
+    class ::LL7
+
+      def bar(l)
+        l.call
+        yield
+      end
+
+      def foo
+        lambda_obj = lambda {
+        }
+
+        bar(lambda_obj) do
+          break 0
+        end
+      end
+    end
+    "
+
+    it "should break from block after calling lambda" do
+       ll7 = ::LL7.new
+       lambda {
+         ll7.foo.should be == 0
+         }.should_not raise_error
+    end
+
+
 end
