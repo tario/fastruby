@@ -190,18 +190,22 @@ describe FastRuby, "fastruby" do
 
   class ::V10
 
-    attr_accessor :a, :b, :c
+    attr_accessor :a, :b, :c, :c_e, :b_e
 
     fastruby "
 
       def moo
         yield(1)
         @c = 32 # this should't be executed
+      ensure
+        @c_e = 4
       end
 
       def bar
         yield(2)
         @b = 16 # this should't be executed
+      ensure
+        @b_e = 4
       end
 
       def foo
@@ -224,6 +228,8 @@ describe FastRuby, "fastruby" do
     v10.a.should be == 111
     v10.b.should be == nil
     v10.c.should be == nil
+    v10.b_e.should be == 4
+    v10.c_e.should be == 4
   end
 
 
