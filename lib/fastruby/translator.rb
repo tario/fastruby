@@ -396,12 +396,13 @@ module FastRuby
 
               fake_locals.pframe = LONG2FIX(&fake_frame);
 
+              VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
               ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
-
 
               frame.parent_frame = (void*)&fake_frame;
 
               if (setjmp(frame.jmp) != 0) {
+
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
@@ -411,14 +412,17 @@ module FastRuby
                      return pframe->return_value;
                   } else {
                     if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
+                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
                       return pframe->return_value;
                     } else if (pframe->target_frame == (void*)&fake_frame) {
+                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
                       return fake_locals.return_value;
                     } else {
                       rb_raise(rb_eLocalJumpError, \"unexpected return\");
                     }
                   }
                 }
+                ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
                 return frame.return_value;
               }
 
@@ -470,6 +474,8 @@ module FastRuby
 
             #{str_arg_initialization}
             #{str_impl}
+
+            #{"((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;" if mname == :lambda or mname == :proc}
 
             return last_expression;
           }
@@ -581,6 +587,7 @@ module FastRuby
                 call_frame.exception = Qnil;
                 call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
 
+                VALUE old_call_frame = plocals->call_frame;
                 plocals->call_frame = LONG2FIX(&call_frame);
 
                 if (setjmp(call_frame.jmp) != 0) {
@@ -592,13 +599,13 @@ module FastRuby
                     longjmp(pframe_->jmp,1);
                   }
 
-                  plocals->call_frame = LONG2FIX(0);
+                  plocals->call_frame = old_call_frame;
                   return call_frame.return_value;
                 }
 
                 // call to #{call_tree[2]}
                 VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
-                plocals->call_frame = LONG2FIX(0);
+                plocals->call_frame = old_call_frame;
                 return ret;
               }
             "
@@ -635,6 +642,7 @@ module FastRuby
         call_frame.exception = Qnil;
         call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
 
+        VALUE old_call_frame = plocals->call_frame;
         plocals->call_frame = LONG2FIX(&call_frame);
 
                 if (setjmp(call_frame.jmp) != 0) {
@@ -644,12 +652,12 @@ module FastRuby
                     longjmp(old_pframe->jmp,1);
                   }
 
-                  plocals->call_frame = LONG2FIX(0);
+                  plocals->call_frame = old_call_frame;
                   return call_frame.return_value;
                 }
 
         VALUE ret = #{inner_code};
-        plocals->call_frame = LONG2FIX(0);
+        plocals->call_frame = old_call_frame;
         return ret;
       "
     end
