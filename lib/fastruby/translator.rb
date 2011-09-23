@@ -406,8 +406,6 @@ module FastRuby
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
-                  } else if (pframe->target_frame == (void*)-2) {
-                     return pframe->return_value;
                   } else if (pframe->target_frame == (void*)-1) {
                      rb_funcall(((typeof(fake_locals)*)(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
                      return Qnil;
@@ -1318,10 +1316,6 @@ module FastRuby
               stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
             }
 
-            if (pframe->target_frame == (void*)-2) {
-              return pframe->return_value;
-            }
-
             if (pframe->target_frame != pframe) {
               // raise exception
               return Qnil;
@@ -1416,10 +1410,6 @@ module FastRuby
             if (stack_chunk_instantiated) {
               rb_gc_unregister_address(&rb_stack_chunk);
               stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
-            }
-
-            if (pframe->target_frame == (void*)-2) {
-              return pframe->return_value;
             }
 
             if (pframe->target_frame != pframe) {
@@ -1981,14 +1971,6 @@ module FastRuby
       "rb_funcall(#{proced.__id__}, #{intern_num :call}, 1, #{parameter})"
     end
 
-    def wrapped_break_block(inner_code)
-      frame("return " + inner_code, "
-            if (original_frame->target_frame == (void*)-2) {
-              return pframe->return_value;
-            }
-            ")
-    end
-
     def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
@@ -1998,10 +1980,6 @@ module FastRuby
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
                 pframe->exception = rb_ivar_get(pframe->last_error, #{intern_num :@ex});
                 pframe->return_value = rb_ivar_get(pframe->last_error, #{intern_num :@return_value});
-
-               if (pframe->target_frame == (void*)-2) {
-                  return pframe->return_value;
-               }
 
                 longjmp(pframe->jmp, 1);
                 return Qnil;
@@ -2169,10 +2147,6 @@ module FastRuby
 
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
-
-          if (pframe->target_frame == (void*)-2) {
-            return pframe->return_value;
-          }
 
           if (pframe->target_frame != pframe) {
             // raise exception
