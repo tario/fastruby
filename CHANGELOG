@@ -1,3 +1,9 @@
+0.0.8	Lambda support
+
+		Re-implemented break
+		
+		DAG representation of stack
+
 0.0.7	Normalized random class names on specs to maximize the profit of the cache when running specs
 
 		Implemented dump of classes into literals using rb_define_class. This improves the cache loads
