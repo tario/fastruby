@@ -187,4 +187,50 @@ describe FastRuby, "fastruby" do
   end
 
 
+
+  class ::V10
+
+    attr_accessor :a, :b, :c, :c_e, :b_e
+
+    fastruby "
+
+      def moo
+        yield(1)
+        @c = 32 # this should't be executed
+      ensure
+        @c_e = 4
+      end
+
+      def bar
+        yield(2)
+        @b = 16 # this should't be executed
+      ensure
+        @b_e = 4
+      end
+
+      def foo
+        ret = moo do |x|
+          bar do |y|
+            break 9
+          end
+          @a = 111
+          break 10
+        end
+        ret + 1
+      end
+
+    "
+  end
+
+  it "should break for nested blocks" do
+    v10 = ::V10.new
+    v10.foo.should be == 11
+    v10.a.should be == 111
+    v10.b.should be == nil
+    v10.c.should be == nil
+    v10.b_e.should be == 4
+    v10.c_e.should be == 4
+  end
+
+
 end

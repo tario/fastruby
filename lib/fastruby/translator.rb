@@ -53,6 +53,7 @@ module FastRuby
         VALUE exception;
         int rescue;
         VALUE last_error;
+        void* stack_chunk;
       }"
 
       @block_struct = "struct {
@@ -61,8 +62,14 @@ module FastRuby
       }"
 
 
-      extra_code << '#include "node.h"
-      '
+      extra_code << "
+        #include \"node.h\"
+
+        #ifndef __INLINE_FASTRUBY_BASE
+        #include \"#{FastRuby.fastruby_load_path}/../ext/fastruby_base/fastruby_base.inl\"
+        #define __INLINE_FASTRUBY_BASE
+        #endif
+      "
 
       ruby_code = "
         $LOAD_PATH << #{FastRuby.fastruby_load_path.inspect}
@@ -73,6 +80,8 @@ module FastRuby
         rb_eval_string(#{ruby_code.inspect});
     	"
 
+
+
       @common_func = common_func
       if common_func
         extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
@@ -82,7 +91,13 @@ module FastRuby
         "
 
         extra_code << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
-        return rb_yield_splat(rb_ary_new4(argc,argv));
+         VALUE yield_args = rb_ary_new4(argc,argv);
+         VALUE* yield_args_p = &yield_args;
+
+         #{@frame_struct}* pframe;
+         pframe = (typeof(pframe))_parent_frame;
+
+         return #{protected_block("rb_yield_splat(*(VALUE*)yield_args_p)",true,"yield_args_p",true)};
         }"
 
         extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
@@ -105,6 +120,55 @@ module FastRuby
 /*
        #{caller.join("\n")}
 */
+
+        "
+        extra_code << "static struct STACKCHUNKREFRENCE* get_stack_chunk_reference_from_context() {
+            struct STACKCHUNKREFERENCE* stack_chunk_reference;
+            VALUE current_thread = rb_thread_current();
+            VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
+            if (rb_stack_chunk_reference == Qnil) {
+              rb_stack_chunk_reference = rb_stack_chunk_reference_create();
+              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk_reference},rb_stack_chunk_reference);
+            }
+
+            Data_Get_Struct(rb_stack_chunk_reference,struct STACKCHUNKREFERENCE,stack_chunk_reference);
+
+            return (void*)stack_chunk_reference;
+        }
+
+        static struct STACKCHUNK* get_stack_chunk_from_context(
+                  struct STACKCHUNKREFERENCE** stack_chunk_reference,
+                  VALUE* rb_stack_chunk
+              ) {
+          struct STACKCHUNK* stack_chunk = 0;
+          *stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
+          *rb_stack_chunk = stack_chunk_reference_retrieve(*stack_chunk_reference);
+          if (*rb_stack_chunk != Qnil) {
+            Data_Get_Struct(*rb_stack_chunk,void,stack_chunk);
+          }
+
+          return stack_chunk;
+        }
+
+        static struct STACKCHUNK* create_stack_chunk_from_context(
+              struct STACKCHUNKREFERENCE** stack_chunk_reference,
+              VALUE* rb_stack_chunk_p
+          ) {
+
+            struct STACKCHUNK* stack_chunk;
+            VALUE rb_stack_chunk = rb_stack_chunk_create(Qnil);
+
+            if (*stack_chunk_reference == 0) {
+              *stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
+            }
+
+            stack_chunk_reference_assign(*stack_chunk_reference, rb_stack_chunk);
+            Data_Get_Struct(rb_stack_chunk,void,stack_chunk);
+
+            *rb_stack_chunk_p = rb_stack_chunk;
+
+            return stack_chunk;
+        }
 
         "
       end
@@ -225,13 +289,13 @@ module FastRuby
                 to_c(subtree)
               }.join(";")
 
-              if anonymous_impl[-1][0] != :return
+              if anonymous_impl[-1][0] != :return and anonymous_impl[-1][0] != :break and anonymous_impl[-1][0] != :next
                 str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl[-1])});"
               else
                 str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
               end
             else
-              if anonymous_impl[0] != :return
+              if anonymous_impl[0] != :return and anonymous_impl[0] != :break and anonymous_impl[0] != :next
                 str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl)});"
               else
                 str_impl = str_impl + ";#{to_c(anonymous_impl)};"
@@ -278,33 +342,92 @@ module FastRuby
           str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
+            execute_code = if mname == :lambda or mname == :proc
+              "VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+
+              // freeze all stacks
+              VALUE current_thread = rb_thread_current();
+              VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
+
+              if (rb_stack_chunk_reference != Qnil) {
+                struct STACKCHUNKREFERENCE* stack_chunk_reference;
+                Data_Get_Struct(rb_stack_chunk_reference, struct STACKCHUNKREFERENCE, stack_chunk_reference);
+
+                VALUE rb_stack_chunk = stack_chunk_reference_retrieve(stack_chunk_reference);
+
+                // add reference to stack chunk to lambda object
+                rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+
+                // freeze the complete chain of stack chunks
+                while (rb_stack_chunk != Qnil) {
+                  struct STACKCHUNK* stack_chunk;
+                  Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+
+                  stack_chunk_freeze(stack_chunk);
+
+                  rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                }
+              }
+
+              return ret;
+              "
+            else
+              "return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);"
+            end
+
             rb_funcall_caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
                 #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+                #{execute_code}
               }
             "
             }
         end
 
+        target_escape_code = if mname == :lambda or mname == :proc
+        "
+              // create a fake parent frame representing the lambda method frame and a fake locals scope
+              #{@locals_struct} fake_locals;
+              #{@frame_struct} fake_frame;
 
-        rb_funcall_block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals) {
-            // block for call to #{call_tree[2]}
-            VALUE last_expression = Qnil;
+              fake_frame.plocals = (void*)&fake_locals;
+              fake_frame.parent_frame = 0;
 
-            #{@frame_struct} frame;
-            #{@frame_struct} *pframe = (void*)&frame;
-            #{@locals_struct} *plocals = (void*)_plocals;
+              fake_locals.pframe = LONG2FIX(&fake_frame);
 
-            frame.plocals = plocals;
-            frame.parent_frame = 0;
-            frame.return_value = Qnil;
-            frame.target_frame = &frame;
-            frame.exception = Qnil;
-            frame.rescue = 0;
+              VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
+              ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
+              frame.parent_frame = (void*)&fake_frame;
+
+              if (setjmp(frame.jmp) != 0) {
+
+                if (pframe->target_frame != pframe) {
+                  if (pframe->target_frame == (void*)-3) {
+                     return pframe->return_value;
+                  } else if (pframe->target_frame == (void*)-1) {
+                     rb_funcall(((typeof(fake_locals)*)(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
+                     return Qnil;
+                  } else {
+                    if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
+                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                      return pframe->return_value;
+                    } else if (pframe->target_frame == (void*)&fake_frame) {
+                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                      return fake_locals.return_value;
+                    } else {
+                      rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                    }
+                  }
+                }
+                ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                return frame.return_value;
+              }
+
+        "
+        else
+        "
             if (setjmp(frame.jmp) != 0) {
               if (pframe->target_frame != pframe) {
                 if (pframe->target_frame == (void*)-3) {
@@ -321,13 +444,37 @@ module FastRuby
                         );
 
                 rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                }
+                return frame.return_value;
               }
-              return frame.return_value;
-            }
+
+        "
+        end
+
+        rb_funcall_block_code = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+            // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
+
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@locals_struct} *plocals = (void*)_plocals;
+
+            frame.plocals = plocals;
+            frame.stack_chunk = 0;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
+            #{target_escape_code}
 
 
             #{str_arg_initialization}
             #{str_impl}
+
+            #{"((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;" if mname == :lambda or mname == :proc}
 
             return last_expression;
           }
@@ -360,6 +507,7 @@ module FastRuby
 
             frame.plocals = (void*)_locals;
             frame.parent_frame = parent_frame;
+            frame.stack_chunk = parent_frame->stack_chunk;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
             frame.exception = Qnil;
@@ -376,6 +524,7 @@ module FastRuby
                   ((typeof(pframe))_parent_frame)->exception = pframe->exception;
                   ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
                   ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
+
                   longjmp(((typeof(pframe))_parent_frame)->jmp,1);
                 }
 
@@ -427,9 +576,36 @@ module FastRuby
                 block.block_function_address = (void*)#{anonymous_function(&block_code)};
                 block.block_function_param = (void*)param;
 
-                // call to #{call_tree[2]}
+                // create a call_frame
+                #{@frame_struct} call_frame;
 
-                return ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe);
+                call_frame.parent_frame = (void*)pframe;
+                call_frame.target_frame = 0;
+                call_frame.plocals = plocals;
+                call_frame.return_value = Qnil;
+                call_frame.exception = Qnil;
+                call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
+
+                VALUE old_call_frame = plocals->call_frame;
+                plocals->call_frame = LONG2FIX(&call_frame);
+
+                if (setjmp(call_frame.jmp) != 0) {
+                  #{@frame_struct}* pframe_ = (void*)pframe;
+
+                  if (call_frame.target_frame != &call_frame) {
+                    pframe_->target_frame = call_frame.target_frame;
+                    pframe_->exception = call_frame.exception;
+                    longjmp(pframe_->jmp,1);
+                  }
+
+                  plocals->call_frame = old_call_frame;
+                  return call_frame.return_value;
+                }
+
+                // call to #{call_tree[2]}
+                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
+                plocals->call_frame = old_call_frame;
+                return ret;
               }
             "
             }
@@ -440,9 +616,48 @@ module FastRuby
           return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
         } else {
           return #{
-            protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+            frame_call(
+              protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+            )
           };
         }
+      "
+    end
+
+    def frame_call(inner_code)
+      inline_block "
+
+
+        // create a call_frame
+        #{@frame_struct} call_frame;
+        typeof(call_frame)* old_pframe = (void*)pframe;
+
+        pframe = (typeof(pframe))&call_frame;
+
+        call_frame.parent_frame = (void*)pframe;
+        call_frame.target_frame = 0;
+        call_frame.plocals = plocals;
+        call_frame.return_value = Qnil;
+        call_frame.exception = Qnil;
+        call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
+
+        VALUE old_call_frame = plocals->call_frame;
+        plocals->call_frame = LONG2FIX(&call_frame);
+
+                if (setjmp(call_frame.jmp) != 0) {
+                  if (call_frame.target_frame != &call_frame) {
+                    old_pframe->target_frame = call_frame.target_frame;
+                    old_pframe->exception = call_frame.exception;
+                    longjmp(old_pframe->jmp,1);
+                  }
+
+                  plocals->call_frame = old_call_frame;
+                  return call_frame.return_value;
+                }
+
+        VALUE ret = #{inner_code};
+        plocals->call_frame = old_call_frame;
+        return ret;
       "
     end
 
@@ -456,10 +671,10 @@ module FastRuby
           pframe = (void*)frame_param;
           plocals = (void*)pframe->plocals;
 
-          if (plocals->block_function_address == 0) {
+          if (FIX2LONG(plocals->block_function_address) == 0) {
             rb_raise(rb_eLocalJumpError, \"no block given\");
           } else {
-            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))plocals->block_function_address)(#{tree.size-1}, block_args, plocals->block_function_param, (VALUE)pframe);
+            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))FIX2LONG(plocals->block_function_address))(#{tree.size-1}, block_args, FIX2LONG(plocals->block_function_param), (VALUE)pframe);
           }
         }
       "
@@ -520,15 +735,27 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "pframe->target_frame = ((typeof(pframe))plocals->pframe); plocals->return_value = #{to_c(tree[1])}; longjmp(pframe->jmp, 1); return Qnil;\n"
+      "pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe)); plocals->return_value = #{to_c(tree[1])}; pframe->return_value = plocals->return_value; longjmp(pframe->jmp, 1); return Qnil;\n"
     end
 
     def to_c_break(tree)
       if @on_block
         inline_block(
          "
-         pframe->target_frame = (void*)-2;
-         pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
+
+         VALUE value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
+
+         typeof(pframe) target_frame_;
+         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
+
+         if (target_frame_ == 0) {
+           rb_raise(rb_eLocalJumpError, \"illegal break\");
+         }
+
+         plocals->call_frame = LONG2FIX(0);
+
+         pframe->target_frame = target_frame_;
+         pframe->return_value = value;
          pframe->exception = Qnil;
          longjmp(pframe->jmp,1);"
          )
@@ -744,8 +971,11 @@ module FastRuby
                 VALUE return_value;
                 VALUE exception;
                 int rescue;
+                VALUE last_error;
+                void* stack_chunk;
               } frame;
 
+              frame.stack_chunk = 0;
               frame.target_frame = 0;
               frame.parent_frame = 0;
               frame.rescue = 0;
@@ -890,34 +1120,14 @@ module FastRuby
 
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
-        void* block_function_address;
-        VALUE block_function_param;
-        jmp_buf jmp;
         VALUE return_value;
-        void* pframe;
+        VALUE pframe;
+        VALUE block_function_address;
+        VALUE block_function_param;
+        VALUE call_frame;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
-
-      if @common_func
-        init_extra << "
-          #{@frame_struct} frame;
-          #{@locals_struct} locals;
-
-          locals.return_value = Qnil;
-          locals.pframe = &frame;
-          locals.self = rb_cObject;
-
-          frame.target_frame = 0;
-          frame.plocals = (void*)&locals;
-          frame.return_value = Qnil;
-          frame.exception = Qnil;
-          frame.rescue = 0;
-          frame.last_error = Qnil;
-
-          typeof(&frame) pframe = &frame;
-        "
-      end
 
     end
 
@@ -940,11 +1150,11 @@ module FastRuby
         #{func_frame}
 
         #{args_tree[1..-1].map { |arg|
-          "locals.#{arg} = #{arg};\n"
+          "plocals->#{arg} = #{arg};\n"
         }.join("") }
 
-        locals.block_function_address = block_address;
-        locals.block_function_param = block_param;
+        plocals->block_function_address = LONG2FIX(block_address);
+        plocals->block_function_param = LONG2FIX(block_param);
 
         return #{to_c impl_tree};
       }"
@@ -971,7 +1181,7 @@ module FastRuby
           void* block_address = 0;
           VALUE block_param = Qnil;
 
-
+          frame.stack_chunk = 0;
           frame.plocals = 0;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
@@ -1057,19 +1267,41 @@ module FastRuby
 
         ret = "VALUE #{@alt_method_name || method_name}() {
 
-          #{@locals_struct} locals;
-          #{@locals_struct} *plocals = (void*)&locals;
+          #{@locals_struct} *plocals;
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
 
-          frame.plocals = plocals;
+          frame.stack_chunk = 0;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
           frame.target_frame = &frame;
           frame.exception = Qnil;
           frame.rescue = 0;
 
-          locals.pframe = &frame;
+
+          int stack_chunk_instantiated = 0;
+          VALUE rb_previous_stack_chunk = Qnil;
+          VALUE current_thread = rb_thread_current();
+          VALUE rb_stack_chunk = Qnil;
+          struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+
+          if (frame.stack_chunk == 0) {
+            frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          }
+
+          if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+            rb_previous_stack_chunk = rb_stack_chunk;
+            rb_gc_register_address(&rb_stack_chunk);
+            stack_chunk_instantiated = 1;
+
+            frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          }
+
+          int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+
+          plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          plocals->pframe = LONG2FIX(&frame);
+          frame.plocals = plocals;
 
           pframe = (void*)&frame;
 
@@ -1077,9 +1309,11 @@ module FastRuby
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
+            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
 
-            if (pframe->target_frame == (void*)-2) {
-              return pframe->return_value;
+            if (stack_chunk_instantiated) {
+              rb_gc_unregister_address(&rb_stack_chunk);
+              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
             }
 
             if (pframe->target_frame != pframe) {
@@ -1090,16 +1324,26 @@ module FastRuby
             return plocals->return_value;
           }
 
-          locals.self = self;
+          plocals->self = self;
 
           #{args_tree[1..-1].map { |arg|
-            "locals.#{arg} = #{arg};\n"
+            "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
-          locals.block_function_address = 0;
-          locals.block_function_param = Qnil;
+          plocals->block_function_address = LONG2FIX(0);
+          plocals->block_function_param = LONG2FIX(Qnil);
+          plocals->call_frame = LONG2FIX(0);
 
-          return #{to_c impl_tree};
+          VALUE ret = #{to_c impl_tree};
+          stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+          if (stack_chunk_instantiated) {
+            rb_gc_unregister_address(&rb_stack_chunk);
+            stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+          }
+
+          return ret;
+
         }"
 
         add_main
@@ -1116,22 +1360,94 @@ module FastRuby
 
         ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
 
-          #{func_frame}
+          #{@frame_struct} frame;
+          #{@frame_struct} *pframe;
+
+          frame.parent_frame = (void*)_parent_frame;
+          frame.stack_chunk = ((typeof(pframe))_parent_frame)->stack_chunk;
+          frame.return_value = Qnil;
+          frame.target_frame = &frame;
+          frame.exception = Qnil;
+          frame.rescue = 0;
+
+          int stack_chunk_instantiated = 0;
+          VALUE rb_previous_stack_chunk = Qnil;
+          VALUE current_thread = rb_thread_current();
+          VALUE rb_stack_chunk = Qnil;
+          struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+
+          if (frame.stack_chunk == 0) {
+            frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          }
+
+          if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+            rb_previous_stack_chunk = rb_stack_chunk;
+            rb_gc_register_address(&rb_stack_chunk);
+            stack_chunk_instantiated = 1;
+
+            frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          }
+
+
+          #{@locals_struct} *plocals;
+
+          int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+
+          plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          frame.plocals = plocals;
+          plocals->pframe = LONG2FIX(&frame);
+          plocals->call_frame = LONG2FIX(0);
+
+          pframe = (void*)&frame;
+
+          #{@block_struct} *pblock;
+          VALUE last_expression = Qnil;
+
+          int aux = setjmp(pframe->jmp);
+          if (aux != 0) {
+            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+            if (stack_chunk_instantiated) {
+              rb_gc_unregister_address(&rb_stack_chunk);
+              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+            }
+
+            if (pframe->target_frame != pframe) {
+              // raise exception
+              ((typeof(pframe))_parent_frame)->exception = pframe->exception;
+              ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
+              ((typeof(pframe))_parent_frame)->return_value = pframe->return_value;
+
+              longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+            }
+
+            return plocals->return_value;
+          }
+
+          plocals->self = self;
 
           #{args_tree[1..-1].map { |arg|
-            "locals.#{arg} = #{arg};\n"
+            "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
           pblock = (void*)block;
           if (pblock) {
-            locals.block_function_address = pblock->block_function_address;
-            locals.block_function_param = (VALUE)pblock->block_function_param;
+            plocals->block_function_address = LONG2FIX(pblock->block_function_address);
+            plocals->block_function_param = LONG2FIX(pblock->block_function_param);
           } else {
-            locals.block_function_address = 0;
-            locals.block_function_param = Qnil;
+            plocals->block_function_address = LONG2FIX(0);
+            plocals->block_function_param = LONG2FIX(Qnil);
           }
 
-          return #{to_c impl_tree};
+          VALUE __ret = #{to_c impl_tree};
+          stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+          if (stack_chunk_instantiated) {
+            rb_gc_unregister_address(&rb_stack_chunk);
+            stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+          }
+
+          return __ret;
         }"
 
         add_main
@@ -1396,12 +1712,12 @@ module FastRuby
        old_locals_struct = @locals_struct
 
        @locals = locals
-       @locals_struct = "struct {
-        void* block_function_address;
-        VALUE block_function_param;
-        jmp_buf jmp;
+        @locals_struct = "struct {
         VALUE return_value;
-        void* pframe;
+        VALUE pframe;
+        VALUE block_function_address;
+        VALUE block_function_param;
+        VALUE call_frame;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -1428,20 +1744,51 @@ module FastRuby
         fun = anonymous_function { |method_name| "static VALUE #{method_name}(VALUE self) {
 
             #{@frame_struct} frame;
-            #{@locals_struct} locals;
             typeof(&frame) pframe = &frame;
-            typeof(&locals) plocals = &locals;
+            #{@locals_struct} *plocals;
 
-            frame.plocals = plocals;
+            frame.stack_chunk = 0;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
 
-            locals.self = self;
+            int stack_chunk_instantiated = 0;
+            VALUE rb_previous_stack_chunk = Qnil;
+            VALUE current_thread = rb_thread_current();
+            VALUE rb_stack_chunk = Qnil;
+            struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+
+            if (frame.stack_chunk == 0) {
+              frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            }
+
+            if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+              rb_previous_stack_chunk = rb_stack_chunk;
+              rb_gc_register_address(&rb_stack_chunk);
+              stack_chunk_instantiated = 1;
+
+              frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            }
+
+            int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+
+            plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+
+            frame.plocals = plocals;
+            plocals->self = self;
+            plocals->call_frame = LONG2FIX(0);
 
             #{to_c tree};
+
+            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+
+            if (stack_chunk_instantiated) {
+              rb_gc_unregister_address(&rb_stack_chunk);
+              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+            }
+
             return Qnil;
           }
         "
@@ -1559,7 +1906,7 @@ module FastRuby
         @infer_lvar_map[lvar_name] = lvar_type
         return ""
       elsif mname == :block_given?
-        return "#{locals_accessor}block_function_address == 0 ? Qfalse : Qtrue"
+        return "FIX2LONG(plocals->block_function_address) == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
 
         code = args[1][1]
@@ -1583,7 +1930,7 @@ module FastRuby
       end
     end
 
-    def inline_block_reference(arg)
+    def inline_block_reference(arg, nolocals = false)
       code = nil
 
       if arg.instance_of? FastRuby::FastRubySexp
@@ -1595,7 +1942,8 @@ module FastRuby
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
           #{@frame_struct} *pframe = (void*)param;
-          #{@locals_struct} *plocals = (void*)pframe->plocals;
+
+          #{nolocals ? "" : "#{@locals_struct} *plocals = (void*)pframe->plocals;"}
           VALUE last_expression = Qnil;
 
           #{code};
@@ -1605,11 +1953,12 @@ module FastRuby
       }
     end
 
-    def inline_block(code, repass_var = nil)
+    def inline_block(code, repass_var = nil, nolocals = false)
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
           #{@frame_struct} *pframe = (void*)param;
-          #{@locals_struct} *plocals = (void*)pframe->plocals;
+
+          #{nolocals ? "" : "#{@locals_struct} *plocals = (void*)pframe->plocals;"}
           VALUE last_expression = Qnil;
 
           #{code}
@@ -1622,27 +1971,15 @@ module FastRuby
       "rb_funcall(#{proced.__id__}, #{intern_num :call}, 1, #{parameter})"
     end
 
-    def wrapped_break_block(inner_code)
-      frame("return " + inner_code, "
-            if (original_frame->target_frame == (void*)-2) {
-              return pframe->return_value;
-            }
-            ")
-    end
-
-    def protected_block(inner_code, always_rescue = false,repass_var = nil)
+    def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       wrapper_code = "
          if (pframe->last_error != Qnil) {
               if (CLASS_OF(pframe->last_error)==#{literal_value FastRuby::Context::UnwindFastrubyFrame}) {
-              #{@frame_struct} *pframe = (void*)param;
+                #{@frame_struct} *pframe = (void*)param;
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
                 pframe->exception = rb_ivar_get(pframe->last_error, #{intern_num :@ex});
                 pframe->return_value = rb_ivar_get(pframe->last_error, #{intern_num :@return_value});
-
-               if (pframe->target_frame == (void*)-2) {
-                  return pframe->return_value;
-               }
 
                 longjmp(pframe->jmp, 1);
                 return Qnil;
@@ -1657,6 +1994,10 @@ module FastRuby
                   return Qnil;
               }
 
+          } else {
+             if (pframe->target_frame != pframe) {
+               longjmp(pframe->jmp, 1);
+             }
           }
       "
 
@@ -1666,8 +2007,36 @@ module FastRuby
       if repass_var
         body =  anonymous_function{ |name| "
           static VALUE #{name}(VALUE param) {
-            #{@frame_struct} *pframe = ((void**)param)[0];
-            #{@locals_struct} *plocals = pframe->plocals;
+
+            #{@frame_struct} frame;
+
+            typeof(frame)* pframe;
+            typeof(frame)* parent_frame = ((typeof(pframe))((void**)param)[0]);
+
+            frame.parent_frame = 0;
+            frame.target_frame = 0;
+            frame.return_value = Qnil;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+            frame.last_error = Qnil;
+            frame.stack_chunk = 0;
+
+            pframe = &frame;
+
+            #{
+            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = parent_frame->plocals;
+            frame.plocals = plocals;
+            "
+            }
+
+            if (setjmp(frame.jmp) != 0) {
+              parent_frame->target_frame = frame.target_frame;
+              parent_frame->exception = frame.exception;
+              parent_frame->return_value = frame.return_value;
+
+              return frame.return_value;
+            }
+
             VALUE #{repass_var} = (VALUE)((void**)param)[1];
             return #{inner_code};
             }
@@ -1677,7 +2046,43 @@ module FastRuby
         rescue_args = ""
         rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
       else
-        body = inline_block_reference("return #{inner_code}")
+
+        body = anonymous_function{ |name| "
+          static VALUE #{name}(VALUE param) {
+            #{@frame_struct} frame;
+
+            typeof(frame)* pframe;
+            typeof(frame)* parent_frame = (typeof(pframe))param;
+
+            frame.parent_frame = 0;
+            frame.target_frame = 0;
+            frame.return_value = Qnil;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+            frame.last_error = Qnil;
+            frame.stack_chunk = 0;
+
+            pframe = &frame;
+
+            #{
+            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = parent_frame->plocals;
+            frame.plocals = plocals;
+            "
+            }
+
+            if (setjmp(frame.jmp) != 0) {
+              parent_frame->target_frame = frame.target_frame;
+              parent_frame->exception = frame.exception;
+              parent_frame->return_value = frame.return_value;
+
+              return frame.return_value;
+            }
+
+            return #{inner_code};
+            }
+          "
+        }
+
         rescue_args = "(VALUE)pframe"
       end
 
@@ -1692,12 +2097,13 @@ module FastRuby
       if always_rescue
         inline_block "
           pframe->last_error = Qnil;
+          pframe->target_frame = pframe;
           VALUE result = #{rescue_code};
 
           #{wrapper_code}
 
           return result;
-        ", repass_var
+        ", repass_var, nolocals
       else
         inline_block "
           VALUE result;
@@ -1712,7 +2118,7 @@ module FastRuby
           #{wrapper_code}
 
           return result;
-        ", repass_var
+        ", repass_var, nolocals
       end
 
     end
@@ -1720,19 +2126,19 @@ module FastRuby
 
     def func_frame
       "
-        #{@locals_struct} locals;
-        #{@locals_struct} *plocals = (void*)&locals;
+        #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
         #{@frame_struct} frame;
         #{@frame_struct} *pframe;
 
         frame.plocals = plocals;
         frame.parent_frame = (void*)_parent_frame;
+        frame.stack_chunk = ((typeof(pframe))_parent_frame)->stack_chunk;
         frame.return_value = Qnil;
         frame.target_frame = &frame;
         frame.exception = Qnil;
         frame.rescue = 0;
 
-        locals.pframe = &frame;
+        plocals->pframe = LONG2FIX(&frame);
 
         pframe = (void*)&frame;
 
@@ -1741,10 +2147,6 @@ module FastRuby
 
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
-
-          if (pframe->target_frame == (void*)-2) {
-            return pframe->return_value;
-          }
 
           if (pframe->target_frame != pframe) {
             // raise exception
@@ -1757,7 +2159,7 @@ module FastRuby
           return plocals->return_value;
         }
 
-        locals.self = self;
+        plocals->self = self;
       "
     end
 
@@ -1932,6 +2334,8 @@ module FastRuby
               }
             }
 
+            if (address==0) convention = #{literal_value :ruby};
+
             #{convention_global_name ? convention_global_name + " = 0;" : ""}
             if (recvtype != Qnil) {
 
@@ -2014,9 +2418,11 @@ module FastRuby
 
           parent_frame = (void*)param;
 
+          frame.stack_chunk = parent_frame->stack_chunk;
           frame.parent_frame = (void*)param;
           frame.plocals = parent_frame->plocals;
           frame.target_frame = &frame;
+          frame.exception = Qnil;
           frame.rescue = #{rescued ? rescued : "parent_frame->rescue"};
 
           plocals = frame.plocals;
@@ -2036,6 +2442,7 @@ module FastRuby
               pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
               pframe->return_value = original_frame->return_value;
+
               longjmp(pframe->jmp,1);
             }
 
