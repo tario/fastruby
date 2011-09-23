@@ -409,7 +409,8 @@ module FastRuby
                   } else if (pframe->target_frame == (void*)-2) {
                      return pframe->return_value;
                   } else if (pframe->target_frame == (void*)-1) {
-                     return pframe->return_value;
+                     rb_funcall(((typeof(fake_locals)*)(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
+                     return Qnil;
                   } else {
                     if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
                       ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
