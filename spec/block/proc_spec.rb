@@ -177,5 +177,57 @@ describe FastRuby, "fastruby" do
          }.should_not raise_error
     end
 
+  fastruby "
+  class LN8
+    def foo
+      f = proc { return 'return from foo from inside proc' }
+      f.call
+      return 'return from foo'
+    end
+   end
+  "
+
+    it "should return from proc" do
+       ll8 = ::LN8.new
+       lambda {
+         ll8.foo.should be == 'return from foo from inside proc'
+         }.should_not raise_error
+    end
+
+  fastruby "
+  class LN9
+    def foo
+      f = Proc.new { return 'return from foo from inside proc' }
+      f.call
+      return 'return from foo'
+    end
+   end
+  "
+
+    it "should return from proc using Proc.new" do
+       ll9 = ::LN9.new
+       lambda {
+         ll9.foo.should be == 'return from foo from inside proc'
+         }.should_not raise_error
+    end
+
+  fastruby "
+  class LN10
+    def foo
+      f = Proc.new { return 'return from foo from inside proc' }
+      f
+    end
+   end
+  "
+
+    it "should raise invalid return from proc using Proc.new" do
+       ll10 = ::LN10.new
+       f = ll10.foo
+
+       lambda {
+         f.call
+       }.should raise_error(LocalJumpError)
+    end
+
 
 end
