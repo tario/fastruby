@@ -178,4 +178,24 @@ describe FastRuby, "fastruby" do
     end
 
 
+    class ::LL8
+
+      alias alt_lambda lambda
+
+      fastruby "
+      def foo
+        lambda_obj = alt_lambda {
+          return 9
+        }
+
+        lambda_obj.call
+      end
+      "
+    end
+
+    it "should close lambda with return when renamed with alias" do
+       ll8 = ::LL8.new
+       ll8.foo.should be == 9
+    end
+
 end
