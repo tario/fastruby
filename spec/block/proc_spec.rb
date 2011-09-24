@@ -229,5 +229,21 @@ describe FastRuby, "fastruby" do
        }.should raise_error(LocalJumpError)
     end
 
+  fastruby "
+  class LN11
+    def foo
+      f = Proc.new { 9 }
+      f.call
+    end
+   end
+  "
+
+    it "should call proc defined using Proc.new" do
+       ll11 = ::LN11.new
+       lambda {
+         ll11.foo.should be == 9
+         }.should_not raise_error
+    end
+
 
 end
