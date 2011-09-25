@@ -342,8 +342,11 @@ module FastRuby
           str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
-            execute_code = if mname == :lambda or mname == :proc
-              "VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+            execute_code =
+              "
+              int lambda_block = #{(mname == :lambda or mname == :proc) ? 1 : 0};
+              if (lambda_block) {
+              VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
 
               // freeze all stacks
               VALUE current_thread = rb_thread_current();
@@ -370,10 +373,10 @@ module FastRuby
               }
 
               return ret;
+              } else {
+                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+              }
               "
-            else
-              "return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);"
-            end
 
             rb_funcall_caller_code = proc { |name| "
               static VALUE #{name}(VALUE param) {
@@ -385,8 +388,8 @@ module FastRuby
             }
         end
 
-        target_escape_code = if mname == :lambda or mname == :proc
-        "
+        target_escape_code = "
+          if (lambda_block) {
               // create a fake parent frame representing the lambda method frame and a fake locals scope
               #{@locals_struct} fake_locals;
               #{@frame_struct} fake_frame;
@@ -396,7 +399,7 @@ module FastRuby
 
               fake_locals.pframe = LONG2FIX(&fake_frame);
 
-              VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
+              old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
               ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
               frame.parent_frame = (void*)&fake_frame;
@@ -424,10 +427,7 @@ module FastRuby
                 ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
                 return frame.return_value;
               }
-
-        "
-        else
-        "
+        } else {
             if (setjmp(frame.jmp) != 0) {
               if (pframe->target_frame != pframe) {
                 if (pframe->target_frame == (void*)-3) {
@@ -447,9 +447,8 @@ module FastRuby
                 }
                 return frame.return_value;
               }
-
+          }
         "
-        end
 
         rb_funcall_block_code = proc { |name| "
           static VALUE #{name}(VALUE arg, VALUE _plocals) {
@@ -468,13 +467,19 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
 
+            VALUE old_call_frame;
+            int lambda_block = #{(mname == :lambda or mname == :proc) ? 1 : 0};
+
             #{target_escape_code}
 
 
             #{str_arg_initialization}
             #{str_impl}
 
-            #{"((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;" if mname == :lambda or mname == :proc}
+
+            if (lambda_block) {
+              ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
+            }
 
             return last_expression;
           }
