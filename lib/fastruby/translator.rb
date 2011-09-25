@@ -88,6 +88,16 @@ module FastRuby
           rb_gvar_set((struct global_entry*)ge,value);
           return value;
         }
+
+        static int is_lambda_call(VALUE receiver, ID method_id) {
+
+          if (method_id == #{intern_num :lambda} || method_id == #{intern_num :proc})  {
+            return 1;
+          } else {
+            return 0;
+          }
+
+        }
         "
 
         extra_code << "static VALUE re_yield(int argc, VALUE* argv, VALUE param, VALUE _parent_frame) {
@@ -338,12 +348,26 @@ module FastRuby
             "
             }
 
+            rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
+
         else
           str_recv = to_c recv_tree
           str_recv = "plocals->self" unless recv_tree
 
-            execute_code = if mname == :lambda or mname == :proc
-              "VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+            rb_funcall_caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+              }
+            "
+            }
+
+            rb_funcall_caller_code_with_lambda = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+              VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
 
               // freeze all stacks
               VALUE current_thread = rb_thread_current();
@@ -370,23 +394,29 @@ module FastRuby
               }
 
               return ret;
-              "
-            else
-              "return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);"
-            end
-
-            rb_funcall_caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-                #{str_lvar_initialization}
-                #{execute_code}
               }
             "
             }
+
         end
 
-        target_escape_code = if mname == :lambda or mname == :proc
-        "
+        rb_funcall_block_code_with_lambda = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+            // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
+
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@locals_struct} *plocals = (void*)_plocals;
+
+            frame.plocals = plocals;
+            frame.stack_chunk = 0;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
               // create a fake parent frame representing the lambda method frame and a fake locals scope
               #{@locals_struct} fake_locals;
               #{@frame_struct} fake_frame;
@@ -425,9 +455,35 @@ module FastRuby
                 return frame.return_value;
               }
 
+
+
+            #{str_arg_initialization}
+            #{str_impl}
+
+            ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+
+            return last_expression;
+          }
         "
-        else
-        "
+        }
+
+        rb_funcall_block_code = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+            // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
+
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@locals_struct} *plocals = (void*)_plocals;
+
+            frame.plocals = plocals;
+            frame.stack_chunk = 0;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
             if (setjmp(frame.jmp) != 0) {
               if (pframe->target_frame != pframe) {
                 if (pframe->target_frame == (void*)-3) {
@@ -448,33 +504,9 @@ module FastRuby
                 return frame.return_value;
               }
 
-        "
-        end
-
-        rb_funcall_block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals) {
-            // block for call to #{call_tree[2]}
-            VALUE last_expression = Qnil;
-
-            #{@frame_struct} frame;
-            #{@frame_struct} *pframe = (void*)&frame;
-            #{@locals_struct} *plocals = (void*)_plocals;
-
-            frame.plocals = plocals;
-            frame.stack_chunk = 0;
-            frame.parent_frame = 0;
-            frame.return_value = Qnil;
-            frame.target_frame = &frame;
-            frame.exception = Qnil;
-            frame.rescue = 0;
-
-            #{target_escape_code}
-
 
             #{str_arg_initialization}
             #{str_impl}
-
-            #{"((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;" if mname == :lambda or mname == :proc}
 
             return last_expression;
           }
@@ -617,7 +649,14 @@ module FastRuby
         } else {
           return #{
             frame_call(
-              protected_block("rb_iterate(#{anonymous_function(&rb_funcall_caller_code)}, (VALUE)pframe, #{anonymous_function(&rb_funcall_block_code)}, (VALUE)plocals)", true)
+              protected_block("
+              rb_iterate(
+                is_lambda_call(plocals->self,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_caller_code_with_lambda)} : #{anonymous_function(&rb_funcall_caller_code)},
+                (VALUE)pframe,
+                is_lambda_call(plocals->self,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_block_code_with_lambda)} : #{anonymous_function(&rb_funcall_block_code)},
+                (VALUE)plocals);
+
+              ", true)
             )
           };
         }
