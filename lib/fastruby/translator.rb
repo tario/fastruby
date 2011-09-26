@@ -497,7 +497,6 @@ module FastRuby
               frame.parent_frame = (void*)&fake_frame;
 
               if (setjmp(frame.jmp) != 0) {
-
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
@@ -506,8 +505,18 @@ module FastRuby
                      return Qnil;
                   } else {
                     if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
+
                       ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
-                      return pframe->return_value;
+                      VALUE ex = rb_funcall(
+                              #{literal_value FastRuby::Context::UnwindFastrubyFrame},
+                              #{intern_num :new},
+                              3,
+                              pframe->exception,
+                              LONG2FIX(pframe->target_frame),
+                              pframe->return_value
+                              );
+
+                      rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
                     } else if (pframe->target_frame == (void*)&fake_frame) {
                       ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
                       return fake_locals.return_value;
@@ -1803,9 +1812,9 @@ module FastRuby
 
       else # else recvtype
         if argnum == 0
-          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", false, repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", true, repass_var)
         else
-          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", false, repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", true, repass_var)
         end
       end # if recvtype
     end
