@@ -525,11 +525,9 @@ module FastRuby
                     }
                   }
                 }
-                ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
-                return frame.return_value;
+
+                rb_raise(rb_eLocalJumpError, \"break from proc-closure\");
               }
-
-
 
             #{str_arg_initialization}
             #{str_impl}
