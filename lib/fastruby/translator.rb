@@ -80,7 +80,14 @@ module FastRuby
         rb_eval_string(#{ruby_code.inspect});
     	"
 
+      lambda_node_gvar = add_global_name("NODE*", 0);
+      proc_node_gvar = add_global_name("NODE*", 0);
+      procnew_node_gvar = add_global_name("NODE*", 0);
 
+      init_extra << "
+        #{lambda_node_gvar} = rb_method_node(rb_cObject, #{intern_num :lambda});
+        #{proc_node_gvar} = rb_method_node(rb_cObject, #{intern_num :proc});
+      "
 
       @common_func = common_func
       if common_func
@@ -91,7 +98,13 @@ module FastRuby
 
         static int is_lambda_call(VALUE receiver, ID method_id) {
 
-          if (method_id == #{intern_num :lambda} || method_id == #{intern_num :proc})  {
+          NODE* node = rb_method_node(CLASS_OF(receiver), method_id);
+
+          if (
+            node == #{proc_node_gvar} ||
+            node == #{lambda_node_gvar}
+            )  {
+
             return 1;
           } else {
             return 0;
