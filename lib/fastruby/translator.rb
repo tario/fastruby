@@ -54,6 +54,7 @@ module FastRuby
         int rescue;
         VALUE last_error;
         void* stack_chunk;
+        VALUE next_recv;
       }"
 
       @block_struct = "struct {
@@ -347,7 +348,7 @@ module FastRuby
         if call_args_tree.size > 1
 
           str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
-          str_recv = to_c recv_tree
+          str_recv = "pframe->next_recv"
 
           str_recv = "plocals->self" unless recv_tree
 
@@ -364,7 +365,7 @@ module FastRuby
             rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
 
         else
-          str_recv = to_c recv_tree
+          str_recv = "pframe->next_recv"
           str_recv = "plocals->self" unless recv_tree
 
             rb_funcall_caller_code = proc { |name| "
@@ -662,14 +663,17 @@ module FastRuby
         } else {
           return #{
             frame_call(
-              protected_block("
-              rb_iterate(
-                is_lambda_call(plocals->self,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_caller_code_with_lambda)} : #{anonymous_function(&rb_funcall_caller_code)},
+              protected_block(inline_block("
+
+              pframe->next_recv = #{recv_tree ? to_c(recv_tree) : "plocals->self"};
+
+              return rb_iterate(
+                is_lambda_call(pframe->next_recv,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_caller_code_with_lambda)} : #{anonymous_function(&rb_funcall_caller_code)},
                 (VALUE)pframe,
-                is_lambda_call(plocals->self,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_block_code_with_lambda)} : #{anonymous_function(&rb_funcall_block_code)},
+                is_lambda_call(pframe->next_recv,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_block_code_with_lambda)} : #{anonymous_function(&rb_funcall_block_code)},
                 (VALUE)plocals);
 
-              ", true)
+              "), true)
             )
           };
         }
