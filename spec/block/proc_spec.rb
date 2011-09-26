@@ -178,23 +178,6 @@ describe FastRuby, "fastruby" do
     end
 
   fastruby "
-  class LN8
-    def foo
-      f = proc { return 'return from foo from inside proc' }
-      f.call
-      return 'return from foo'
-    end
-   end
-  "
-
-    it "should return from proc" do
-       ll8 = ::LN8.new
-       lambda {
-         ll8.foo.should be == 'return from foo from inside proc'
-         }.should_not raise_error
-    end
-
-  fastruby "
   class LN9
     def foo
       f = Proc.new { return 'return from foo from inside proc' }
