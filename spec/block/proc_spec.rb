@@ -229,4 +229,20 @@ describe FastRuby, "fastruby" do
     end
 
 
+  fastruby "
+  class LN12
+    def foo
+      f = Proc.new { break }
+      f.call
+    end
+   end
+  "
+
+    it "should raise LocalJumpError from proc using Proc.new when break is used" do
+       ll12 = ::LN12.new
+       lambda {
+         ll12.foo
+         }.should raise_error(LocalJumpError)
+    end
+
 end
