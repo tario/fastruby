@@ -88,6 +88,7 @@ module FastRuby
       init_extra << "
         #{lambda_node_gvar} = rb_method_node(rb_cObject, #{intern_num :lambda});
         #{proc_node_gvar} = rb_method_node(rb_cObject, #{intern_num :proc});
+        #{procnew_node_gvar} = rb_method_node(CLASS_OF(rb_cProc), #{intern_num :new});
       "
 
       @common_func = common_func
@@ -103,9 +104,9 @@ module FastRuby
 
           if (
             node == #{proc_node_gvar} ||
-            node == #{lambda_node_gvar}
+            node == #{lambda_node_gvar} ||
+            (node == #{procnew_node_gvar} && receiver == rb_cProc)
             )  {
-
             return 1;
           } else {
             return 0;
