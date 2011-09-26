@@ -81,14 +81,14 @@ module FastRuby
         rb_eval_string(#{ruby_code.inspect});
     	"
 
-      lambda_node_gvar = add_global_name("NODE*", 0);
-      proc_node_gvar = add_global_name("NODE*", 0);
-      procnew_node_gvar = add_global_name("NODE*", 0);
+      @lambda_node_gvar = add_global_name("NODE*", 0);
+      @proc_node_gvar = add_global_name("NODE*", 0);
+      @procnew_node_gvar = add_global_name("NODE*", 0);
 
       init_extra << "
-        #{lambda_node_gvar} = rb_method_node(rb_cObject, #{intern_num :lambda});
-        #{proc_node_gvar} = rb_method_node(rb_cObject, #{intern_num :proc});
-        #{procnew_node_gvar} = rb_method_node(CLASS_OF(rb_cProc), #{intern_num :new});
+        #{@lambda_node_gvar} = rb_method_node(rb_cObject, #{intern_num :lambda});
+        #{@proc_node_gvar} = rb_method_node(rb_cObject, #{intern_num :proc});
+        #{@procnew_node_gvar} = rb_method_node(CLASS_OF(rb_cProc), #{intern_num :new});
       "
 
       @common_func = common_func
@@ -96,22 +96,6 @@ module FastRuby
         extra_code << "static VALUE _rb_gvar_set(void* ge,VALUE value) {
           rb_gvar_set((struct global_entry*)ge,value);
           return value;
-        }
-
-        static int is_lambda_call(VALUE receiver, ID method_id) {
-
-          NODE* node = rb_method_node(CLASS_OF(receiver), method_id);
-
-          if (
-            node == #{proc_node_gvar} ||
-            node == #{lambda_node_gvar} ||
-            (node == #{procnew_node_gvar} && receiver == rb_cProc)
-            )  {
-            return 1;
-          } else {
-            return 0;
-          }
-
         }
         "
 
@@ -364,7 +348,6 @@ module FastRuby
             }
 
             rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
-
         else
           str_recv = "pframe->next_recv"
           str_recv = "plocals->self" unless recv_tree
@@ -481,6 +464,74 @@ module FastRuby
           }
         "
         }
+
+        rb_funcall_block_code_proc_new = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+            // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
+
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@locals_struct} *plocals = (void*)_plocals;
+
+            frame.plocals = plocals;
+            frame.stack_chunk = 0;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.target_frame = &frame;
+            frame.exception = Qnil;
+            frame.rescue = 0;
+
+              // create a fake parent frame representing the lambda method frame and a fake locals scope
+              #{@locals_struct} fake_locals;
+              #{@frame_struct} fake_frame;
+
+              fake_frame.plocals = (void*)&fake_locals;
+              fake_frame.parent_frame = 0;
+
+              fake_locals.pframe = LONG2FIX(&fake_frame);
+
+              VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
+              ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
+
+              frame.parent_frame = (void*)&fake_frame;
+
+              if (setjmp(frame.jmp) != 0) {
+
+                if (pframe->target_frame != pframe) {
+                  if (pframe->target_frame == (void*)-3) {
+                     return pframe->return_value;
+                  } else if (pframe->target_frame == (void*)-1) {
+                     rb_funcall(((typeof(fake_locals)*)(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
+                     return Qnil;
+                  } else {
+                    if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
+                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                      return pframe->return_value;
+                    } else if (pframe->target_frame == (void*)&fake_frame) {
+                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                      return fake_locals.return_value;
+                    } else {
+                      rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                    }
+                  }
+                }
+                ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                return frame.return_value;
+              }
+
+
+
+            #{str_arg_initialization}
+            #{str_impl}
+
+            ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+
+            return last_expression;
+          }
+        "
+        }
+
 
         rb_funcall_block_code = proc { |name| "
           static VALUE #{name}(VALUE arg, VALUE _plocals) {
@@ -668,10 +719,29 @@ module FastRuby
 
               pframe->next_recv = #{recv_tree ? to_c(recv_tree) : "plocals->self"};
 
+              NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
+              void* caller_func;
+              void* block_func;
+
+              if (
+                node == #{@proc_node_gvar} ||
+                node == #{@lambda_node_gvar}
+                )  {
+
+                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
+                block_func = #{anonymous_function(&rb_funcall_block_code_with_lambda)};
+              } else if (node == #{@procnew_node_gvar} && pframe->next_recv == rb_cProc) {
+                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
+                block_func = #{anonymous_function(&rb_funcall_block_code_proc_new)};
+              } else {
+                caller_func = #{anonymous_function(&rb_funcall_caller_code)};
+                block_func = #{anonymous_function(&rb_funcall_block_code)};
+              }
+
               return rb_iterate(
-                is_lambda_call(pframe->next_recv,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_caller_code_with_lambda)} : #{anonymous_function(&rb_funcall_caller_code)},
+                caller_func,
                 (VALUE)pframe,
-                is_lambda_call(pframe->next_recv,#{intern_num mname.to_sym}) ? #{anonymous_function(&rb_funcall_block_code_with_lambda)} : #{anonymous_function(&rb_funcall_block_code)},
+                block_func,
                 (VALUE)plocals);
 
               "), true)
