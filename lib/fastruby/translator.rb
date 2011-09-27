@@ -422,6 +422,7 @@ module FastRuby
               fake_frame.plocals = (void*)&fake_locals;
               fake_frame.parent_frame = 0;
 
+              fake_locals.active = Qtrue;
               fake_locals.pframe = LONG2FIX(&fake_frame);
 
               VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
@@ -489,6 +490,7 @@ module FastRuby
               fake_frame.plocals = (void*)&fake_locals;
               fake_frame.parent_frame = 0;
 
+              fake_locals.active = Qtrue;
               fake_locals.pframe = LONG2FIX(&fake_frame);
 
               VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
@@ -506,17 +508,21 @@ module FastRuby
                   } else {
                     if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
 
-                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
-                      VALUE ex = rb_funcall(
-                              #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                              #{intern_num :new},
-                              3,
-                              pframe->exception,
-                              LONG2FIX(pframe->target_frame),
-                              pframe->return_value
-                              );
+                      if (plocals->active == Qfalse) {
+                        rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
+                      } else {
+                        ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                        VALUE ex = rb_funcall(
+                                #{literal_value FastRuby::Context::UnwindFastrubyFrame},
+                                #{intern_num :new},
+                                3,
+                                pframe->exception,
+                                LONG2FIX(pframe->target_frame),
+                                pframe->return_value
+                                );
 
-                      rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                        rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                      }
                     } else if (pframe->target_frame == (void*)&fake_frame) {
                       ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
                       return fake_locals.return_value;
@@ -869,7 +875,13 @@ module FastRuby
     end
 
     def to_c_return(tree)
-      "pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe)); plocals->return_value = #{to_c(tree[1])}; pframe->return_value = plocals->return_value; longjmp(pframe->jmp, 1); return Qnil;\n"
+      inline_block "
+        pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe));
+        plocals->return_value = #{to_c(tree[1])};
+        pframe->return_value = plocals->return_value;
+        longjmp(pframe->jmp, 1);
+        return Qnil;
+        "
     end
 
     def to_c_break(tree)
@@ -1259,6 +1271,7 @@ module FastRuby
         VALUE block_function_address;
         VALUE block_function_param;
         VALUE call_frame;
+        VALUE active;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
@@ -1434,6 +1447,7 @@ module FastRuby
           int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
 
           plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          plocals->active = Qtrue;
           plocals->pframe = LONG2FIX(&frame);
           frame.plocals = plocals;
 
@@ -1452,9 +1466,11 @@ module FastRuby
 
             if (pframe->target_frame != pframe) {
               // raise exception
+              plocals->active = Qfalse;
               return Qnil;
             }
 
+            plocals->active = Qfalse;
             return plocals->return_value;
           }
 
@@ -1476,6 +1492,7 @@ module FastRuby
             stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
           }
 
+          plocals->active = Qfalse;
           return ret;
 
         }"
@@ -1529,6 +1546,7 @@ module FastRuby
 
           plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
+          plocals->active = Qtrue;
           plocals->pframe = LONG2FIX(&frame);
           plocals->call_frame = LONG2FIX(0);
 
@@ -1539,6 +1557,8 @@ module FastRuby
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
+            plocals->active = Qfalse;
+
             stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
 
             if (stack_chunk_instantiated) {
@@ -1581,6 +1601,7 @@ module FastRuby
             stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
           }
 
+          plocals->active = Qfalse;
           return __ret;
         }"
 
@@ -1852,6 +1873,7 @@ module FastRuby
         VALUE block_function_address;
         VALUE block_function_param;
         VALUE call_frame;
+        VALUE active;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -1911,6 +1933,7 @@ module FastRuby
             plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
 
             frame.plocals = plocals;
+            plocals->active = Qtrue;
             plocals->self = self;
             plocals->call_frame = LONG2FIX(0);
 
@@ -1923,6 +1946,7 @@ module FastRuby
               stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
             }
 
+            plocals->active = Qfalse;
             return Qnil;
           }
         "
