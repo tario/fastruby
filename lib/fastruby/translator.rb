@@ -416,19 +416,8 @@ module FastRuby
             frame.rescue = 0;
 
               // create a fake parent frame representing the lambda method frame and a fake locals scope
-              #{@locals_struct} fake_locals;
-              #{@frame_struct} fake_frame;
-
-              fake_frame.plocals = (void*)&fake_locals;
-              fake_frame.parent_frame = 0;
-
-              fake_locals.active = Qtrue;
-              fake_locals.pframe = LONG2FIX(&fake_frame);
-
-              VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
-              ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
-
-              frame.parent_frame = (void*)&fake_frame;
+              VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
+              ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
               if (setjmp(frame.jmp) != 0) {
 
@@ -436,21 +425,18 @@ module FastRuby
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
                   } else if (pframe->target_frame == (void*)-1) {
-                     rb_funcall(((typeof(fake_locals)*)(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
+                     rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
                      return Qnil;
                   } else {
                     if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
-                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                      ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
                       return pframe->return_value;
-                    } else if (pframe->target_frame == (void*)&fake_frame) {
-                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
-                      return fake_locals.return_value;
                     } else {
                       rb_raise(rb_eLocalJumpError, \"unexpected return\");
                     }
                   }
                 }
-                ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
                 return frame.return_value;
               }
 
@@ -459,8 +445,7 @@ module FastRuby
             #{str_arg_initialization}
             #{str_impl}
 
-            ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
-
+             ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
             return last_expression;
           }
         "
@@ -484,26 +469,15 @@ module FastRuby
             frame.rescue = 0;
 
               // create a fake parent frame representing the lambda method frame and a fake locals scope
-              #{@locals_struct} fake_locals;
-              #{@frame_struct} fake_frame;
-
-              fake_frame.plocals = (void*)&fake_locals;
-              fake_frame.parent_frame = 0;
-
-              fake_locals.active = Qtrue;
-              fake_locals.pframe = LONG2FIX(&fake_frame);
-
-              VALUE old_call_frame = ((typeof(fake_locals)*)(pframe->plocals))->call_frame;
-              ((typeof(fake_locals)*)(pframe->plocals))->call_frame = LONG2FIX(pframe);
-
-              frame.parent_frame = (void*)&fake_frame;
+              VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
+              ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
               if (setjmp(frame.jmp) != 0) {
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
                   } else if (pframe->target_frame == (void*)-1) {
-                     rb_funcall(((typeof(fake_locals)*)(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
+                     rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
                      return Qnil;
                   } else {
                     if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
@@ -511,7 +485,7 @@ module FastRuby
                       if (plocals->active == Qfalse) {
                         rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
                       } else {
-                        ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+                        ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
                         VALUE ex = rb_funcall(
                                 #{literal_value FastRuby::Context::UnwindFastrubyFrame},
                                 #{intern_num :new},
@@ -523,9 +497,6 @@ module FastRuby
 
                         rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
                       }
-                    } else if (pframe->target_frame == (void*)&fake_frame) {
-                      ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
-                      return fake_locals.return_value;
                     } else {
                       rb_raise(rb_eLocalJumpError, \"unexpected return\");
                     }
@@ -538,7 +509,7 @@ module FastRuby
             #{str_arg_initialization}
             #{str_impl}
 
-            ((typeof(fake_locals)*)(pframe->plocals))->call_frame = old_call_frame;
+            ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
 
             return last_expression;
           }
