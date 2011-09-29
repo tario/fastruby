@@ -55,6 +55,7 @@ module FastRuby
         VALUE last_error;
         void* stack_chunk;
         VALUE next_recv;
+        int targetted;
       }"
 
       @block_struct = "struct {
@@ -418,6 +419,7 @@ module FastRuby
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
+            frame.targetted = 0;
 
               // create a fake parent frame representing the lambda method frame and a fake locals scope
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
@@ -434,8 +436,12 @@ module FastRuby
                      return Qnil;
                   } else {
                     if (aux == FASTRUBY_TAG_RETURN) {
-                      ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                      return ((typeof(plocals))(pframe->plocals))->return_value;
+                      if (((typeof(pframe))(FIX2LONG(plocals->pframe)))->targetted == 1) {
+                        ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
+                        return ((typeof(plocals))(pframe->plocals))->return_value;
+                      } else {
+                        rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                      }
                     } else {
                       rb_raise(rb_eLocalJumpError, \"unexpected return\");
                     }
@@ -472,6 +478,7 @@ module FastRuby
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
+            frame.targetted = 0;
 
               // create a fake parent frame representing the lambda method frame and a fake locals scope
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
@@ -539,6 +546,7 @@ module FastRuby
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
+            frame.targetted = 0;
 
             int aux = setjmp(frame.jmp);
             if (aux != 0) {
@@ -601,6 +609,7 @@ module FastRuby
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
+            frame.targetted = 0;
 
             plocals = frame.plocals;
 
@@ -674,6 +683,7 @@ module FastRuby
                 call_frame.return_value = Qnil;
                 call_frame.exception = Qnil;
                 call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
+                call_frame.targetted = 0;
 
                 VALUE old_call_frame = plocals->call_frame;
                 plocals->call_frame = LONG2FIX(&call_frame);
@@ -759,6 +769,7 @@ module FastRuby
         call_frame.return_value = Qnil;
         call_frame.exception = Qnil;
         call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
+        call_frame.targetted = 0;
 
         VALUE old_call_frame = plocals->call_frame;
         plocals->call_frame = LONG2FIX(&call_frame);
@@ -858,6 +869,7 @@ module FastRuby
       inline_block "
         pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe));
         plocals->return_value = #{to_c(tree[1])};
+        ((typeof(pframe))FIX2LONG(plocals->pframe))->targetted = 1;
         longjmp(pframe->jmp, FASTRUBY_TAG_RETURN);
         return Qnil;
         "
@@ -1314,6 +1326,7 @@ module FastRuby
           frame.target_frame = &frame;
           frame.exception = Qnil;
           frame.rescue = 0;
+          frame.targetted = 0;
 
           if (rb_block_given_p()) {
             block_address = #{
@@ -1403,7 +1416,7 @@ module FastRuby
           frame.target_frame = &frame;
           frame.exception = Qnil;
           frame.rescue = 0;
-
+          frame.targetted = 0;
 
           int stack_chunk_instantiated = 0;
           VALUE rb_previous_stack_chunk = Qnil;
@@ -1499,6 +1512,7 @@ module FastRuby
           frame.target_frame = &frame;
           frame.exception = Qnil;
           frame.rescue = 0;
+          frame.targetted = 0;
 
           int stack_chunk_instantiated = 0;
           VALUE rb_previous_stack_chunk = Qnil;
@@ -1887,6 +1901,7 @@ module FastRuby
             frame.target_frame = &frame;
             frame.exception = Qnil;
             frame.rescue = 0;
+            frame.targetted = 0;
 
             int stack_chunk_instantiated = 0;
             VALUE rb_previous_stack_chunk = Qnil;
@@ -2156,6 +2171,7 @@ module FastRuby
             frame.rescue = 0;
             frame.last_error = Qnil;
             frame.stack_chunk = 0;
+            frame.targetted = 0;
 
             pframe = &frame;
 
@@ -2196,6 +2212,7 @@ module FastRuby
             frame.rescue = 0;
             frame.last_error = Qnil;
             frame.stack_chunk = 0;
+            frame.targetted = 0;
 
             pframe = &frame;
 
@@ -2271,6 +2288,7 @@ module FastRuby
         frame.target_frame = &frame;
         frame.exception = Qnil;
         frame.rescue = 0;
+        frame.targetted = 0;
 
         plocals->pframe = LONG2FIX(&frame);
 
@@ -2557,6 +2575,7 @@ module FastRuby
           frame.target_frame = &frame;
           frame.exception = Qnil;
           frame.rescue = #{rescued ? rescued : "parent_frame->rescue"};
+          frame.targetted = 0;
 
           plocals = frame.plocals;
           pframe = &frame;
