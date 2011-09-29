@@ -24,10 +24,9 @@ module FastRuby
 
   class Context
     class UnwindFastrubyFrame < Exception
-      def initialize(ex,target_frame,return_value)
+      def initialize(ex,target_frame)
         @ex = ex
         @target_frame = target_frame
-        @return_value = return_value
       end
     end
   end
