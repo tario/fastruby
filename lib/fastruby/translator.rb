@@ -423,7 +423,8 @@ module FastRuby
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
               ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
-              if (setjmp(frame.jmp) != 0) {
+              int aux = setjmp(frame.jmp);
+              if (aux != 0) {
 
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
@@ -432,9 +433,9 @@ module FastRuby
                      rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.exception);
                      return Qnil;
                   } else {
-                    if (pframe->target_frame == (void*)FIX2LONG(plocals->pframe)) {
+                    if (aux == FASTRUBY_TAG_RETURN) {
                       ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                      return pframe->return_value;
+                      return ((typeof(plocals))(pframe->plocals))->return_value;
                     } else {
                       rb_raise(rb_eLocalJumpError, \"unexpected return\");
                     }
