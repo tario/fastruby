@@ -66,6 +66,10 @@ module FastRuby
       extra_code << "
         #include \"node.h\"
 
+        #define FASTRUBY_TAG_RETURN 0x80
+        #define FASTRUBY_TAG_NEXT 0x81
+        #define FASTRUBY_TAG_BREAK 0x82
+
         #ifndef __INLINE_FASTRUBY_BASE
         #include \"#{FastRuby.fastruby_load_path}/../ext/fastruby_base/fastruby_base.inl\"
         #define __INLINE_FASTRUBY_BASE
@@ -472,7 +476,8 @@ module FastRuby
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
               ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
-              if (setjmp(frame.jmp) != 0) {
+              int aux = setjmp(frame.jmp);
+              if (aux != 0) {
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
@@ -489,9 +494,10 @@ module FastRuby
                         VALUE ex = rb_funcall(
                                 #{literal_value FastRuby::Context::UnwindFastrubyFrame},
                                 #{intern_num :new},
-                                2,
+                                3,
                                 pframe->exception,
-                                LONG2FIX(pframe->target_frame)
+                                LONG2FIX(pframe->target_frame),
+                                INT2FIX(aux)
                                 );
 
                         rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
@@ -533,7 +539,8 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
 
-            if (setjmp(frame.jmp) != 0) {
+            int aux = setjmp(frame.jmp);
+            if (aux != 0) {
               if (pframe->target_frame != pframe) {
                 if (pframe->target_frame == (void*)-3) {
                    return pframe->return_value;
@@ -542,9 +549,10 @@ module FastRuby
                 VALUE ex = rb_funcall(
                         #{literal_value FastRuby::Context::UnwindFastrubyFrame},
                         #{intern_num :new},
-                        2,
+                        3,
                         pframe->exception,
-                        LONG2FIX(pframe->target_frame)
+                        LONG2FIX(pframe->target_frame),
+                        INT2FIX(aux)
                         );
 
                 rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
@@ -595,7 +603,8 @@ module FastRuby
 
             plocals = frame.plocals;
 
-            if (setjmp(frame.jmp) != 0) {
+            int aux = setjmp(frame.jmp);
+            if (aux != 0) {
                 if (pframe->target_frame != pframe) {
                   if (pframe->target_frame == (void*)-3) {
                      return pframe->return_value;
@@ -604,7 +613,7 @@ module FastRuby
                   ((typeof(pframe))_parent_frame)->exception = pframe->exception;
                   ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
 
-                  longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+                  longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
                 }
 
             }
@@ -668,13 +677,14 @@ module FastRuby
                 VALUE old_call_frame = plocals->call_frame;
                 plocals->call_frame = LONG2FIX(&call_frame);
 
-                if (setjmp(call_frame.jmp) != 0) {
+                int aux = setjmp(call_frame.jmp);
+                if (aux != 0) {
                   #{@frame_struct}* pframe_ = (void*)pframe;
 
                   if (call_frame.target_frame != &call_frame) {
                     pframe_->target_frame = call_frame.target_frame;
                     pframe_->exception = call_frame.exception;
-                    longjmp(pframe_->jmp,1);
+                    longjmp(pframe_->jmp,aux);
                   }
 
                   plocals->call_frame = old_call_frame;
@@ -752,11 +762,12 @@ module FastRuby
         VALUE old_call_frame = plocals->call_frame;
         plocals->call_frame = LONG2FIX(&call_frame);
 
-                if (setjmp(call_frame.jmp) != 0) {
+                int aux = setjmp(call_frame.jmp);
+                if (aux != 0) {
                   if (call_frame.target_frame != &call_frame) {
                     old_pframe->target_frame = call_frame.target_frame;
                     old_pframe->exception = call_frame.exception;
-                    longjmp(old_pframe->jmp,1);
+                    longjmp(old_pframe->jmp,aux);
                   }
 
                   plocals->call_frame = old_call_frame;
@@ -846,7 +857,7 @@ module FastRuby
       inline_block "
         pframe->target_frame = ((typeof(pframe))FIX2LONG(plocals->pframe));
         plocals->return_value = #{to_c(tree[1])};
-        longjmp(pframe->jmp, 1);
+        longjmp(pframe->jmp, FASTRUBY_TAG_RETURN);
         return Qnil;
         "
     end
@@ -870,7 +881,7 @@ module FastRuby
          pframe->target_frame = target_frame_;
          target_frame_->return_value = value;
          pframe->exception = Qnil;
-         longjmp(pframe->jmp,1);"
+         longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);"
          )
       else
         inline_block("
@@ -890,7 +901,7 @@ module FastRuby
         inline_block("
             pframe->target_frame = (void*)-1;
             pframe->exception = #{literal_value LocalJumpError.exception};
-            longjmp(pframe->jmp,1);
+            longjmp(pframe->jmp,FASTRUBY_TAG_NEXT);
             return Qnil;
             ")
 
@@ -1121,9 +1132,10 @@ module FastRuby
                     VALUE ex = rb_funcall(
                             #{literal_value FastRuby::Context::UnwindFastrubyFrame},
                             #{intern_num :new},
-                            2,
+                            3,
                             frame.exception,
-                            LONG2FIX(frame.target_frame)
+                            LONG2FIX(frame.target_frame),
+                            INT2FIX(aux)
                             );
 
                     rb_funcall(self, #{intern_num :raise}, 1, ex);
@@ -1537,7 +1549,7 @@ module FastRuby
               ((typeof(pframe))_parent_frame)->exception = pframe->exception;
               ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
 
-              longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+              longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
             }
 
             return plocals->return_value;
@@ -2102,8 +2114,9 @@ module FastRuby
 
                 pframe->target_frame = (void*)FIX2LONG(rb_ivar_get(pframe->last_error, #{intern_num :@target_frame}));
                 pframe->exception = rb_ivar_get(pframe->last_error, #{intern_num :@ex});
+                int jump_tag_code = FIX2INT(rb_ivar_get(pframe->last_error, #{intern_num :@jump_tag_code}));
 
-                longjmp(pframe->jmp, 1);
+                longjmp(pframe->jmp, jump_tag_code);
                 return Qnil;
 
               } else {
@@ -2272,7 +2285,7 @@ module FastRuby
             // raise exception
             ((typeof(pframe))_parent_frame)->exception = pframe->exception;
             ((typeof(pframe))_parent_frame)->target_frame = pframe->target_frame;
-            longjmp(((typeof(pframe))_parent_frame)->jmp,1);
+            longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
           }
 
           return plocals->return_value;
@@ -2561,7 +2574,7 @@ module FastRuby
               pframe->exception = original_frame->exception;
               pframe->target_frame = original_frame->target_frame;
 
-              longjmp(pframe->jmp,1);
+              longjmp(pframe->jmp,aux);
             }
 
             return last_expression;
