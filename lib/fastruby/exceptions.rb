@@ -24,8 +24,7 @@ module FastRuby
 
   class Context
     class UnwindFastrubyFrame < Exception
-      def initialize(ex,target_frame,jump_tag_code)
-        @ex = ex
+      def initialize(target_frame,jump_tag_code)
         @target_frame = target_frame
         @jump_tag_code = jump_tag_code;
       end
