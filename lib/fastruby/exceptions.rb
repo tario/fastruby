@@ -21,12 +21,4 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class TypeMismatchAssignmentException < Exception
   end
-
-  class Context
-    class UnwindFastrubyFrame < Exception
-      def initialize(jump_tag_code)
-        @jump_tag_code = jump_tag_code;
-      end
-    end
-  end
 end

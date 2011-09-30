@@ -69,6 +69,7 @@ module FastRuby
         #define FASTRUBY_TAG_NEXT 0x81
         #define FASTRUBY_TAG_BREAK 0x82
         #define FASTRUBY_TAG_RAISE 0x83
+        #define TAG_RAISE 0x6
 
         #ifndef __INLINE_FASTRUBY_BASE
         #include \"#{FastRuby.fastruby_load_path}/../ext/fastruby_base/fastruby_base.inl\"
@@ -440,14 +441,7 @@ module FastRuby
                           rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
                         } else {
                           ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                          VALUE ex = rb_funcall(
-                                  #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                                  #{intern_num :new},
-                                  1,
-                                  INT2FIX(aux)
-                                  );
-
-                          rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                          rb_jump_tag(aux);
                         }
                       } else {
                         rb_raise(rb_eLocalJumpError, \"unexpected return\");
@@ -491,14 +485,7 @@ module FastRuby
                   return pframe->thread_data->accumulator;
                 }
 
-                VALUE ex = rb_funcall(
-                        #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                        #{intern_num :new},
-                        1,
-                        INT2FIX(aux)
-                        );
-
-                rb_funcall(plocals->self, #{intern_num :raise}, 1, ex);
+                rb_jump_tag(aux);
                 return frame.return_value;
             }
 
@@ -1063,14 +1050,7 @@ module FastRuby
                 }
 
                 if (frame.targetted == 0) {
-                    VALUE ex = rb_funcall(
-                            #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                            #{intern_num :new},
-                            1,
-                            INT2FIX(aux)
-                            );
-
-                    rb_funcall(self, #{intern_num :raise}, 1, ex);
+                    rb_jump_tag(aux);
                 }
 
                 return Qnil;
@@ -2040,29 +2020,6 @@ module FastRuby
     end
 
     def protected_block(inner_code, repass_var = nil, nolocals = false)
-      wrapper_code = "
-         if (pframe->last_error != Qnil) {
-              if (CLASS_OF(pframe->last_error)==#{literal_value FastRuby::Context::UnwindFastrubyFrame}) {
-                #{@frame_struct} *pframe = (void*)param;
-
-                int jump_tag_code = FIX2INT(rb_ivar_get(pframe->last_error, #{intern_num :@jump_tag_code}));
-
-                longjmp(pframe->jmp, jump_tag_code);
-                return Qnil;
-
-              } else {
-
-                // raise emulation
-                  #{@frame_struct} *pframe = (void*)param;
-                  pframe->thread_data->exception = pframe->last_error;
-                  longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-                  return Qnil;
-              }
-
-          }
-      "
-
-
       body = nil
       rescue_args = nil
       if repass_var
@@ -2096,15 +2053,7 @@ module FastRuby
               if (frame.targetted == 1) {
                 return frame.return_value;
               } else {
-
-                VALUE ex = rb_funcall(
-                    #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                    #{intern_num :new},
-                    1,
-                    INT2FIX(aux)
-                    );
-
-                rb_funcall(Qnil,#{intern_num :raise},1,ex);
+                rb_jump_tag(aux);
               }
             }
 
@@ -2147,15 +2096,7 @@ module FastRuby
               if (frame.targetted == 1) {
                 return frame.return_value;
               } else {
-
-                VALUE ex = rb_funcall(
-                    #{literal_value FastRuby::Context::UnwindFastrubyFrame},
-                    #{intern_num :new},
-                    1,
-                    INT2FIX(aux)
-                    );
-
-                rb_funcall(Qnil,#{intern_num :raise},1,ex);
+                rb_jump_tag(aux);
               }
             }
 
@@ -2177,14 +2118,28 @@ module FastRuby
 
       inline_block("
         pframe->last_error = Qnil;
-        VALUE result = #{rescue_code};
+        int state;
+        VALUE result = rb_protect(#{body},#{rescue_args},&state);
 
-        #{wrapper_code}
+        if (state != 0) {
+          if (state < 0x80) {
+
+            if (state == TAG_RAISE) {
+                // raise emulation
+                pframe->thread_data->exception = rb_eval_string(\"$!\");
+                longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+                return Qnil;
+            } else {
+              rb_jump_tag(state);
+            }
+          } else {
+            longjmp(pframe->jmp, state);
+          }
+
+        }
 
         return result;
         ", repass_var, nolocals)
-
-
     end
 
 
