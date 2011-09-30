@@ -20,7 +20,6 @@ struct STACKCHUNK {
 };
 
 struct FASTRUBYTHREADDATA {
-	void* target_frame;
 	VALUE exception;
 };
 
@@ -230,21 +229,20 @@ static inline void fastruby_thread_data_mark(struct FASTRUBYTHREADDATA* thread_d
 
 static inline VALUE rb_thread_data_create() {
 	struct FASTRUBYTHREADDATA* thread_data;
-	
+
 	VALUE ret = Data_Make_Struct(rb_cFastRubyThreadData,struct FASTRUBYTHREADDATA,fastruby_thread_data_mark,0,thread_data);
-	
+
 	thread_data->exception = Qnil;
-	thread_data->target_frame = 0;
-	
+
 	return ret;
 }
 
 static inline struct FASTRUBYTHREADDATA* rb_current_thread_data() {
 	VALUE rb_thread = rb_thread_current();
 	VALUE rb_thread_data = rb_thread_local_aref(rb_thread,id_fastruby_thread_data);
-	
+
 	struct FASTRUBYTHREADDATA* thread_data = 0;
-	
+
 	if (rb_thread_data == Qnil) {
 		rb_thread_data = rb_thread_data_create();
 		rb_thread_local_aset(rb_thread,id_fastruby_thread_data,rb_thread_data);
@@ -259,7 +257,7 @@ static void init_stack_chunk() {
 	rb_mFastRuby = rb_define_module("FastRuby");
 	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
 	rb_cFastRubyThreadData = rb_define_class_under(rb_mFastRuby, "ThreadData", rb_cObject);
-	
+
 	id_fastruby_thread_data = rb_intern("fastruby_thread_data");
 
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
