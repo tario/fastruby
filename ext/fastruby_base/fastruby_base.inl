@@ -22,11 +22,9 @@ struct STACKCHUNK {
 struct FASTRUBYTHREADDATA {
 	VALUE exception;
 	VALUE accumulator;
-};
-
-struct STACKCHUNKREFERENCE {
 	VALUE rb_stack_chunk;
 };
+
 
 static inline void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	// initialize pointers with zeros
@@ -176,57 +174,11 @@ static inline VALUE rb_stack_chunk_alloc(VALUE self, VALUE rb_size) {
 	return self;
 }
 
-static inline struct STACKCHUNKREFERENCE* stack_chunk_reference_initialize(struct STACKCHUNKREFERENCE *scr) {
-	scr->rb_stack_chunk = Qnil;
-	return scr;
-}
-
-static inline void stack_chunk_reference_assign(struct STACKCHUNKREFERENCE* scr, VALUE value) {
-	scr->rb_stack_chunk = value;
-}
-
-static inline VALUE stack_chunk_reference_retrieve(struct STACKCHUNKREFERENCE* scr) {
-	return scr->rb_stack_chunk;
-}
-
-static inline void stack_chunk_reference_mark(struct STACKCHUNKREFERENCE* scr) {
-	rb_gc_mark(scr->rb_stack_chunk);
-}
-
-static inline void stack_chunk_reference_free(struct STACKCHUNKREFERENCE* scr) {
-	free(scr);
-}
-
-static inline VALUE rb_stack_chunk_reference_assign(VALUE self, VALUE value) {
-	struct STACKCHUNKREFERENCE* scr;
-	Data_Get_Struct(self,struct STACKCHUNKREFERENCE,scr);
-
-	scr->rb_stack_chunk = value;
-	return scr->rb_stack_chunk;
-}
-
-static inline VALUE rb_stack_chunk_reference_retrieve(VALUE self) {
-	struct STACKCHUNKREFERENCE* scr;
-	Data_Get_Struct(self,struct STACKCHUNKREFERENCE,scr);
-
-	return scr->rb_stack_chunk;
-}
-
-static inline VALUE rb_stack_chunk_reference_create() {
-	// alloc memory for struct
-	struct STACKCHUNKREFERENCE* scr;
-
-	// make ruby object to wrap the stack and let the ruby GC do his work
-	VALUE ret = Data_Make_Struct(rb_cStackChunkReference,struct STACKCHUNKREFERENCE,stack_chunk_reference_mark,stack_chunk_reference_free,scr);
-
-	stack_chunk_reference_initialize(scr);
-
-	return ret;
-}
 
 static inline void fastruby_thread_data_mark(struct FASTRUBYTHREADDATA* thread_data) {
 	rb_gc_mark(thread_data->exception);
 	rb_gc_mark(thread_data->accumulator);
+	rb_gc_mark(thread_data->rb_stack_chunk);
 }
 
 static inline VALUE rb_thread_data_create() {
@@ -236,6 +188,7 @@ static inline VALUE rb_thread_data_create() {
 
 	thread_data->exception = Qnil;
 	thread_data->accumulator = Qnil;
+	thread_data->rb_stack_chunk = Qnil;
 
 	return ret;
 }
@@ -265,11 +218,5 @@ static void init_stack_chunk() {
 
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
 	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
-
-	rb_cStackChunkReference = rb_define_class_under(rb_mFastRuby, "StackChunkReference", rb_cObject);
-
-	rb_define_singleton_method(rb_cStackChunkReference, "create", rb_stack_chunk_reference_create,0);
-	rb_define_method(rb_cStackChunkReference, "stack_chunk=", rb_stack_chunk_reference_assign,1);
-	rb_define_method(rb_cStackChunkReference, "stack_chunk", rb_stack_chunk_reference_retrieve, 0);
 }
 

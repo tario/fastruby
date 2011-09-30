@@ -51,7 +51,6 @@ module FastRuby
         VALUE return_value;
         int rescue;
         VALUE last_error;
-        void* stack_chunk;
         VALUE next_recv;
         int targetted;
         struct FASTRUBYTHREADDATA* thread_data;
@@ -134,55 +133,6 @@ module FastRuby
 /*
        #{caller.join("\n")}
 */
-
-        "
-        extra_code << "static struct STACKCHUNKREFRENCE* get_stack_chunk_reference_from_context() {
-            struct STACKCHUNKREFERENCE* stack_chunk_reference;
-            VALUE current_thread = rb_thread_current();
-            VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
-            if (rb_stack_chunk_reference == Qnil) {
-              rb_stack_chunk_reference = rb_stack_chunk_reference_create();
-              rb_ivar_set(current_thread,#{intern_num :_fastruby_stack_chunk_reference},rb_stack_chunk_reference);
-            }
-
-            Data_Get_Struct(rb_stack_chunk_reference,struct STACKCHUNKREFERENCE,stack_chunk_reference);
-
-            return (void*)stack_chunk_reference;
-        }
-
-        static struct STACKCHUNK* get_stack_chunk_from_context(
-                  struct STACKCHUNKREFERENCE** stack_chunk_reference,
-                  VALUE* rb_stack_chunk
-              ) {
-          struct STACKCHUNK* stack_chunk = 0;
-          *stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
-          *rb_stack_chunk = stack_chunk_reference_retrieve(*stack_chunk_reference);
-          if (*rb_stack_chunk != Qnil) {
-            Data_Get_Struct(*rb_stack_chunk,void,stack_chunk);
-          }
-
-          return stack_chunk;
-        }
-
-        static struct STACKCHUNK* create_stack_chunk_from_context(
-              struct STACKCHUNKREFERENCE** stack_chunk_reference,
-              VALUE* rb_stack_chunk_p
-          ) {
-
-            struct STACKCHUNK* stack_chunk;
-            VALUE rb_stack_chunk = rb_stack_chunk_create(Qnil);
-
-            if (*stack_chunk_reference == 0) {
-              *stack_chunk_reference = (void*)get_stack_chunk_reference_from_context();
-            }
-
-            stack_chunk_reference_assign(*stack_chunk_reference, rb_stack_chunk);
-            Data_Get_Struct(rb_stack_chunk,void,stack_chunk);
-
-            *rb_stack_chunk_p = rb_stack_chunk;
-
-            return stack_chunk;
-        }
 
         "
       end
@@ -373,14 +323,10 @@ module FastRuby
               VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
 
               // freeze all stacks
-              VALUE current_thread = rb_thread_current();
-              VALUE rb_stack_chunk_reference = rb_ivar_get(current_thread,#{intern_num :_fastruby_stack_chunk_reference});
+              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
 
-              if (rb_stack_chunk_reference != Qnil) {
-                struct STACKCHUNKREFERENCE* stack_chunk_reference;
-                Data_Get_Struct(rb_stack_chunk_reference, struct STACKCHUNKREFERENCE, stack_chunk_reference);
-
-                VALUE rb_stack_chunk = stack_chunk_reference_retrieve(stack_chunk_reference);
+              if (thread_data != 0) {
+                VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
 
                 // add reference to stack chunk to lambda object
                 rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
@@ -413,7 +359,6 @@ module FastRuby
             #{@locals_struct} *plocals = (void*)_plocals;
 
             frame.plocals = plocals;
-            frame.stack_chunk = 0;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.rescue = 0;
@@ -471,7 +416,6 @@ module FastRuby
             #{@locals_struct} *plocals = (void*)_plocals;
 
             frame.plocals = plocals;
-            frame.stack_chunk = 0;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.rescue = 0;
@@ -534,7 +478,6 @@ module FastRuby
             #{@locals_struct} *plocals = (void*)_plocals;
 
             frame.plocals = plocals;
-            frame.stack_chunk = 0;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.rescue = 0;
@@ -594,7 +537,6 @@ module FastRuby
 
             frame.plocals = (void*)_locals;
             frame.parent_frame = parent_frame;
-            frame.stack_chunk = parent_frame->stack_chunk;
             frame.return_value = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
@@ -666,7 +608,6 @@ module FastRuby
                 call_frame.parent_frame = (void*)pframe;
                 call_frame.plocals = plocals;
                 call_frame.return_value = Qnil;
-                call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
                 call_frame.targetted = 0;
                 call_frame.thread_data = rb_current_thread_data();
 
@@ -749,7 +690,6 @@ module FastRuby
         call_frame.parent_frame = (void*)pframe;
         call_frame.plocals = plocals;
         call_frame.return_value = Qnil;
-        call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
         call_frame.targetted = 0;
         call_frame.thread_data = old_pframe->thread_data;
         if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
@@ -1089,13 +1029,11 @@ module FastRuby
                 VALUE return_value;
                 int rescue;
                 VALUE last_error;
-                void* stack_chunk;
                 VALUE next_recv;
                 int targetted;
                 struct FASTRUBYTHREADDATA* thread_data;
               } frame;
 
-              frame.stack_chunk = 0;
               frame.parent_frame = 0;
               frame.rescue = 0;
               frame.return_value = Qnil;
@@ -1300,7 +1238,6 @@ module FastRuby
           void* block_address = 0;
           VALUE block_param = Qnil;
 
-          frame.stack_chunk = 0;
           frame.plocals = 0;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
@@ -1390,34 +1327,38 @@ module FastRuby
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
 
-          frame.stack_chunk = 0;
           frame.parent_frame = 0;
           frame.return_value = Qnil;
           frame.rescue = 0;
           frame.targetted = 0;
           frame.thread_data = rb_current_thread_data();
 
+
           int stack_chunk_instantiated = 0;
           VALUE rb_previous_stack_chunk = Qnil;
-          VALUE current_thread = rb_thread_current();
-          VALUE rb_stack_chunk = Qnil;
-          struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+          VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
+          struct STACKCHUNK* stack_chunk = 0;
 
-          if (frame.stack_chunk == 0) {
-            frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          if (rb_stack_chunk != Qnil) {
+            Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
 
-          if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+          if (stack_chunk == 0 || (stack_chunk == 0 ? 0 : stack_chunk_frozen(stack_chunk)) ) {
             rb_previous_stack_chunk = rb_stack_chunk;
             rb_gc_register_address(&rb_stack_chunk);
             stack_chunk_instantiated = 1;
 
-            frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            rb_stack_chunk = rb_stack_chunk_create(Qnil);
+            frame.thread_data->rb_stack_chunk = rb_stack_chunk;
+
+            rb_ivar_set(rb_stack_chunk, #{intern_num :_parent_stack_chunk}, rb_previous_stack_chunk);
+
+            Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
 
-          int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+          int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
 
-          plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           plocals->active = Qtrue;
           plocals->pframe = LONG2FIX(&frame);
           frame.plocals = plocals;
@@ -1428,11 +1369,11 @@ module FastRuby
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
-            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+            stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
             if (stack_chunk_instantiated) {
               rb_gc_unregister_address(&rb_stack_chunk);
-              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+              frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
 
             plocals->active = Qfalse;
@@ -1450,11 +1391,11 @@ module FastRuby
           plocals->call_frame = LONG2FIX(0);
 
           VALUE ret = #{to_c impl_tree};
-          stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+          stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
           if (stack_chunk_instantiated) {
             rb_gc_unregister_address(&rb_stack_chunk);
-            stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+            frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
           }
 
           plocals->active = Qfalse;
@@ -1480,7 +1421,6 @@ module FastRuby
           #{@frame_struct} *pframe;
 
           frame.parent_frame = (void*)_parent_frame;
-          frame.stack_chunk = ((typeof(pframe))_parent_frame)->stack_chunk;
           frame.return_value = Qnil;
           frame.rescue = 0;
           frame.targetted = 0;
@@ -1489,28 +1429,32 @@ module FastRuby
 
           int stack_chunk_instantiated = 0;
           VALUE rb_previous_stack_chunk = Qnil;
-          VALUE current_thread = rb_thread_current();
-          VALUE rb_stack_chunk = Qnil;
-          struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+          VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
+          struct STACKCHUNK* stack_chunk = 0;
 
-          if (frame.stack_chunk == 0) {
-            frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+          if (rb_stack_chunk != Qnil) {
+            Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
 
-          if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+          if (stack_chunk == 0 || (stack_chunk == 0 ? 0 : stack_chunk_frozen(stack_chunk)) ) {
             rb_previous_stack_chunk = rb_stack_chunk;
             rb_gc_register_address(&rb_stack_chunk);
             stack_chunk_instantiated = 1;
 
-            frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            rb_stack_chunk = rb_stack_chunk_create(Qnil);
+            frame.thread_data->rb_stack_chunk = rb_stack_chunk;
+
+            rb_ivar_set(rb_stack_chunk, #{intern_num :_parent_stack_chunk}, rb_previous_stack_chunk);
+
+            Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
 
 
           #{@locals_struct} *plocals;
 
-          int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+          int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
 
-          plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
           plocals->active = Qtrue;
           plocals->pframe = LONG2FIX(&frame);
@@ -1525,11 +1469,11 @@ module FastRuby
           if (aux != 0) {
             plocals->active = Qfalse;
 
-            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+            stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
             if (stack_chunk_instantiated) {
               rb_gc_unregister_address(&rb_stack_chunk);
-              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+              frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
 
             if (pframe->targetted == 0) {
@@ -1555,11 +1499,11 @@ module FastRuby
           }
 
           VALUE __ret = #{to_c impl_tree};
-          stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+          stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
           if (stack_chunk_instantiated) {
             rb_gc_unregister_address(&rb_stack_chunk);
-            stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+            frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
           }
 
           plocals->active = Qfalse;
@@ -1866,7 +1810,6 @@ module FastRuby
             typeof(&frame) pframe = &frame;
             #{@locals_struct} *plocals;
 
-            frame.stack_chunk = 0;
             frame.parent_frame = 0;
             frame.return_value = Qnil;
             frame.rescue = 0;
@@ -1875,25 +1818,29 @@ module FastRuby
 
             int stack_chunk_instantiated = 0;
             VALUE rb_previous_stack_chunk = Qnil;
-            VALUE current_thread = rb_thread_current();
-            VALUE rb_stack_chunk = Qnil;
-            struct STACKCHUNKREFERENCE* stack_chunk_reference = 0;
+            VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
+            struct STACKCHUNK* stack_chunk = 0;
 
-            if (frame.stack_chunk == 0) {
-              frame.stack_chunk = get_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+            if (rb_stack_chunk != Qnil) {
+              Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
             }
 
-            if (frame.stack_chunk == 0 || (frame.stack_chunk == 0 ? 0 : stack_chunk_frozen(frame.stack_chunk)) ) {
+            if (stack_chunk == 0 || (stack_chunk == 0 ? 0 : stack_chunk_frozen(stack_chunk)) ) {
               rb_previous_stack_chunk = rb_stack_chunk;
               rb_gc_register_address(&rb_stack_chunk);
               stack_chunk_instantiated = 1;
 
-              frame.stack_chunk = create_stack_chunk_from_context(&stack_chunk_reference,&rb_stack_chunk);
+              rb_stack_chunk = rb_stack_chunk_create(Qnil);
+              frame.thread_data->rb_stack_chunk = rb_stack_chunk;
+
+              rb_ivar_set(rb_stack_chunk, #{intern_num :_parent_stack_chunk}, rb_previous_stack_chunk);
+
+              Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
             }
 
-            int previous_stack_position = stack_chunk_get_current_position(frame.stack_chunk);
+            int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
 
-            plocals = (typeof(plocals))stack_chunk_alloc(frame.stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+            plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
 
             frame.plocals = plocals;
             plocals->active = Qtrue;
@@ -1902,11 +1849,11 @@ module FastRuby
 
             #{to_c tree};
 
-            stack_chunk_set_current_position(frame.stack_chunk, previous_stack_position);
+            stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
             if (stack_chunk_instantiated) {
               rb_gc_unregister_address(&rb_stack_chunk);
-              stack_chunk_reference_assign(stack_chunk_reference, rb_previous_stack_chunk);
+              frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
 
             plocals->active = Qfalse;
@@ -2131,7 +2078,6 @@ module FastRuby
             frame.return_value = Qnil;
             frame.rescue = 0;
             frame.last_error = Qnil;
-            frame.stack_chunk = 0;
             frame.targetted = 0;
             frame.thread_data = parent_frame->thread_data;
             if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
@@ -2183,7 +2129,6 @@ module FastRuby
             frame.return_value = Qnil;
             frame.rescue = 0;
             frame.last_error = Qnil;
-            frame.stack_chunk = 0;
             frame.targetted = 0;
             frame.thread_data = parent_frame->thread_data;
             if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
@@ -2267,7 +2212,6 @@ module FastRuby
 
         frame.plocals = plocals;
         frame.parent_frame = (void*)_parent_frame;
-        frame.stack_chunk = ((typeof(pframe))_parent_frame)->stack_chunk;
         frame.return_value = Qnil;
         frame.rescue = 0;
         frame.targetted = 0;
@@ -2550,7 +2494,6 @@ module FastRuby
 
           parent_frame = (void*)param;
 
-          frame.stack_chunk = parent_frame->stack_chunk;
           frame.parent_frame = (void*)param;
           frame.plocals = parent_frame->plocals;
           frame.rescue = #{rescued ? rescued : "parent_frame->rescue"};
