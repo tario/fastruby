@@ -1897,6 +1897,13 @@ module FastRuby
       end
     end
 
+    def to_c_for(tree)
+      alter_tree = tree.dup
+      alter_tree[0] = :iter
+      alter_tree[1] = [:call, alter_tree[1], :each, [:arglist]]
+      to_c alter_tree
+    end
+
     def to_c_while(tree)
       inline_block("
           while (#{to_c tree[1]}) {
