@@ -56,6 +56,7 @@ module FastRuby
         void* stack_chunk;
         VALUE next_recv;
         int targetted;
+        struct FASTRUBYTHREADDATA* thread_data;
       }"
 
       @block_struct = "struct {
@@ -420,6 +421,7 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
+            frame.thread_data = rb_current_thread_data();
 
               // create a fake parent frame representing the lambda method frame and a fake locals scope
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
@@ -479,6 +481,7 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
+            frame.thread_data = rb_current_thread_data();
 
               // create a fake parent frame representing the lambda method frame and a fake locals scope
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
@@ -547,6 +550,7 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
+            frame.thread_data = rb_current_thread_data();
 
             int aux = setjmp(frame.jmp);
             if (aux != 0) {
@@ -610,6 +614,8 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
+            frame.thread_data = parent_frame->thread_data;
+            if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
             plocals = frame.plocals;
 
@@ -684,6 +690,7 @@ module FastRuby
                 call_frame.exception = Qnil;
                 call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
                 call_frame.targetted = 0;
+                call_frame.thread_data = rb_current_thread_data();
 
                 VALUE old_call_frame = plocals->call_frame;
                 plocals->call_frame = LONG2FIX(&call_frame);
@@ -770,6 +777,8 @@ module FastRuby
         call_frame.exception = Qnil;
         call_frame.stack_chunk = ((typeof(&call_frame))pframe)->stack_chunk;
         call_frame.targetted = 0;
+        call_frame.thread_data = old_pframe->thread_data;
+        if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
 
         VALUE old_call_frame = plocals->call_frame;
         plocals->call_frame = LONG2FIX(&call_frame);
@@ -1327,6 +1336,7 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
           frame.targetted = 0;
+          frame.thread_data = rb_current_thread_data();
 
           if (rb_block_given_p()) {
             block_address = #{
@@ -1417,6 +1427,7 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
           frame.targetted = 0;
+          frame.thread_data = rb_current_thread_data();
 
           int stack_chunk_instantiated = 0;
           VALUE rb_previous_stack_chunk = Qnil;
@@ -1513,6 +1524,8 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = 0;
           frame.targetted = 0;
+          frame.thread_data = ((typeof(pframe))_parent_frame)->thread_data;
+          if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
           int stack_chunk_instantiated = 0;
           VALUE rb_previous_stack_chunk = Qnil;
@@ -1902,6 +1915,7 @@ module FastRuby
             frame.exception = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
+            frame.thread_data = rb_current_thread_data();
 
             int stack_chunk_instantiated = 0;
             VALUE rb_previous_stack_chunk = Qnil;
@@ -2172,6 +2186,8 @@ module FastRuby
             frame.last_error = Qnil;
             frame.stack_chunk = 0;
             frame.targetted = 0;
+            frame.thread_data = parent_frame->thread_data;
+            if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
             pframe = &frame;
 
@@ -2213,6 +2229,8 @@ module FastRuby
             frame.last_error = Qnil;
             frame.stack_chunk = 0;
             frame.targetted = 0;
+            frame.thread_data = parent_frame->thread_data;
+            if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
             pframe = &frame;
 
@@ -2289,6 +2307,8 @@ module FastRuby
         frame.exception = Qnil;
         frame.rescue = 0;
         frame.targetted = 0;
+        frame.thread_data = ((typeof(pframe))_parent_frame)->thread_data;
+        if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
         plocals->pframe = LONG2FIX(&frame);
 
@@ -2576,6 +2596,8 @@ module FastRuby
           frame.exception = Qnil;
           frame.rescue = #{rescued ? rescued : "parent_frame->rescue"};
           frame.targetted = 0;
+          frame.thread_data = parent_frame->thread_data;
+          if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
           plocals = frame.plocals;
           pframe = &frame;
