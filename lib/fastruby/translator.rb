@@ -429,7 +429,7 @@ module FastRuby
                 if (aux == FASTRUBY_TAG_BREAK) {
                   return frame.return_value;
                 } else if (aux == FASTRUBY_TAG_NEXT) {
-                   return pframe->return_value;
+                   return pframe->thread_data->accumulator;
                 } else if (aux == FASTRUBY_TAG_RAISE) {
                    rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
                    return Qnil;
@@ -485,7 +485,7 @@ module FastRuby
               int aux = setjmp(frame.jmp);
               if (aux != 0) {
                     if (aux == FASTRUBY_TAG_NEXT) {
-                       return pframe->return_value;
+                       return pframe->thread_data->accumulator;
                     } else if (aux == FASTRUBY_TAG_RAISE) {
                        rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
                        return Qnil;
@@ -545,7 +545,7 @@ module FastRuby
             if (aux != 0) {
 
                 if (aux == FASTRUBY_TAG_NEXT) {
-                   return pframe->return_value;
+                  return pframe->thread_data->accumulator;
                 }
 
                 VALUE ex = rb_funcall(
@@ -607,7 +607,7 @@ module FastRuby
             if (aux != 0) {
                 if (pframe->targetted == 0) {
                   if (aux == FASTRUBY_TAG_NEXT) {
-                     return pframe->return_value;
+                    return pframe->thread_data->accumulator;
                   }
                   longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
                 }
@@ -888,7 +888,11 @@ module FastRuby
 
     def to_c_next(tree)
       if @on_block
-       "Qnil; pframe->return_value = #{tree[1] ? to_c(tree[1]) : "Qnil"}; longjmp(pframe->jmp,FASTRUBY_TAG_NEXT)"
+       inline_block "
+        pframe->thread_data->accumulator = #{tree[1] ? to_c(tree[1]) : "Qnil"};
+        longjmp(pframe->jmp,FASTRUBY_TAG_NEXT);
+        return Qnil;
+        "
       else
         inline_block("
             pframe->thread_data->exception = #{literal_value LocalJumpError.exception};

@@ -21,6 +21,7 @@ struct STACKCHUNK {
 
 struct FASTRUBYTHREADDATA {
 	VALUE exception;
+	VALUE accumulator;
 };
 
 struct STACKCHUNKREFERENCE {
@@ -225,6 +226,7 @@ static inline VALUE rb_stack_chunk_reference_create() {
 
 static inline void fastruby_thread_data_mark(struct FASTRUBYTHREADDATA* thread_data) {
 	rb_gc_mark(thread_data->exception);
+	rb_gc_mark(thread_data->accumulator);
 }
 
 static inline VALUE rb_thread_data_create() {
@@ -233,6 +235,7 @@ static inline VALUE rb_thread_data_create() {
 	VALUE ret = Data_Make_Struct(rb_cFastRubyThreadData,struct FASTRUBYTHREADDATA,fastruby_thread_data_mark,0,thread_data);
 
 	thread_data->exception = Qnil;
+	thread_data->accumulator = Qnil;
 
 	return ret;
 }
