@@ -3,8 +3,11 @@
 #include "env.h"
 
 VALUE rb_cStackChunk;
+VALUE rb_cFastRubyThreadData;
 VALUE rb_cStackChunkReference;
 VALUE rb_mFastRuby;
+
+ID id_fastruby_thread_data;
 
 #define PAGE_SIZE 0x1000
 #define NUM_PAGES 0x1000
@@ -14,6 +17,11 @@ struct STACKCHUNK {
 	VALUE* pages[NUM_PAGES];
 	int current_position;
 	int frozen;
+};
+
+struct FASTRUBYTHREADDATA {
+	void* target_frame;
+	VALUE exception;
 };
 
 struct STACKCHUNKREFERENCE {
@@ -216,10 +224,43 @@ static inline VALUE rb_stack_chunk_reference_create() {
 	return ret;
 }
 
+static inline void fastruby_thread_data_mark(struct FASTRUBYTHREADDATA* thread_data) {
+	rb_gc_mark(thread_data->exception);
+}
+
+static inline VALUE rb_thread_data_create() {
+	struct FASTRUBYTHREADDATA* thread_data;
+	
+	VALUE ret = Data_Make_Struct(rb_cFastRubyThreadData,struct FASTRUBYTHREADDATA,fastruby_thread_data_mark,0,thread_data);
+	
+	thread_data->exception = Qnil;
+	thread_data->target_frame = 0;
+	
+	return ret;
+}
+
+static inline struct FASTRUBYTHREADDATA* rb_current_thread_data() {
+	VALUE rb_thread = rb_thread_current();
+	VALUE rb_thread_data = rb_thread_local_aref(rb_thread,id_fastruby_thread_data);
+	
+	struct FASTRUBYTHREADDATA* thread_data = 0;
+	
+	if (rb_thread_data == Qnil) {
+		rb_thread_data = rb_thread_data_create();
+		rb_thread_local_aset(rb_thread,id_fastruby_thread_data,rb_thread_data);
+	}
+
+	Data_Get_Struct(rb_thread_data,struct FASTRUBYTHREADDATA,thread_data);
+	return thread_data;
+}
+
 static void init_stack_chunk() {
 
 	rb_mFastRuby = rb_define_module("FastRuby");
 	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
+	rb_cFastRubyThreadData = rb_define_class_under(rb_mFastRuby, "ThreadData", rb_cObject);
+	
+	id_fastruby_thread_data = rb_intern("fastruby_thread_data");
 
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
 	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
@@ -230,3 +271,4 @@ static void init_stack_chunk() {
 	rb_define_method(rb_cStackChunkReference, "stack_chunk=", rb_stack_chunk_reference_assign,1);
 	rb_define_method(rb_cStackChunkReference, "stack_chunk", rb_stack_chunk_reference_retrieve, 0);
 }
+
