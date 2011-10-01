@@ -141,10 +141,6 @@ module FastRuby
       end
     end
 
-    def on_block
-      yield
-    end
-
     def to_c(tree)
       return "Qnil" unless tree
       send("to_c_" + tree[0].to_s, tree);
