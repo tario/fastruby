@@ -437,4 +437,26 @@ describe FastRuby, "fastruby" do
     l.foo.should be == 222
    end
 
+  def self.argumentless_rescue(exceptionname)
+      fastruby "
+        class ::L15_#{exceptionname}
+          def foo
+            begin
+              raise #{exceptionname}
+            rescue
+            end
+          end
+        end
+      "
+
+    it "should argumentless rescue catch #{exceptionname}" do
+      l15 = eval("::L15_#{exceptionname}").new
+      lambda {
+        l15.foo
+      }.should_not raise_exception
+    end
+  end
+
+  argumentless_rescue("RuntimeError")
+
 end
