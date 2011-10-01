@@ -98,4 +98,18 @@ describe FastRuby, "fastruby retry statement" do
     ::WG3.new.foo.should be == 10
   end
 
+  class ::WG4
+    fastruby "
+      def foo
+        retry
+      end
+    "
+  end
+
+  it "should raise LocalJumpError when there is no block" do
+    lambda {
+    ::WG4.new.foo
+    }.should raise_error(LocalJumpError)
+  end
+
 end
