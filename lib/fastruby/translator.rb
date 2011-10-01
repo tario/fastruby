@@ -113,7 +113,7 @@ module FastRuby
          #{@frame_struct}* pframe;
          pframe = (typeof(pframe))_parent_frame;
 
-         return #{protected_block("rb_yield_splat(*(VALUE*)yield_args_p)","yield_args_p",true)};
+         return #{protected_block("rb_yield_splat(*(VALUE*)yield_args_p)",true,"yield_args_p",true)};
         }"
 
         extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
@@ -672,7 +672,7 @@ module FastRuby
                 block_func,
                 (VALUE)plocals);
 
-              "))
+              "), true)
             )
           };
         }
@@ -763,7 +763,7 @@ module FastRuby
           anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
         end
 
-      protected_block(ret)
+      protected_block(ret, false)
     end
 
     def to_c_block(tree)
@@ -1779,9 +1779,9 @@ module FastRuby
 
       else # else recvtype
         if argnum == 0
-          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", true, repass_var)
         else
-          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", repass_var)
+          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", true, repass_var)
         end
       end # if recvtype
     end
@@ -2087,7 +2087,7 @@ module FastRuby
       "rb_funcall(#{proced.__id__}, #{intern_num :call}, 1, #{parameter})"
     end
 
-    def protected_block(inner_code, repass_var = nil, nolocals = false)
+    def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       body = nil
       rescue_args = nil
       if repass_var
@@ -2176,20 +2176,7 @@ module FastRuby
         rescue_args = "(VALUE)pframe"
       end
 
-      rescue_code = "rb_rescue2(#{body},#{rescue_args},#{anonymous_function{|name| "
-        static VALUE #{name}(VALUE param, VALUE error) {
-            #{@frame_struct} *pframe = (void*)param;
-            pframe->last_error = error;
-          }
-      "}}
-      ,(VALUE)pframe, rb_eException,(VALUE)0)"
-
-      inline_block("
-        pframe->last_error = Qnil;
-        int state;
-        VALUE result = rb_protect(#{body},#{rescue_args},&state);
-
-        if (state != 0) {
+      wrapper_code = "        if (state != 0) {
           if (state < 0x80) {
 
             if (state == TAG_RAISE) {
@@ -2205,11 +2192,37 @@ module FastRuby
           }
 
         }
+        "
 
-        return result;
-        ", repass_var, nolocals)
+      rescue_code = "rb_protect(#{body},#{rescue_args},&state)"
+
+      if always_rescue
+        inline_block "
+          int state;
+          pframe->last_error = Qnil;
+          VALUE result = #{rescue_code};
+
+          #{wrapper_code}
+
+          return result;
+        ", repass_var, nolocals
+      else
+        inline_block "
+          VALUE result;
+          int state;
+          pframe->last_error = Qnil;
+
+          if (pframe->rescue) {
+            result = #{rescue_code};
+            #{wrapper_code}
+          } else {
+            return #{inner_code};
+          }
+
+          return result;
+        ", repass_var, nolocals
+      end
     end
-
 
     def func_frame
       "
@@ -2342,7 +2355,7 @@ module FastRuby
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
 
           return #{
-            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", "method_arguments"
+            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
             };
         }
         "
@@ -2360,17 +2373,17 @@ module FastRuby
 
           if (#{cruby_len} == -1) {
             return #{
-              protected_block "((VALUE(*)(int,VALUE*,VALUE))#{cruby_name})(#{args_tree.size-1}, ((VALUE*)method_arguments)+1,*((VALUE*)method_arguments));", "method_arguments"
+              protected_block "((VALUE(*)(int,VALUE*,VALUE))#{cruby_name})(#{args_tree.size-1}, ((VALUE*)method_arguments)+1,*((VALUE*)method_arguments));", false, "method_arguments"
               };
 
           } else if (#{cruby_len} == -2) {
             return #{
-              protected_block "((VALUE(*)(VALUE,VALUE))#{cruby_name})(*((VALUE*)method_arguments), rb_ary_new4(#{args_tree.size-1},((VALUE*)method_arguments)+1) );", "method_arguments"
+              protected_block "((VALUE(*)(VALUE,VALUE))#{cruby_name})(*((VALUE*)method_arguments), rb_ary_new4(#{args_tree.size-1},((VALUE*)method_arguments)+1) );", false, "method_arguments"
               };
 
           } else {
             return #{
-              protected_block "((VALUE(*)(#{value_cast}))#{cruby_name})(((VALUE*)method_arguments)[0] #{inprocstrargs});", "method_arguments"
+              protected_block "((VALUE(*)(#{value_cast}))#{cruby_name})(((VALUE*)method_arguments)[0] #{inprocstrargs});", false, "method_arguments"
               };
           }
         }
