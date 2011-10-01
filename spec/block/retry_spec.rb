@@ -78,4 +78,24 @@ describe FastRuby, "fastruby retry statement" do
     wg2.b.should be == 10
   end
 
+  class ::WG3
+    fastruby "
+      def foo
+        sum = 0
+        begin
+          sum = sum + 1
+          raise RuntimeError
+        rescue RuntimeError
+          retry if sum < 10
+        end
+
+        sum
+      end
+    "
+  end
+
+  it "should work with rescue" do
+    ::WG3.new.foo.should be == 10
+  end
+
 end
