@@ -830,7 +830,6 @@ module FastRuby
     end
 
     def to_c_retry(tree)
-      if @on_block
         inline_block(
          "
          typeof(pframe) target_frame_;
@@ -843,14 +842,6 @@ module FastRuby
          target_frame_->targetted = 1;
          longjmp(pframe->jmp,FASTRUBY_TAG_RETRY);"
         )
-      else
-        inline_block("
-            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
-            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
-            return Qnil;
-            ")
-
-      end
     end
 
     def to_c_redo(tree)
@@ -1680,7 +1671,8 @@ module FastRuby
         resbody_tree = tree[2]
         else_tree = tree[3]
 
-        frame(to_c(tree[1])+";","
+        frame_call(
+          frame(to_c(tree[1])+";","
           if (aux == FASTRUBY_TAG_RAISE) {
             if (CLASS_OF(frame.thread_data->exception) == #{to_c(resbody_tree[1][1])})
             {
@@ -1691,6 +1683,8 @@ module FastRuby
             }
           }
           ", else_tree ? to_c(else_tree) : nil, 1)
+
+          )
       end
     end
 
