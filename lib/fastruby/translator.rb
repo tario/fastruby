@@ -69,6 +69,7 @@ module FastRuby
         #define FASTRUBY_TAG_NEXT 0x81
         #define FASTRUBY_TAG_BREAK 0x82
         #define FASTRUBY_TAG_RAISE 0x83
+        #define FASTRUBY_TAG_REDO 0x84
         #define TAG_RAISE 0x6
 
         #ifndef __INLINE_FASTRUBY_BASE
@@ -376,6 +377,8 @@ module FastRuby
                   return frame.return_value;
                 } else if (aux == FASTRUBY_TAG_NEXT) {
                    return pframe->thread_data->accumulator;
+                } else if (aux == FASTRUBY_TAG_REDO) {
+                  // do nothing and let execute the block again
                 } else if (aux == FASTRUBY_TAG_RAISE) {
                    rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
                    return Qnil;
@@ -390,13 +393,12 @@ module FastRuby
                   } else {
                     rb_raise(rb_eLocalJumpError, \"unexpected return\");
                   }
+
+                  ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
+                  return frame.return_value;
+
                 }
-
-                ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                return frame.return_value;
               }
-
-
 
             #{str_arg_initialization}
             #{str_impl}
@@ -431,6 +433,8 @@ module FastRuby
               if (aux != 0) {
                     if (aux == FASTRUBY_TAG_NEXT) {
                        return pframe->thread_data->accumulator;
+                    } else if (aux == FASTRUBY_TAG_REDO) {
+                      // do nothing and let execute the block again
                     } else if (aux == FASTRUBY_TAG_RAISE) {
                        rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
                        return Qnil;
@@ -447,8 +451,6 @@ module FastRuby
                         rb_raise(rb_eLocalJumpError, \"unexpected return\");
                       }
                     }
-
-                rb_raise(rb_eLocalJumpError, \"break from proc-closure\");
               }
 
             #{str_arg_initialization}
@@ -483,10 +485,12 @@ module FastRuby
 
                 if (aux == FASTRUBY_TAG_NEXT) {
                   return pframe->thread_data->accumulator;
+                } else if (aux == FASTRUBY_TAG_REDO) {
+                  // do nothing and let execute the block again
+                } else {
+                  rb_jump_tag(aux);
+                  return frame.return_value;
                 }
-
-                rb_jump_tag(aux);
-                return frame.return_value;
             }
 
 
@@ -537,8 +541,11 @@ module FastRuby
                 if (pframe->targetted == 0) {
                   if (aux == FASTRUBY_TAG_NEXT) {
                     return pframe->thread_data->accumulator;
+                  } else if (aux == FASTRUBY_TAG_REDO) {
+                    // do nothing and let execute the block again
+                  } else {
+                    longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
                   }
-                  longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
                 }
 
             }
@@ -811,6 +818,13 @@ module FastRuby
             ")
 
       end
+    end
+
+    def to_c_redo(tree)
+       inline_block "
+        longjmp(pframe->jmp,FASTRUBY_TAG_REDO);
+        return Qnil;
+        "
     end
 
     def to_c_next(tree)
