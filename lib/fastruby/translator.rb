@@ -70,6 +70,7 @@ module FastRuby
         #define FASTRUBY_TAG_BREAK 0x82
         #define FASTRUBY_TAG_RAISE 0x83
         #define FASTRUBY_TAG_REDO 0x84
+        #define FASTRUBY_TAG_RETRY 0x85
         #define TAG_RAISE 0x6
 
         #ifndef __INLINE_FASTRUBY_BASE
@@ -616,8 +617,15 @@ module FastRuby
                     longjmp(pframe_->jmp,aux);
                   }
 
-                  plocals->call_frame = old_call_frame;
-                  return call_frame.return_value;
+                  if (aux == FASTRUBY_TAG_BREAK) {
+                    plocals->call_frame = old_call_frame;
+                    return call_frame.return_value;
+                  } else if (aux == FASTRUBY_TAG_RETRY ) {
+                    // do nothing and let the call execute again
+                  } else {
+                    plocals->call_frame = old_call_frame;
+                    return call_frame.return_value;
+                  }
                 }
 
                 // call to #{call_tree[2]}
@@ -697,8 +705,15 @@ module FastRuby
                     longjmp(old_pframe->jmp,aux);
                   }
 
-                  plocals->call_frame = old_call_frame;
-                  return call_frame.return_value;
+                  if (aux == FASTRUBY_TAG_BREAK) {
+                    plocals->call_frame = old_call_frame;
+                    return call_frame.return_value;
+                  } else if (aux == FASTRUBY_TAG_RETRY ) {
+                    // do nothing and let the call execute again
+                  } else {
+                    plocals->call_frame = old_call_frame;
+                    return call_frame.return_value;
+                  }
                 }
 
         VALUE ret = #{inner_code};
@@ -809,6 +824,30 @@ module FastRuby
          target_frame_->targetted = 1;
          pframe->thread_data->exception = Qnil;
          longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);"
+        )
+      else
+        inline_block("
+            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
+            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
+            return Qnil;
+            ")
+
+      end
+    end
+
+    def to_c_retry(tree)
+      if @on_block
+        inline_block(
+         "
+         typeof(pframe) target_frame_;
+         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
+
+         if (target_frame_ == 0) {
+           rb_raise(rb_eLocalJumpError, \"illegal break\");
+         }
+
+         target_frame_->targetted = 1;
+         longjmp(pframe->jmp,FASTRUBY_TAG_RETRY);"
         )
       else
         inline_block("
