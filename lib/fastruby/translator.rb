@@ -568,29 +568,7 @@ module FastRuby
         caller_code = nil
         convention_global_name = add_global_name("int",0)
 
-        if call_args_tree.size > 1
-          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
-
-          str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param, VALUE pframe) {
-                #{@block_struct} block;
-                #{@locals_struct} *plocals = (void*)param;
-
-                block.block_function_address = (void*)#{anonymous_function(&block_code)};
-                block.block_function_param = (void*)param;
-
-                // call to #{call_tree[2]}
-
-                return ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)pframe, #{str_called_code_args});
-              }
-            "
-            }
-
-        else
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param, VALUE pframe) {
+        call_frame_struct_code = "
                 #{@block_struct} block;
                 #{@locals_struct} *plocals = (void*)param;
 
@@ -613,20 +591,40 @@ module FastRuby
                 if (aux != 0) {
                   #{@frame_struct}* pframe_ = (void*)pframe;
 
-                  if (call_frame.targetted == 0) {
-                    longjmp(pframe_->jmp,aux);
-                  }
-
-                  if (aux == FASTRUBY_TAG_BREAK) {
-                    plocals->call_frame = old_call_frame;
-                    return call_frame.return_value;
-                  } else if (aux == FASTRUBY_TAG_RETRY ) {
+                  if (aux == FASTRUBY_TAG_RETRY ) {
                     // do nothing and let the call execute again
                   } else {
+                    if (call_frame.targetted == 0) {
+                      longjmp(pframe_->jmp,aux);
+                    }
+
                     plocals->call_frame = old_call_frame;
                     return call_frame.return_value;
                   }
                 }
+        "
+
+        if call_args_tree.size > 1
+          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
+
+          str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param, VALUE pframe) {
+                // call to #{call_tree[2]}
+                #{call_frame_struct_code}
+
+                VALUE ret = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
+                plocals->call_frame = old_call_frame;
+                return ret;
+              }
+            "
+            }
+
+        else
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param, VALUE pframe) {
+                #{call_frame_struct_code}
 
                 // call to #{call_tree[2]}
                 VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
