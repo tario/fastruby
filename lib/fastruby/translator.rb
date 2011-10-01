@@ -821,10 +821,18 @@ module FastRuby
     end
 
     def to_c_redo(tree)
-       inline_block "
-        longjmp(pframe->jmp,FASTRUBY_TAG_REDO);
-        return Qnil;
-        "
+      if @on_block
+         inline_block "
+          longjmp(pframe->jmp,FASTRUBY_TAG_REDO);
+          return Qnil;
+          "
+      else
+         inline_block "
+            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
+            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
+            return Qnil;
+          "
+      end
     end
 
     def to_c_next(tree)
