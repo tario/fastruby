@@ -1671,10 +1671,15 @@ module FastRuby
         resbody_tree = tree[2]
         else_tree = tree[3]
 
+        trapcode = "rb_eException";
+        if resbody_tree[1][1]
+          trapcode = to_c(resbody_tree[1][1])
+        end
+
         frame_call(
           frame(to_c(tree[1])+";","
           if (aux == FASTRUBY_TAG_RAISE) {
-            if (CLASS_OF(frame.thread_data->exception) == #{to_c(resbody_tree[1][1])})
+            if (rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)
             {
               // trap exception
               frame.targetted = 1;
