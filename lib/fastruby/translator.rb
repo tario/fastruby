@@ -727,7 +727,7 @@ module FastRuby
           plocals = (void*)pframe->plocals;
 
           if (FIX2LONG(plocals->block_function_address) == 0) {
-            rb_raise(rb_eLocalJumpError, \"no block given\");
+            #{_raise("rb_eLocalJumpError", "no block given")};
           } else {
             return ((VALUE(*)(int,VALUE*,VALUE,VALUE))FIX2LONG(plocals->block_function_address))(#{tree.size-1}, block_args, FIX2LONG(plocals->block_function_param), (VALUE)pframe);
           }
