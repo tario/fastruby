@@ -33,6 +33,6 @@ module FastRuby
   FastRuby.fastruby_script_path = File.expand_path(__FILE__)
   FastRuby.fastruby_load_path = File.expand_path(File.dirname(__FILE__))
 
-  VERSION = "0.0.10" unless defined? FastRuby::VERSION
+  VERSION = "0.0.11" unless defined? FastRuby::VERSION
 end
 
