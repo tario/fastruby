@@ -1,3 +1,9 @@
+0.0.10	retry support (exceptions and blocks)
+
+		redo support
+		
+		for each support
+
 0.0.9	Proc support
 
 		Enhanced lambda, proc and Proc.new hook by using nodes for method identification at runtime instead of method name
