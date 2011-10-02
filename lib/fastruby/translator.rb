@@ -1541,7 +1541,11 @@ module FastRuby
     end
 
     def to_c_gvar(tree)
-      "rb_gvar_get((struct global_entry*)#{global_entry(tree[1])})"
+      if (tree[1] == :$!)
+        "pframe->thread_data->exception"
+      else
+        "rb_gvar_get((struct global_entry*)#{global_entry(tree[1])})"
+      end
     end
 
     def to_c_gasgn(tree)
@@ -1679,6 +1683,8 @@ module FastRuby
               // trap exception
               frame.targetted = 1;
 
+              #{resbody_tree[1][2] ? to_c(resbody_tree[1][2]) : ""};
+
                #{to_c(resbody_tree[2])};
             }
           }
@@ -1711,11 +1717,19 @@ module FastRuby
         # raise code
         args = tree[3]
 
-        return inline_block("
-            pframe->thread_data->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},0);
-            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-            return Qnil;
-            ")
+        if args[2]
+          return inline_block("
+              pframe->thread_data->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},1,#{to_c args[2]});
+              longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+              return Qnil;
+              ")
+        else
+          return inline_block("
+              pframe->thread_data->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},0);
+              longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+              return Qnil;
+              ")
+        end
       end
 
       recv = tree[1]
