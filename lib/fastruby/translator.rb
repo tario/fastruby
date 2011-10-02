@@ -799,7 +799,6 @@ module FastRuby
     end
 
     def to_c_break(tree)
-      if @on_block
         inline_block(
          "
 
@@ -809,7 +808,9 @@ module FastRuby
          target_frame_ = (void*)FIX2LONG(plocals->call_frame);
 
          if (target_frame_ == 0) {
-           rb_raise(rb_eLocalJumpError, \"illegal break\");
+            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
+            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
+            return Qnil;
          }
 
          plocals->call_frame = LONG2FIX(0);
@@ -819,14 +820,6 @@ module FastRuby
          pframe->thread_data->exception = Qnil;
          longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);"
         )
-      else
-        inline_block("
-            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
-            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
-            return Qnil;
-            ")
-
-      end
     end
 
     def to_c_retry(tree)
