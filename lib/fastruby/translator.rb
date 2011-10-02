@@ -1579,15 +1579,17 @@ module FastRuby
         if klass
 
           verify_type_function = proc { |name| "
-            static VALUE #{name}(VALUE arg) {
-              if (CLASS_OF(arg)!=#{literal_value klass}) rb_raise(#{literal_value FastRuby::TypeMismatchAssignmentException}, \"Illegal assignment at runtime (type mismatch)\");
+            static VALUE #{name}(VALUE arg, void* pframe ) {
+              if (CLASS_OF(arg)!=#{literal_value klass}) {
+                #{_raise(literal_value(FastRuby::TypeMismatchAssignmentException), "Illegal assignment at runtime (type mismatch)")};
+              }
               return arg;
             }
           "
           }
 
 
-          "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(&verify_type_function)}(#{to_c tree[2]}))"
+          "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(&verify_type_function)}(#{to_c tree[2]},pframe))"
         else
           "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
         end
