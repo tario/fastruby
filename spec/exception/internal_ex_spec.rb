@@ -55,4 +55,32 @@ describe FastRuby, "fastruby" do
     llj2.a.should be == 1
   end
 
+  it "should trap FastRuby::TypeMismatchAssignmentException" do
+    fastruby "
+      class LLJ3
+        attr_accessor :a
+
+        def bar
+          a = 0
+          lvar_type(a,Fixnum)
+          a = 'wrong value'
+        end
+
+        def foo
+          bar # this will raise FastRuby::TypeMismatchAssignmentException
+        ensure
+          @a = 1
+        end
+      end
+    ", :validate_lvar_types => true
+
+    llj3 = LLJ3.new
+
+    lambda {
+      llj3.foo
+    }.should raise_error(FastRuby::TypeMismatchAssignmentException)
+
+    llj3.a.should be == 1
+  end
+
 end
