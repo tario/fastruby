@@ -309,4 +309,31 @@ describe FastRuby, "fastruby" do
   end
 
 
+  it "should trap 'TypeError" do
+    fastruby "
+      class LLJ2
+        attr_accessor :a
+
+        def bar
+          4::X
+        end
+
+        def foo
+          bar # this will raise TypeError
+        ensure
+          @a = 1
+        end
+      end
+    "
+
+    llj2 = LLJ2.new
+
+    lambda {
+      llj2.foo
+    }.should raise_error(TypeError)
+
+    llj2.a.should be == 1
+  end
+
+
 end
