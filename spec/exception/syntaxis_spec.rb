@@ -60,9 +60,9 @@ describe FastRuby, "fastruby" do
             end
              "
 
-      l = eval(random_name).new
-      l.foo.should be == 222
-     end
+    l = eval(random_name).new
+    l.foo.should be == 222
+   end
 
     def self.argumentless_rescue(exceptionname)
         fastruby "
@@ -85,5 +85,24 @@ describe FastRuby, "fastruby" do
     end
 
     argumentless_rescue("RuntimeError")
+
+  it "should read exception into local" do
+    fastruby "
+      class ::LLX1
+        def foo
+          begin
+            raise Exception,'message'
+          rescue Exception => a
+          end
+
+          a
+        end
+      end
+    "
+
+    llx1 = ::LLX1.new
+    llx1.foo.message.should be == "message"
+  end
+
 
 end
