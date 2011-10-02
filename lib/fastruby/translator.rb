@@ -836,7 +836,9 @@ module FastRuby
          target_frame_ = (void*)FIX2LONG(plocals->call_frame);
 
          if (target_frame_ == 0) {
-           rb_raise(rb_eLocalJumpError, \"illegal break\");
+            pframe->thread_data->exception = rb_funcall(rb_eLocalJumpError, #{intern_num :exception},0);
+            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+            return Qnil;
          }
 
          target_frame_->targetted = 1;
