@@ -1561,8 +1561,7 @@ module FastRuby
             return rb_const_get_from(klass, #{intern_num tree[2]});
             break;
           default:
-            rb_raise(rb_eTypeError, \"%s is not a class/module\",
-               RSTRING(rb_obj_as_string(klass))->ptr);
+            #{_raise("rb_eTypeError","not a class/module")};
             break;
         }
       }
