@@ -808,9 +808,7 @@ module FastRuby
          target_frame_ = (void*)FIX2LONG(plocals->call_frame);
 
          if (target_frame_ == 0) {
-            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
-            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
-            return Qnil;
+            #{_raise("rb_eLocalJumpError","illegal break")};
          }
 
          plocals->call_frame = LONG2FIX(0);
@@ -829,9 +827,7 @@ module FastRuby
          target_frame_ = (void*)FIX2LONG(plocals->call_frame);
 
          if (target_frame_ == 0) {
-            pframe->thread_data->exception = rb_funcall(rb_eLocalJumpError, #{intern_num :exception},0);
-            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-            return Qnil;
+            #{_raise("rb_eLocalJumpError","illegal retry")};
          }
 
          target_frame_->targetted = 1;
@@ -846,11 +842,7 @@ module FastRuby
           return Qnil;
           "
       else
-         inline_block "
-            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
-            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
-            return Qnil;
-          "
+          _raise("rb_eLocalJumpError","illegal redo");
       end
     end
 
@@ -862,12 +854,7 @@ module FastRuby
         return Qnil;
         "
       else
-        inline_block("
-            pframe->thread_data->exception = #{literal_value LocalJumpError.exception};
-            longjmp(pframe->jmp,FASTRUBY_TAG_RAISE);
-            return Qnil;
-            ")
-
+        _raise("rb_eLocalJumpError","illegal next");
       end
     end
 
@@ -1705,6 +1692,31 @@ module FastRuby
       end
     end
 
+    def _raise(class_tree, message_tree = nil)
+      class_tree = to_c class_tree unless class_tree.instance_of? String
+
+      if message_tree.instance_of? String
+        message_tree = "rb_str_new2(#{message_tree.inspect})"
+      else
+        message_tree = to_c message_tree
+      end
+
+      if message_tree
+        return inline_block("
+            pframe->thread_data->exception = rb_funcall(#{class_tree}, #{intern_num :exception},1,#{message_tree});
+            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+            return Qnil;
+            ")
+      else
+        return inline_block("
+            pframe->thread_data->exception = rb_funcall(#{class_tree}, #{intern_num :exception},0);
+            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+            return Qnil;
+            ")
+      end
+
+    end
+
     def to_c_call(tree, repass_var = nil)
       directive_code = directive(tree)
       if directive_code
@@ -1716,20 +1728,7 @@ module FastRuby
       elsif tree[2] == :raise
         # raise code
         args = tree[3]
-
-        if args[2]
-          return inline_block("
-              pframe->thread_data->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},1,#{to_c args[2]});
-              longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-              return Qnil;
-              ")
-        else
-          return inline_block("
-              pframe->thread_data->exception = rb_funcall(#{to_c args[1]}, #{intern_num :exception},0);
-              longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-              return Qnil;
-              ")
-        end
+        return _raise(args[1],args[2])
       end
 
       recv = tree[1]
