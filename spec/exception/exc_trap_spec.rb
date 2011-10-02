@@ -282,5 +282,31 @@ describe FastRuby, "fastruby" do
   basic_unhandled_exception("4", "StandardError")
   basic_unhandled_exception("5", "Errno::ENOENT")
 
+  it "should trap 'no block given" do
+    fastruby "
+      class LLJ1
+        attr_accessor :a
+
+        def bar
+          yield
+        end
+
+        def foo
+          bar # this will raise LocalJumpError
+        ensure
+          @a = 1
+        end
+      end
+    "
+
+    llj1 = LLJ1.new
+
+    lambda {
+      llj1.foo
+    }.should raise_error(LocalJumpError)
+
+    llj1.a.should be == 1
+  end
+
 
 end
