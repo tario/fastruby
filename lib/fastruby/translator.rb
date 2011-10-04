@@ -1658,23 +1658,44 @@ module FastRuby
         resbody_tree = tree[2]
         else_tree = tree[3]
 
-        trapcode = "rb_eException";
-        if resbody_tree[1][1]
-          trapcode = to_c(resbody_tree[1][1])
+        catch_code = ""
+        lasgn_code = ""
+        resbody_code = to_c(resbody_tree[2])
+
+        if resbody_tree[1].size == 1
+          resbody_tree[1][1] = [:const, :Exception]
         end
 
-        frame_call(
-          frame(to_c(tree[1])+";","
-          if (aux == FASTRUBY_TAG_RAISE) {
+        if resbody_tree[1].last[0] == :lasgn
+          lasgn_code = to_c(resbody_tree[1].last)
+        end
+
+        resbody_tree[1][1..-1].each do |xtree|
+          if xtree[0] != :lasgn
+            trapcode = "rb_eException";
+
+            if xtree
+              trapcode = to_c(xtree)
+            end
+
+            catch_code << "
             if (rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)
             {
               // trap exception
               frame.targetted = 1;
 
-              #{resbody_tree[1][2] ? to_c(resbody_tree[1][2]) : ""};
+              #{lasgn_code};
 
-               #{to_c(resbody_tree[2])};
+               #{resbody_code};
             }
+            "
+          end
+        end
+
+        frame_call(
+          frame(to_c(tree[1])+";","
+          if (aux == FASTRUBY_TAG_RAISE) {
+            #{catch_code}
           }
           ", else_tree ? to_c(else_tree) : nil, 1)
 
