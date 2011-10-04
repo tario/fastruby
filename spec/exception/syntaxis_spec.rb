@@ -104,5 +104,23 @@ describe FastRuby, "fastruby" do
     llx1.foo.message.should be == "message"
   end
 
+  it "should read exception into local with traps of two exceptions" do
+    fastruby "
+      class ::LLX2
+        def foo
+          begin
+            raise RuntimeError,'message2'
+          rescue LocalJumpError, RuntimeError => b
+          end
+
+          b
+        end
+      end
+    "
+
+    llx2 = ::LLX2.new
+    llx2.foo.message.should be == "message2"
+  end
+
 
 end
