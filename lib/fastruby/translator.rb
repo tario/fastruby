@@ -1658,7 +1658,7 @@ module FastRuby
         resbody_tree = tree[2]
         else_tree = tree[3]
 
-        catch_code = ""
+        catch_condition_array = []
         lasgn_code = ""
         resbody_code = to_c(resbody_tree[2])
 
@@ -1678,8 +1678,14 @@ module FastRuby
               trapcode = to_c(xtree)
             end
 
-            catch_code << "
-            if (rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)
+            catch_condition_array << "(rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)"
+          end
+        end
+
+        frame_call(
+          frame(to_c(tree[1])+";","
+          if (aux == FASTRUBY_TAG_RAISE) {
+            if (#{catch_condition_array.join(" || ")})
             {
               // trap exception
               frame.targetted = 1;
@@ -1688,14 +1694,6 @@ module FastRuby
 
                #{resbody_code};
             }
-            "
-          end
-        end
-
-        frame_call(
-          frame(to_c(tree[1])+";","
-          if (aux == FASTRUBY_TAG_RAISE) {
-            #{catch_code}
           }
           ", else_tree ? to_c(else_tree) : nil, 1)
 
