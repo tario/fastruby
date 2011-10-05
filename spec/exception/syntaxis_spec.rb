@@ -122,5 +122,42 @@ describe FastRuby, "fastruby" do
     llx2.foo.message.should be == "message2"
   end
 
+  it "should trap exception with multiple rescue clauses" do
+    fastruby "
+      class ::LLX3
+        def foo
+          begin
+            raise RuntimeError,'message2'
+          rescue LocalJumpError
+          rescue RuntimeError => b
+          end
+
+          b
+        end
+      end
+    "
+
+    llx3 = ::LLX3.new
+    llx3.foo.message.should be == "message2"
+  end
+
+  it "should trap exception with multiple rescue clauses 2" do
+    fastruby "
+      class ::LLX4
+        def foo
+          begin
+            raise LocalJumpError,'message2'
+          rescue LocalJumpError => a
+          rescue RuntimeError
+          end
+
+          a
+        end
+      end
+    "
+
+    llx4 = ::LLX4.new
+    llx4.foo.message.should be == "message2"
+  end
 
 end
