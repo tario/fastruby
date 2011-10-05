@@ -1656,45 +1656,60 @@ module FastRuby
         end
       else
         resbody_tree = tree[2]
-        else_tree = tree[3]
+        else_tree = nil
+        if tree[-1]
+          if tree[-1][0] != :resbody
+            else_tree = tree[-1]
+          end
+        end
 
         catch_condition_array = []
         lasgn_code = ""
         resbody_code = to_c(resbody_tree[2])
 
-        if resbody_tree[1].size == 1
-          resbody_tree[1][1] = [:const, :Exception]
-        end
+        rescue_code = ""
 
-        if resbody_tree[1].last[0] == :lasgn
-          lasgn_code = to_c(resbody_tree[1].last)
-        end
+        tree[1..-1].each do |resbody_tree|
+          next if resbody_tree[0] != :resbody
 
-        resbody_tree[1][1..-1].each do |xtree|
-          if xtree[0] != :lasgn
-            trapcode = "rb_eException";
-
-            if xtree
-              trapcode = to_c(xtree)
-            end
-
-            catch_condition_array << "(rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)"
+          if resbody_tree[1].size == 1
+            resbody_tree[1][1] = [:const, :Exception]
           end
+
+          if resbody_tree[1].last[0] == :lasgn
+            lasgn_code = to_c(resbody_tree[1].last)
+          end
+
+          resbody_tree[1][1..-1].each do |xtree|
+            if xtree[0] != :lasgn
+              trapcode = "rb_eException";
+
+              if xtree
+                trapcode = to_c(xtree)
+              end
+
+              catch_condition_array << "(rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)"
+            end
+          end
+
+          rescue_code << "
+            if (aux == FASTRUBY_TAG_RAISE) {
+              if (#{catch_condition_array.join(" || ")})
+              {
+                // trap exception
+                frame.targetted = 1;
+
+                #{lasgn_code};
+
+                 #{resbody_code};
+              }
+            }
+          "
         end
 
         frame_call(
           frame(to_c(tree[1])+";","
-          if (aux == FASTRUBY_TAG_RAISE) {
-            if (#{catch_condition_array.join(" || ")})
-            {
-              // trap exception
-              frame.targetted = 1;
-
-              #{lasgn_code};
-
-               #{resbody_code};
-            }
-          }
+            #{rescue_code}
           ", else_tree ? to_c(else_tree) : nil, 1)
 
           )
