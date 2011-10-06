@@ -1,3 +1,7 @@
+0.0.12	Completed exception support (multiple rescue clauses,  multiple exceptions in only one rescue, assign exceptions to variables and fastruby internal exceptions)
+
+0.0.11	Fixed packaging error
+
 0.0.10	retry support (exceptions and blocks)
 
 		redo support
