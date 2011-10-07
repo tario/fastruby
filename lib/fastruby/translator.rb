@@ -24,6 +24,8 @@ require "fastruby/set_tree"
 require "fastruby/exceptions"
 require "fastruby/translator/iter"
 require "fastruby/translator/call"
+require "fastruby/translator/block"
+require "fastruby/translator/nonlocal"
 require "rubygems"
 require "sexp"
 
@@ -211,71 +213,6 @@ module FastRuby
       "
     end
 
-    def to_c_yield(tree)
-
-      block_code = proc { |name| "
-        static VALUE #{name}(VALUE frame_param, VALUE* block_args) {
-
-          #{@locals_struct} *plocals;
-          #{@frame_struct} *pframe;
-          pframe = (void*)frame_param;
-          plocals = (void*)pframe->plocals;
-
-          if (FIX2LONG(plocals->block_function_address) == 0) {
-            #{_raise("rb_eLocalJumpError", "no block given")};
-          } else {
-            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))FIX2LONG(plocals->block_function_address))(#{tree.size-1}, block_args, FIX2LONG(plocals->block_function_param), (VALUE)pframe);
-          }
-        }
-      "
-      }
-
-      new_yield_signature = tree[1..-1].map{|subtree| infer_type subtree}
-      # merge the new_yield_signature with the new
-      if @yield_signature
-        if new_yield_signature.size == @yield_signature.size
-          (0..new_yield_signature.size-1).each do |i|
-            if @yield_signature[i] != new_yield_signature[i]
-              @yield_signature[i] = nil
-            end
-          end
-        else
-          @yield_signature = new_yield_signature.map{|x| nil}
-        end
-      else
-        @yield_signature = new_yield_signature
-      end
-
-      ret = if tree.size > 1
-          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
-        else
-          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
-        end
-
-      protected_block(ret, false)
-    end
-
-    def to_c_block(tree)
-
-      str = ""
-      str = tree[1..-2].map{ |subtree|
-        to_c(subtree)
-      }.join(";")
-
-      if tree[-1]
-
-        if tree[-1][0] != :return
-          str = str + ";last_expression = #{to_c(tree[-1])};"
-        else
-          str = str + ";#{to_c(tree[-1])};"
-        end
-      end
-
-      str << "return last_expression;"
-
-      inline_block str
-    end
-
     def to_c_cvar(tree)
       "rb_cvar_get(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]})"
     end
@@ -283,76 +220,6 @@ module FastRuby
     def to_c_cvasgn(tree)
       "__rb_cvar_set(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]},#{to_c tree[2]},Qfalse)"
     end
-
-    def to_c_return(tree)
-      inline_block "
-        plocals->return_value = #{to_c(tree[1])};
-        ((typeof(pframe))FIX2LONG(plocals->pframe))->targetted = 1;
-        longjmp(pframe->jmp, FASTRUBY_TAG_RETURN);
-        return Qnil;
-        "
-    end
-
-    def to_c_break(tree)
-        inline_block(
-         "
-
-         VALUE value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
-
-         typeof(pframe) target_frame_;
-         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
-
-         if (target_frame_ == 0) {
-            #{_raise("rb_eLocalJumpError","illegal break")};
-         }
-
-         plocals->call_frame = LONG2FIX(0);
-
-         target_frame_->return_value = value;
-         target_frame_->targetted = 1;
-         pframe->thread_data->exception = Qnil;
-         longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);"
-        )
-    end
-
-    def to_c_retry(tree)
-        inline_block(
-         "
-         typeof(pframe) target_frame_;
-         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
-
-         if (target_frame_ == 0) {
-            #{_raise("rb_eLocalJumpError","illegal retry")};
-         }
-
-         target_frame_->targetted = 1;
-         longjmp(pframe->jmp,FASTRUBY_TAG_RETRY);"
-        )
-    end
-
-    def to_c_redo(tree)
-      if @on_block
-         inline_block "
-          longjmp(pframe->jmp,FASTRUBY_TAG_REDO);
-          return Qnil;
-          "
-      else
-          _raise("rb_eLocalJumpError","illegal redo");
-      end
-    end
-
-    def to_c_next(tree)
-      if @on_block
-       inline_block "
-        pframe->thread_data->accumulator = #{tree[1] ? to_c(tree[1]) : "Qnil"};
-        longjmp(pframe->jmp,FASTRUBY_TAG_NEXT);
-        return Qnil;
-        "
-      else
-        _raise("rb_eLocalJumpError","illegal next");
-      end
-    end
-
     def to_c_lit(tree)
       literal_value tree[1]
     end
