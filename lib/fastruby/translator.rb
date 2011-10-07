@@ -557,30 +557,6 @@ module FastRuby
       "plocals->"
     end
 
-    def get_class_name(argument)
-      if argument.instance_of? Symbol
-        argument.to_s
-      elsif argument.instance_of? FastRuby::FastRubySexp
-        if argument[0] == :colon3
-          get_class_name(argument[1])
-        elsif argument[0] == :colon2
-          get_class_name(argument[2])
-        end
-      end
-    end
-
-    def get_container_tree(argument)
-      if argument.instance_of? Symbol
-        s(:self)
-      elsif argument.instance_of? FastRuby::FastRubySexp
-        if argument[0] == :colon3
-          s(:const, :Object)
-        elsif argument[0] == :colon2
-          argument[1]
-        end
-      end
-    end
-
     def locals_scope(locals)
        old_locals = @locals
        old_locals_struct = @locals_struct
@@ -602,90 +578,6 @@ module FastRuby
         @locals = old_locals
         @locals_struct = old_locals_struct
       end
-    end
-
-    def method_group(init_code, tree)
-
-      alt_locals = Set.new
-      alt_locals << :self
-
-      FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
-        alt_locals << local
-      end
-
-      fun = nil
-
-      locals_scope(alt_locals) do
-        fun = anonymous_function { |method_name| "static VALUE #{method_name}(VALUE self) {
-
-            #{@frame_struct} frame;
-            typeof(&frame) pframe = &frame;
-            #{@locals_struct} *plocals;
-
-            frame.parent_frame = 0;
-            frame.return_value = Qnil;
-            frame.rescue = 0;
-            frame.targetted = 0;
-            frame.thread_data = rb_current_thread_data();
-
-            int stack_chunk_instantiated = 0;
-            VALUE rb_previous_stack_chunk = Qnil;
-            VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
-            struct STACKCHUNK* stack_chunk = 0;
-
-            if (rb_stack_chunk != Qnil) {
-              Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
-            }
-
-            if (stack_chunk == 0 || (stack_chunk == 0 ? 0 : stack_chunk_frozen(stack_chunk)) ) {
-              rb_previous_stack_chunk = rb_stack_chunk;
-              rb_gc_register_address(&rb_stack_chunk);
-              stack_chunk_instantiated = 1;
-
-              rb_stack_chunk = rb_stack_chunk_create(Qnil);
-              frame.thread_data->rb_stack_chunk = rb_stack_chunk;
-
-              rb_ivar_set(rb_stack_chunk, #{intern_num :_parent_stack_chunk}, rb_previous_stack_chunk);
-
-              Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
-            }
-
-            int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
-
-            plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
-
-            frame.plocals = plocals;
-            plocals->active = Qtrue;
-            plocals->self = self;
-            plocals->call_frame = LONG2FIX(0);
-
-            #{to_c tree};
-
-            stack_chunk_set_current_position(stack_chunk, previous_stack_position);
-
-            if (stack_chunk_instantiated) {
-              rb_gc_unregister_address(&rb_stack_chunk);
-              frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
-            }
-
-            plocals->active = Qfalse;
-            return Qnil;
-          }
-        "
-        }
-      end
-
-      inline_block("
-        #{init_code}
-
-        rb_funcall(tmpklass, #{intern_num :__id__},0);
-
-        #{fun}(tmpklass);
-        return Qnil;
-
-
-      ")
-
     end
 
     def infer_type(recv)
