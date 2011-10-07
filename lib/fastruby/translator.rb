@@ -32,6 +32,7 @@ require "fastruby/translator/defn"
 require "fastruby/translator/exceptions"
 require "fastruby/translator/logical"
 require "fastruby/translator/flow"
+require "fastruby/translator/method_group"
 require "rubygems"
 require "sexp"
 
@@ -697,47 +698,6 @@ module FastRuby
 
       ")
 
-    end
-
-
-
-    def to_c_class(tree)
-      str_class_name = get_class_name(tree[1])
-      container_tree = get_container_tree(tree[1])
-
-      if container_tree == s(:self)
-        method_group("
-                    VALUE tmpklass = rb_define_class(
-                      #{str_class_name.inspect},
-                      #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
-                  );
-        ", tree[3])
-      else
-        method_group("
-                    VALUE container_klass = #{to_c(container_tree)};
-                    VALUE tmpklass = rb_define_class_under(
-                      container_klass,
-                      #{str_class_name.inspect},
-                      #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
-                  );
-        ", tree[3])
-      end
-    end
-
-    def to_c_module(tree)
-      str_class_name = get_class_name(tree[1])
-      container_tree = get_container_tree(tree[1])
-
-      if container_tree == s(:self)
-        method_group("
-                      VALUE tmpklass = rb_define_module(#{str_class_name.inspect});
-        ", tree[2])
-      else
-        method_group("
-                      VALUE container_klass = #{to_c(container_tree)};
-                      VALUE tmpklass = rb_define_module_under(container_klass,#{str_class_name.inspect});
-        ", tree[2])
-      end
     end
 
     def infer_type(recv)
