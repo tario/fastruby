@@ -19,9 +19,12 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "set"
+require "rubygems"
+require "sexp"
 require "fastruby/method_extension"
 require "fastruby/set_tree"
 require "fastruby/exceptions"
+require "fastruby/translator/translator_modules"
 require "fastruby/translator/iter"
 require "fastruby/translator/call"
 require "fastruby/translator/block"
@@ -33,8 +36,6 @@ require "fastruby/translator/exceptions"
 require "fastruby/translator/logical"
 require "fastruby/translator/flow"
 require "fastruby/translator/method_group"
-require "rubygems"
-require "sexp"
 
 module FastRuby
   class Context
