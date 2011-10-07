@@ -31,6 +31,7 @@ require "fastruby/translator/variable"
 require "fastruby/translator/defn"
 require "fastruby/translator/exceptions"
 require "fastruby/translator/logical"
+require "fastruby/translator/flow"
 require "rubygems"
 require "sexp"
 
@@ -220,36 +221,6 @@ module FastRuby
       else
         "Qnil"
       end
-    end
-
-    def to_c_case(tree)
-
-      tmpvarname = "tmp" + rand(1000000).to_s;
-
-      code = tree[2..-2].map{|subtree|
-
-        # this subtree is a when
-        subtree[1][1..-1].map{|subsubtree|
-          c_calltree = s(:call, nil, :inline_c, s(:arglist, s(:str, tmpvarname), s(:false)))
-          calltree = s(:call, subsubtree, :===, s(:arglist, c_calltree))
-              "
-                if (RTEST(#{to_c_call(calltree, tmpvarname)})) {
-                   return #{to_c(subtree[2])};
-                }
-
-              "
-        }.join("\n")
-
-      }.join("\n")
-
-      inline_block "
-
-        VALUE #{tmpvarname} = #{to_c tree[1]};
-
-        #{code};
-
-        return #{to_c tree[-1]};
-      "
     end
 
     def initialize_method_structs(args_tree)
@@ -597,25 +568,6 @@ module FastRuby
       "plocals->"
     end
 
-    def to_c_if(tree)
-      condition_tree = tree[1]
-      impl_tree = tree[2]
-      else_tree = tree[3]
-
-      inline_block "
-          if (RTEST(#{to_c condition_tree})) {
-            last_expression = #{to_c impl_tree};
-          }#{else_tree ?
-            " else {
-            last_expression = #{to_c else_tree};
-            }
-            " : ""
-          }
-
-          return last_expression;
-      "
-    end
-
     def get_class_name(argument)
       if argument.instance_of? Symbol
         argument.to_s
@@ -786,22 +738,6 @@ module FastRuby
                       VALUE tmpklass = rb_define_module_under(container_klass,#{str_class_name.inspect});
         ", tree[2])
       end
-    end
-
-    def to_c_for(tree)
-      alter_tree = tree.dup
-      alter_tree[0] = :iter
-      alter_tree[1] = [:call, alter_tree[1], :each, [:arglist]]
-      to_c alter_tree
-    end
-
-    def to_c_while(tree)
-      inline_block("
-          while (#{to_c tree[1]}) {
-            #{to_c tree[2]};
-          }
-          return Qnil;
-      ")
     end
 
     def infer_type(recv)
