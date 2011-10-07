@@ -31,21 +31,19 @@ module FastRuby
 
       hash = Hash.new
       value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
+      
+      args_array_accessors = (0..args_tree.size-2).map{|x| "argv[#{x}]"}
 
       strmethodargs = ""
-      strmethodargs_class = (["self"] + args_tree[1..-1]).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
+      strmethodargs_class = (["self"] + args_array_accessors).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
       if args_tree.size > 1
-        strmethodargs = "self,block,(VALUE)&frame,#{args_tree[1..-1].map(&:to_s).join(",") }"
+        strmethodargs = "self,block,(VALUE)&frame,#{args_array_accessors.map(&:to_s).join(",") }"
       else
         strmethodargs = "self,block,(VALUE)&frame"
       end
 
-      strmethod_signature = (["self"] + args_tree[1..-1]).map { |arg|
-        "sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(#{arg}))));\n"
-      }.join
-
-      anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(#{(["self"]+args_tree[1..-1]).map{|arg| "VALUE #{arg}" }.join(",")}) {
+      anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
 
           VALUE klass = #{global_klass_variable};
           char method_name[0x100];
@@ -54,7 +52,11 @@ module FastRuby
           method_name[1] = 0;
 
           sprintf(method_name+1, \"#{method_name}\");
-          #{strmethod_signature}
+          
+          int i;
+          for (i=0; i<argc_; i++) {
+            sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
+          }
 
           NODE* body;
           ID id;
@@ -133,14 +135,8 @@ module FastRuby
                 return Qnil;
               }
 
-              if (argc == #{args_tree.size+1}) {
+              if (argc_ == #{args_tree.size-1} && argc == #{args_tree.size+1}) {
                 return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
-              } else if (argc == -1) {
-                VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
-                return ((VALUE(*)(int,VALUE*,VALUE))body->nd_cfnc)(#{args_tree.size},argv,self);
-              } else if (argc == -2) {
-                VALUE argv[] = {#{(["block,(VALUE)&frame"]+args_tree[1..-1]).map(&:to_s).join(",")} };
-                return ((VALUE(*)(VALUE,VALUE))body->nd_cfnc)(self, rb_ary_new4(#{args_tree.size},argv));
               } else {
                 rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
               }
@@ -168,7 +164,7 @@ module FastRuby
 
                 );
 
-        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, #{args_tree.size-1} );
+        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
         "
 
     end
