@@ -98,7 +98,7 @@ module FastRuby
     end
 
     def build(signature, noreturn = false)
-      require "fastruby/translator"
+      require "fastruby/translator/translator"
       require "rubygems"
       require "inline"
 
