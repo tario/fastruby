@@ -100,6 +100,9 @@ module FastRuby
         end
       end # if recvtype
     end
-    
+
+    def to_c_attrasgn(tree)
+      to_c_call(tree)
+    end
   end
 end

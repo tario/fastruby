@@ -169,10 +169,6 @@ module FastRuby
       name
     end
 
-    def to_c_attrasgn(tree)
-      to_c_call(tree)
-    end
-
     def frame_call(inner_code)
       inline_block "
 
