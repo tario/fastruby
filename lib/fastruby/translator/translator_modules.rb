@@ -33,6 +33,12 @@ module FastRuby
     def register_translator_module(modl)
       @modls << modl  
     end
+    
+    def load_under(dir)
+      Dir.glob(dir + "/*.rb") do |x|
+        require x
+      end
+    end
   end
 end
 

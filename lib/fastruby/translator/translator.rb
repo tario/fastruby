@@ -25,17 +25,7 @@ require "fastruby/method_extension"
 require "fastruby/set_tree"
 require "fastruby/exceptions"
 require "fastruby/translator/translator_modules"
-require "fastruby/translator/iter"
-require "fastruby/translator/call"
-require "fastruby/translator/block"
-require "fastruby/translator/nonlocal"
-require "fastruby/translator/literal"
-require "fastruby/translator/variable"
-require "fastruby/translator/defn"
-require "fastruby/translator/exceptions"
-require "fastruby/translator/logical"
-require "fastruby/translator/flow"
-require "fastruby/translator/method_group"
+
 
 module FastRuby
   class Context
@@ -50,6 +40,7 @@ module FastRuby
     attr_reader :extra_code
     attr_reader :yield_signature
     
+    TranslatorModules.instance.load_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/")
     TranslatorModules.instance.modls.each do |modl|
       include modl
     end
