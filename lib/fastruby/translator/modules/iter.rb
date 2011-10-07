@@ -242,7 +242,7 @@ module FastRuby
                    return Qnil;
                 } else {
                   if (aux == FASTRUBY_TAG_RETURN) {
-                    if (((typeof(pframe))(FIX2LONG(plocals->pframe)))->targetted == 1) {
+                    if (plocals->targetted == 1) {
                       ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
                       return ((typeof(plocals))(pframe->plocals))->return_value;
                     } else {
@@ -297,8 +297,7 @@ module FastRuby
                        rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
                        return Qnil;
                     } else {
-                      if (((typeof(pframe))(FIX2LONG(plocals->pframe)))->targetted == 1) {
-
+                      if (plocals->targetted == 1) {
                         if (plocals->active == Qfalse) {
                           rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
                         } else {

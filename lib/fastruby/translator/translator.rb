@@ -212,6 +212,7 @@ module FastRuby
         VALUE block_function_param;
         VALUE call_frame;
         VALUE active;
+        VALUE targetted;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
         }"
@@ -390,6 +391,7 @@ module FastRuby
 
           plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           plocals->active = Qtrue;
+          plocals->targetted = Qfalse;
           plocals->pframe = LONG2FIX(&frame);
           frame.plocals = plocals;
 
@@ -487,6 +489,7 @@ module FastRuby
           plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           frame.plocals = plocals;
           plocals->active = Qtrue;
+          plocals->targetted = Qfalse;
           plocals->pframe = LONG2FIX(&frame);
           plocals->call_frame = LONG2FIX(0);
 
@@ -506,7 +509,7 @@ module FastRuby
               frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
 
-            if (pframe->targetted == 0) {
+            if (plocals->targetted == Qfalse) {
               longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
             }
 
@@ -561,6 +564,7 @@ module FastRuby
         VALUE block_function_param;
         VALUE call_frame;
         VALUE active;
+        VALUE targetted;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -837,6 +841,7 @@ module FastRuby
         if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
         plocals->pframe = LONG2FIX(&frame);
+        plocals->targetted = Qfalse;
 
         pframe = (void*)&frame;
 
@@ -846,7 +851,7 @@ module FastRuby
         int aux = setjmp(pframe->jmp);
         if (aux != 0) {
 
-          if (pframe->targetted == 0) {
+          if (plocals->targetted == Qfalse) {
             longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
           }
 

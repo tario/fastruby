@@ -115,6 +115,7 @@ private
             frame.plocals = plocals;
             plocals->active = Qtrue;
             plocals->self = self;
+            plocals->targetted = Qfalse;
             plocals->call_frame = LONG2FIX(0);
 
             #{to_c tree};

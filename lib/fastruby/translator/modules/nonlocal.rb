@@ -25,7 +25,7 @@ module FastRuby
     def to_c_return(tree)
       inline_block "
         plocals->return_value = #{to_c(tree[1])};
-        ((typeof(pframe))FIX2LONG(plocals->pframe))->targetted = 1;
+        plocals->targetted = 1;
         longjmp(pframe->jmp, FASTRUBY_TAG_RETURN);
         return Qnil;
         "
