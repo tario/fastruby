@@ -194,6 +194,13 @@ module FastRuby
         return Qnil;
         "
     end
-    
+
+    def to_c_scope(tree)
+      if tree[1]
+        to_c(tree[1])
+      else
+        "Qnil"
+      end
+    end
   end
 end

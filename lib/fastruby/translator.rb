@@ -212,14 +212,6 @@ module FastRuby
       "
     end
 
-    def to_c_scope(tree)
-      if tree[1]
-        to_c(tree[1])
-      else
-        "Qnil"
-      end
-    end
-
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
         VALUE return_value;
