@@ -30,6 +30,7 @@ require "fastruby/translator/literal"
 require "fastruby/translator/variable"
 require "fastruby/translator/defn"
 require "fastruby/translator/exceptions"
+require "fastruby/translator/logical"
 require "rubygems"
 require "sexp"
 
@@ -594,18 +595,6 @@ module FastRuby
 
     def locals_accessor
       "plocals->"
-    end
-
-    def to_c_and(tree)
-      "(RTEST(#{to_c tree[1]}) && RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
-    end
-
-    def to_c_or(tree)
-      "(RTEST(#{to_c tree[1]}) || RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
-    end
-
-    def to_c_not(tree)
-      "RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue"
     end
 
     def to_c_if(tree)
