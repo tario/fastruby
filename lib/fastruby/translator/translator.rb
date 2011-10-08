@@ -214,7 +214,7 @@ module FastRuby
         VALUE active;
         VALUE targetted;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg};\n"}.join};
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")};\n"}.join};
         }"
 
     end
@@ -239,6 +239,8 @@ module FastRuby
         #{func_frame}
 
         #{args_tree[1..-1].map { |arg|
+          arg = arg.to_s
+          arg.gsub!("*","")
           "plocals->#{arg} = #{arg};\n"
         }.join("") }
 
@@ -416,6 +418,8 @@ module FastRuby
           plocals->self = self;
 
           #{args_tree[1..-1].map { |arg|
+            arg = arg.to_s
+            arg.gsub!("*","")
             "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
@@ -520,6 +524,8 @@ module FastRuby
           plocals->self = self;
 
           #{args_tree[1..-1].map { |arg|
+            arg = arg.to_s
+            arg.gsub!("*","")
             "plocals->#{arg} = #{arg};\n"
           }.join("") }
 
