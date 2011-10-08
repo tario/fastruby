@@ -32,16 +32,39 @@ module FastRuby
       hash = Hash.new
       value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
       
-      args_array_accessors = (0..args_tree.size-2).map{|x| "argv[#{x}]"}
+      multiple_arguments = args_tree[1..-1].find{|x| x.to_s =~ /\*/}
+      
+      args_array_accessors = if multiple_arguments
+        (0..args_tree.size-3).map{|x| "argv[#{x}]"} + ["argarray"]
+      else
+        (0..args_tree.size-2).map{|x| "argv[#{x}]"}
+      end
       
       strmethodargs = ""
-      strmethodargs_class = (["self"] + args_array_accessors).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
       if args_tree.size > 1
         strmethodargs = "self,block,(VALUE)&frame,#{args_array_accessors.map(&:to_s).join(",") }"
       else
         strmethodargs = "self,block,(VALUE)&frame"
       end
+      
+      strmakecall = if multiple_arguments
+                "
+                  if (argc_ >= #{args_tree.size-2}) {
+                    // pass pre-calculated method arguments plus an empty array
+                    VALUE argarray = rb_ary_new();
+                    return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+                  } else {
+                    rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-2}))\", argc_);
+                  }
+                "
+              else
+                "if (argc_ == #{args_tree.size-1} && argc == #{args_tree.size+1}) {
+                  return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+                } else {
+                  rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-1}))\", argc_);
+                }"
+              end
 
       anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
 
@@ -140,11 +163,7 @@ module FastRuby
                 return Qnil;
               }
 
-              if (argc_ == #{args_tree.size-1} && argc == #{args_tree.size+1}) {
-                return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
-              } else {
-                rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-1}))\", argc_);
-              }
+              #{strmakecall}
             }
 
           return Qnil;
