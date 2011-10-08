@@ -229,7 +229,8 @@ module FastRuby
       initialize_method_structs(args_tree)
 
       strargs = if args_tree.size > 1
-        "VALUE self, void* block_address, VALUE block_param, void* _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+        
+        "VALUE self, void* block_address, VALUE block_param, void* _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")}" }.join(",") }"
       else
         "VALUE self, void* block_address, VALUE block_param, void* _parent_frame"
       end
@@ -347,7 +348,7 @@ module FastRuby
         initialize_method_structs(args_tree)
 
         strargs = if args_tree.size > 1
-          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")}" }.join(",") }"
         else
           "VALUE block, VALUE _parent_frame"
         end
@@ -442,7 +443,7 @@ module FastRuby
         initialize_method_structs(args_tree)
 
         strargs = if args_tree.size > 1
-          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg}" }.join(",") }"
+          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")}" }.join(",") }"
         else
           "VALUE block, VALUE _parent_frame"
         end
