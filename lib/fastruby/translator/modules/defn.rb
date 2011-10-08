@@ -50,7 +50,10 @@ module FastRuby
       
       strmakecall = if multiple_arguments
                 "
-                  if (argc_ >= #{args_tree.size-2}) {
+                  if (argc_ > #{args_tree.size-2}) {
+                    VALUE argarray = rb_ary_new4(argc_, argv);
+                    return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+                  } else if (argc_ == #{args_tree.size-2}) {
                     // pass pre-calculated method arguments plus an empty array
                     VALUE argarray = rb_ary_new();
                     return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
