@@ -143,7 +143,7 @@ module FastRuby
               if (argc_ == #{args_tree.size-1} && argc == #{args_tree.size+1}) {
                 return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
               } else {
-                rb_raise(rb_eArgError, \"wrong number of arguments (#{args_tree.size-1} for %d)\", argc);
+                rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-1}))\", argc_);
               }
             }
 
