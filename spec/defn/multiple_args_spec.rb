@@ -108,5 +108,131 @@ describe FastRuby, "fastruby" do
       
       ::CF8.new.foo(1,2).should be == 1
     }.should_not raise_error
+  end
+  
+  it "should allow define method with array arguments and call with no arguments from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF9
+          def foo(*x)
+            x
+          end
+          
+          def bar
+            foo
+          end
+        end
+      "
+      
+      ::CF9.new.bar.should be == []
+    }.should_not raise_error
   end  
+
+  it "should allow define method with array arguments and call with one argument from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF10
+          def foo(*x)
+            x
+          end
+          
+          def bar
+            foo(1)
+          end
+        end
+      "
+      
+      ::CF10.new.bar.should be == [1]
+    }.should_not raise_error
+  end  
+
+  it "should allow define method with array arguments and call with two arguments from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF11
+          def foo(*x)
+            x
+          end
+          
+          def bar
+            foo(1,2)
+          end
+        end
+      "
+      
+      ::CF11.new.bar.should be == [1,2]
+    }.should_not raise_error
+  end  
+  
+  it "should allow define method with normal argument plus array arguments and call with one argument from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF12
+          def foo(a, *x)
+            x
+          end
+          
+          def bar
+            foo(1)
+          end
+        end
+      "
+      
+      ::CF12.new.bar.should be == []
+    }.should_not raise_error
+  end  
+
+  it "should allow define method with normal argument plus array arguments and call with two arguments from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF13
+          def foo(a, *x)
+            x
+          end
+          
+          def bar
+            foo(1,2)
+          end
+        end
+      "
+      
+      ::CF13.new.bar.should be == [2]
+    }.should_not raise_error
+  end  
+  
+  it "should allow define method with normal argument plus array arguments and call with one argument from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF14
+          def foo(a, *x)
+            a
+          end
+          
+          def bar
+            foo(1)
+          end
+        end
+      "
+      
+      ::CF14.new.bar.should be == 1
+    }.should_not raise_error
+  end  
+
+  it "should allow define method with normal argument plus array arguments and call with two arguments from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF15
+          def foo(a, *x)
+            a
+          end
+
+          def bar
+            foo(1.2)
+          end
+        end
+      "
+      
+      ::CF15.new.foo(1,2).should be == 1
+    }.should_not raise_error
+  end
 end
