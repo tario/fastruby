@@ -33,7 +33,7 @@ module FastRuby
       value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
       
       args_array_accessors = (0..args_tree.size-2).map{|x| "argv[#{x}]"}
-
+      
       strmethodargs = ""
       strmethodargs_class = (["self"] + args_array_accessors).map{|arg| "CLASS_OF(#{arg.to_s})"}.join(",")
 
@@ -65,9 +65,14 @@ module FastRuby
           body = rb_method_node(klass,id);
 
           if (body == 0) {
-            VALUE argv_class[] = {#{strmethodargs_class} };
-            VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
-
+            VALUE argv_class[argc_+1];
+            
+            argv_class[0] = CLASS_OF(self); 
+            for (i=0; i<argc_; i++) {
+              argv_class[i+1] = CLASS_OF(argv[i]);
+            }
+            
+            VALUE signature = rb_ary_new4(argc_+1,argv_class);
             VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
 
             struct METHOD {
