@@ -43,13 +43,45 @@ module FastRuby
 
       mname = :require_fastruby if mname == :require
 
-      strargs = args[1..-1].map{|arg| to_c arg}.join(",")
-
       argnum = args.size - 1
 
       recv = recv || s(:self)
 
       recvtype = infer_type(recv)
+      
+      if args.size > 0
+        if args.last[0] == :splat
+          return protected_block(
+            inline_block(
+            "
+            
+            int argc = #{args.size-2};
+            VALUE argv[256];
+            
+            #{
+              i = -1
+              args[1..-2].map {|arg|
+                i = i + 1
+                "argv[#{i}] = #{to_c arg}"
+              }.join(";\n")
+            };
+            
+            VALUE array = #{to_c args.last[1]};
+            int array_len = RARRAY(array)->len;
+            
+            int i;
+            for (i=0; i<array_len;i++) {
+              argv[argc] = rb_ary_entry(array,i);
+              argc++; 
+            }
+            
+            return rb_funcall2(#{to_c recv}, #{intern_num tree[2]}, argc, argv);
+            "
+            ), true, repass_var)
+        end
+      end
+
+      strargs = args[1..-1].map{|arg| to_c arg}.join(",")
 
       if recvtype
 
