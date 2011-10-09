@@ -235,4 +235,37 @@ describe FastRuby, "fastruby" do
       ::CF15.new.foo(1,2).should be == 1
     }.should_not raise_error
   end
+  
+  it "should raise ArgumentError when trying to call with too few arguments" do
+    lambda {
+      fastruby "
+        class ::CF16
+          def foo(a, *x)
+            a
+          end
+        end
+      "
+      
+      ::CF16.new.foo
+    }.should raise_error(ArgumentError)
+  end
+  
+  it "should raise ArgumentError when trying to call with too few arguments from fastruby" do
+    lambda {
+      fastruby "
+        class ::CF17
+          def foo(a, *x)
+            a
+          end
+          
+          def bar
+            foo
+          end
+        end
+      "
+      
+      ::CF17.new.bar
+    }.should raise_error(ArgumentError)
+  end
+  
 end
