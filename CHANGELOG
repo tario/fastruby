@@ -1,3 +1,11 @@
+0.0.13	Argument splat method calls (not optimized yet)
+
+		Array arguments on methods (optional arguments, variable number of arguments)
+		
+		Fixed bug of return when trying to return from a proc (illegal overwrite of memory on stack when trying to flag frame as targetted)
+
+		Internal refactor
+
 0.0.12	Completed exception support (multiple rescue clauses,  multiple exceptions in only one rescue, assign exceptions to variables and fastruby internal exceptions)
 
 0.0.11	Fixed packaging error
