@@ -49,7 +49,7 @@ module FastRuby
 
       recvtype = infer_type(recv)
       
-      if args.size > 0
+      if args.size > 1
         if args.last[0] == :splat
           return protected_block(
             inline_block(
