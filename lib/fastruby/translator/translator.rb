@@ -1048,6 +1048,9 @@ module FastRuby
               if (convention == #{literal_value :fastruby}) {
                 #{convention_global_name ? convention_global_name + " = 1;" : ""}
                 #{name} = address;
+              } else if (convention == #{literal_value :fastruby_array}) {
+                // ruby, wrap rb_funcall
+                #{name} = (void*)#{ruby_wrapper};
               } else if (convention == #{literal_value :cruby}) {
                 // cruby, wrap direct call
                 #{cruby_name} = address;

@@ -88,7 +88,14 @@ module FastRuby
           end
 
           if method_tree
-            :fastruby
+            
+            args_tree = method_tree[2]
+            
+            if args_tree.any?{|x|x.to_s.match(/\*/)}
+              :fastruby_array
+            else
+              :fastruby
+            end
           else
             :cruby
           end
