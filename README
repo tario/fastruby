@@ -61,7 +61,6 @@ I will stabilize the API and document it for next releases. I promise
 * callcc is not supported, it works but using it may result in unexpected behaviour
 * recursive methods will be slow since the optimization of method calls only works with already defined methods
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call it's pretty fast)
-* does not support methods with variable number of arguments
 
 == Usage
 
