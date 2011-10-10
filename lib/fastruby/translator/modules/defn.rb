@@ -48,6 +48,55 @@ module FastRuby
         strmethodargs = "self,block,(VALUE)&frame"
       end
       
+      strmakesignature = if multiple_arguments
+                          "
+                          VALUE argv_class[argc_+1];
+                          
+                          argv_class[0] = CLASS_OF(self); 
+                          for (i=0; i<#{args_tree.size-2}; i++) {
+                            argv_class[i+1] = CLASS_OF(argv[i]);
+                          }
+                          
+                          argv_class[#{args_tree.size-1}] = rb_cArray;
+                          
+                          VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
+                          "
+                       else
+                           "
+                          VALUE argv_class[argc_+1];
+                          
+                          argv_class[0] = CLASS_OF(self); 
+                          for (i=0; i<argc_; i++) {
+                            argv_class[i+1] = CLASS_OF(argv[i]);
+                          }
+                          
+                          VALUE signature = rb_ary_new4(argc_+1,argv_class);
+                          "
+                        end                           
+      
+      strmakemethodsignature = if multiple_arguments
+                    "
+                      int i;
+                      for (i=0; i<#{args_tree.size-2}; i++) {
+                        sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
+                      }
+                      sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(rb_cArray)));
+                    "
+                  else
+                    "
+                      int i;
+                      for (i=0; i<argc_; i++) {
+                        sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
+                      }
+                    "                      
+                  end
+                  
+      strrequiredargs = if multiple_arguments
+                          args_tree.size-2
+                        else
+                          args_tree.size-1
+                        end                  
+                   
       strmakecall = if multiple_arguments
                 "
                   if (argc_ > #{args_tree.size-2}) {
@@ -70,6 +119,10 @@ module FastRuby
               end
 
       anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
+      
+          if (argc_ < #{strrequiredargs}) {
+            rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{strrequiredargs}))\", argc_);
+          }
 
           VALUE klass = #{global_klass_variable};
           char method_name[0x100];
@@ -79,10 +132,7 @@ module FastRuby
 
           sprintf(method_name+1, \"#{method_name}\");
           
-          int i;
-          for (i=0; i<argc_; i++) {
-            sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
-          }
+          #{strmakemethodsignature}
 
           NODE* body;
           ID id;
@@ -91,14 +141,9 @@ module FastRuby
           body = rb_method_node(klass,id);
 
           if (body == 0) {
-            VALUE argv_class[argc_+1];
             
-            argv_class[0] = CLASS_OF(self); 
-            for (i=0; i<argc_; i++) {
-              argv_class[i+1] = CLASS_OF(argv[i]);
-            }
+            #{strmakesignature}
             
-            VALUE signature = rb_ary_new4(argc_+1,argv_class);
             VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
 
             struct METHOD {
