@@ -105,10 +105,6 @@ module FastRuby
     end
 
     def build(signature, noreturn = false)
-      require "fastruby/translator/translator"
-      require "rubygems"
-      require "inline"
-
       no_cache = false
 
       mname = FastRuby.make_str_signature(@method_name, signature)
@@ -121,6 +117,10 @@ module FastRuby
       rescue NameError
         FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
       end
+
+      require "fastruby/translator/translator"
+      require "rubygems"
+      require "inline"
 
       context = FastRuby::Context.new
       context.locals = locals
