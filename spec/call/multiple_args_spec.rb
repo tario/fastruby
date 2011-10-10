@@ -64,19 +64,23 @@ end
         ::CY4.new.foo([1,2,3]).should be == [100,1,2,3]
   end
   
-  it "should allow long array of 8192 elements" do
         class ::CY5
           def bar(*x)
             x
           end
-        fastruby "
-          def foo(x)
-            bar(*x)
-          end
-        "
+          fastruby "
+            def foo(x)
+              bar(*x)
+            end
+          "
         end
         
-        ::CY5.new.foo([0]*8192).should be == [0]*8192
+  it "should allow long array of 8192 elements" do
+    ::CY5.new.foo([0]*8192).should be == [0]*8192
+  end
+
+  it "should allow non-array element (should be converted to array)" do
+    ::CY5.new.foo(0).should be == [0]
   end
 
   
