@@ -134,7 +134,9 @@ module FastRuby
 
       (1..signature.size).each do |i|
         arg = args_tree[i]
-        context.infer_lvar_map[arg] = signature[i]
+        if arg
+          context.infer_lvar_map[arg.to_s.gsub("*","").to_sym] = signature[i]
+        end
       end
 
       context.infer_self = signature[0]
