@@ -131,6 +131,7 @@ module FastRuby
           method_name[1] = 0;
 
           sprintf(method_name+1, \"#{method_name}\");
+          sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(self))));
           
           #{strmakemethodsignature}
 
