@@ -55,8 +55,9 @@ module FastRuby
             inline_block(
             "
             
+            VALUE array = #{to_c args.last[1]};
             int argc = #{args.size-2};
-            VALUE argv[256];
+            VALUE argv[#{args.size} + RARRAY(array)->len];
             
             #{
               i = -1
@@ -66,7 +67,6 @@ module FastRuby
               }.join(";\n")
             };
             
-            VALUE array = #{to_c args.last[1]};
             int array_len = RARRAY(array)->len;
             
             int i;

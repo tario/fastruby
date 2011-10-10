@@ -157,8 +157,9 @@ module FastRuby
   
                   #{str_lvar_initialization}
                   
+                  VALUE array = #{to_c call_args_tree.last[1]};
                   int argc = #{call_args_tree.size-2};
-                  VALUE argv[256];
+                  VALUE argv[#{call_args_tree.size} + RARRAY(array)->len];
                   
                   #{
                     i = -1
@@ -168,7 +169,6 @@ module FastRuby
                     }.join(";\n")
                   };
                   
-                  VALUE array = #{to_c call_args_tree.last[1]};
                   int array_len = RARRAY(array)->len;
                   
                   int i;
