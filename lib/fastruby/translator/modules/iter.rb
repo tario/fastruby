@@ -147,21 +147,53 @@ module FastRuby
 
         if call_args_tree.size > 1
 
-          str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
           str_recv = "pframe->next_recv"
 
           str_recv = "plocals->self" unless recv_tree
-
-            rb_funcall_caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-
-                #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, #{str_called_code_args});
+            if call_args_tree.last[0] == :splat
+              rb_funcall_caller_code = proc { |name| "
+                static VALUE #{name}(VALUE param) {
+                  // call to #{call_tree[2]}
+  
+                  #{str_lvar_initialization}
+                  
+                  int argc = #{call_args_tree.size-2};
+                  VALUE argv[256];
+                  
+                  #{
+                    i = -1
+                    call_args_tree[1..-2].map {|arg|
+                      i = i + 1
+                      "argv[#{i}] = #{to_c arg}"
+                    }.join(";\n")
+                  };
+                  
+                  VALUE array = #{to_c call_args_tree.last[1]};
+                  int array_len = RARRAY(array)->len;
+                  
+                  int i;
+                  for (i=0; i<array_len;i++) {
+                    argv[argc] = rb_ary_entry(array,i);
+                    argc++; 
+                  }
+                  
+                  return rb_funcall2(#{str_recv}, #{intern_num call_tree[2]}, argc, argv);
+                }
+              "
               }
-            "
-            }
-
+            else
+              str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+              rb_funcall_caller_code = proc { |name| "
+                static VALUE #{name}(VALUE param) {
+                  // call to #{call_tree[2]}
+  
+                  #{str_lvar_initialization}
+                  return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, #{str_called_code_args});
+                }
+              "
+              }
+            end
+            
             rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
         else
           str_recv = "pframe->next_recv"
@@ -459,42 +491,8 @@ module FastRuby
                   }
                 }
         "
-
-        if call_args_tree.size > 1
-          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
-
-          str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param, VALUE pframe) {
-                // call to #{call_tree[2]}
-                #{call_frame_struct_code}
-
-                VALUE ret = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
-                plocals->call_frame = old_call_frame;
-                return ret;
-              }
-            "
-            }
-
-        else
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param, VALUE pframe) {
-                #{call_frame_struct_code}
-
-                // call to #{call_tree[2]}
-                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
-                plocals->call_frame = old_call_frame;
-                return ret;
-              }
-            "
-            }
-        end
-
-      inline_block "
-        if (#{convention_global_name}) {
-          return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
-        } else {
+        
+          funcall_call_code = "
           return #{
             frame_call(
               protected_block(inline_block("
@@ -529,8 +527,53 @@ module FastRuby
               "), true)
             )
           };
-        }
-      "
+          "        
+
+      if call_args_tree.size > 1 ? call_args_tree.last[0] == :splat : false
+        inline_block "
+          #{funcall_call_code}
+        "
+      else
+
+        if call_args_tree.size > 1
+          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
+
+          str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
+
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param, VALUE pframe) {
+                // call to #{call_tree[2]}
+                #{call_frame_struct_code}
+
+                VALUE ret = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
+                plocals->call_frame = old_call_frame;
+                return ret;
+              }
+            "
+            }
+
+        else
+            caller_code = proc { |name| "
+              static VALUE #{name}(VALUE param, VALUE pframe) {
+                #{call_frame_struct_code}
+
+                // call to #{call_tree[2]}
+                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
+                plocals->call_frame = old_call_frame;
+                return ret;
+              }
+            "
+            }
+        end
+        
+        inline_block "
+          if (#{convention_global_name}) {
+            return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
+          } else {
+            #{funcall_call_code}
+          }
+        "
+      end
     end
   end
 end
