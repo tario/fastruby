@@ -158,6 +158,11 @@ module FastRuby
                   #{str_lvar_initialization}
                   
                   VALUE array = #{to_c call_args_tree.last[1]};
+                  
+                  if (TYPE(array) != T_ARRAY) {
+                    array = rb_ary_new4(1,&array);
+                  }
+                  
                   int argc = #{call_args_tree.size-2};
                   VALUE argv[#{call_args_tree.size} + RARRAY(array)->len];
                   

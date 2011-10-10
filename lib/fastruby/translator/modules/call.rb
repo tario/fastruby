@@ -56,6 +56,11 @@ module FastRuby
             "
             
             VALUE array = #{to_c args.last[1]};
+            
+            if (TYPE(array) != T_ARRAY) {
+              array = rb_ary_new4(1,&array);
+            }
+            
             int argc = #{args.size-2};
             VALUE argv[#{args.size} + RARRAY(array)->len];
             
