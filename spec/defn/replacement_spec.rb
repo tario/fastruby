@@ -1,7 +1,7 @@
 require "fastruby"
 
 describe FastRuby, "fastruby" do
-  it "should allow define method with array arguments" do
+  it "should allow replace methods after they are called and compiled at runtime" do
     fastruby "
       class JU1
         def foo
