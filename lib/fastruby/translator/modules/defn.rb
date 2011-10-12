@@ -226,6 +226,18 @@ module FastRuby
 
       inline_block "
         #{global_klass_variable} = plocals->self;
+        
+        // clean all previously defined function methods
+        VALUE class_instance_methods = rb_funcall(plocals->self,#{intern_num :instance_methods},0);
+        
+        int i;
+        for (i=0;i<RARRAY(class_instance_methods)->len;i++) {
+          char* method_name = RSTRING(rb_ary_entry(class_instance_methods,i))->ptr;
+          
+          if (memcmp(method_name, \"_#{method_name}\", #{method_name.to_s.size+1})==0) {
+            rb_undef_method(plocals->self, method_name);
+          }
+        } 
 
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
