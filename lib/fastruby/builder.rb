@@ -85,13 +85,12 @@ module FastRuby
 
       mname = FastRuby.make_str_signature(@method_name, signature)
 
-      begin
-        if (@owner.instance_method(mname))
+      if @owner.respond_to? :method_hash
+        method_hash = @owner.method_hash || {}
+        if (method_hash[mname.to_sym.__id__])
           FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"
           return @owner.instance_method(mname)
         end
-      rescue NameError
-        FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
       end
       
       require "fastruby/translator/translator"
