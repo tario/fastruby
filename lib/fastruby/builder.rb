@@ -53,30 +53,6 @@ module FastRuby
       @owner = owner
     end
 
-    def method_from_signature(signature, inference_complete)
-      begin
-        recvtype = @owner
-        if recvtype.respond_to? :fastruby_method and inference_complete
-
-          method_tree = nil
-          begin
-            method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
-          rescue NoMethodError
-          end
-
-          if method_tree
-            recvtype.build(signature, @method_name.to_sym)
-          else
-            recvtype.instance_method(@method_name.to_sym)
-          end
-        else
-          recvtype.instance_method(@method_name.to_sym)
-        end
-      rescue NameError
-        nil
-      end
-    end
-
     def convention(signature, inference_complete)
         recvtype = @owner
         if recvtype.respond_to? :fastruby_method and inference_complete
@@ -117,7 +93,7 @@ module FastRuby
       rescue NameError
         FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
       end
-
+      
       require "fastruby/translator/translator"
       require "rubygems"
       require "inline"
@@ -215,16 +191,13 @@ module FastRuby
         FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
       end
 
-      if noreturn then
-        nil
-      else
-        ret = @owner.instance_method(mname)
+      ret = Object.new
 
-        ret.extend MethodExtent
-        ret.yield_signature = context.yield_signature
+      ret.extend MethodExtent
+      ret.yield_signature = context.yield_signature
 
-        ret
-      end
+      ret
+
     end
 
     module MethodExtent
@@ -241,8 +214,17 @@ module FastRuby
       fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
-    def method_from_signature(signature, method_name, inference_complete)
-      fastruby_method(method_name.to_sym).method_from_signature(signature, inference_complete)
+    def register_method_value(key,value)
+      @method_hash = Hash.new unless @method_hash
+      @method_hash[key] = value
+    end
+    
+    def method_hash
+      @method_hash
+    end
+    
+    def clear_method_hash
+      @method_hash.clear if @method_hash
     end
 
     def fastruby_method(mname_)

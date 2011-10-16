@@ -101,18 +101,18 @@ module FastRuby
                 "
                   if (argc_ > #{args_tree.size-2}) {
                     VALUE argarray = rb_ary_new4(argc_-#{args_tree.size-2}, argv+#{args_tree.size-2});
-                    return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+                    return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs});
                   } else if (argc_ == #{args_tree.size-2}) {
                     // pass pre-calculated method arguments plus an empty array
                     VALUE argarray = rb_ary_new();
-                    return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+                    return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs});
                   } else {
                     rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-2}))\", argc_);
                   }
                 "
               else
-                "if (argc_ == #{args_tree.size-1} && argc == #{args_tree.size+1}) {
-                  return ((VALUE(*)(#{value_cast}))body->nd_cfnc)(#{strmethodargs});
+                "if (argc_ == #{args_tree.size-1}) {
+                  return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs});
                 } else {
                   rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-1}))\", argc_);
                 }"
@@ -135,36 +135,42 @@ module FastRuby
           
           #{strmakemethodsignature}
 
-          NODE* body;
+          void* fptr = 0;
           ID id;
+          VALUE rb_method_hash;
 
           id = rb_intern(method_name);
-          body = rb_method_node(klass,id);
-
-          if (body == 0) {
-            
-            #{strmakesignature}
-            
-            VALUE mobject = rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
-
-            struct METHOD {
-              VALUE klass, rklass;
-              VALUE recv;
-              ID id, oid;
-              int safe_level;
-              NODE *body;
-            };
-
-            struct METHOD *data;
-            Data_Get_Struct(mobject, struct METHOD, data);
-            body = data->body;
-
-            if (body == 0) {
-              rb_raise(rb_eRuntimeError,\"method not found after build: '%s'\", method_name);
+          rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},0);
+          
+          if (rb_method_hash != Qnil) {
+            VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+            if (tmp != Qnil) {
+                fptr = (void*)FIX2LONG(tmp);
             }
           }
 
-            if (nd_type(body) == NODE_CFUNC) {
+          if (fptr == 0) {
+
+            #{strmakesignature}
+            
+            rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
+  
+            id = rb_intern(method_name);
+            rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},0);
+            
+            if (rb_method_hash != Qnil) {
+              VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+              if (tmp != Qnil) {
+                  fptr = (void*)FIX2LONG(tmp);
+              }
+            }
+            
+            if (fptr == 0) {
+              rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
+            }
+
+          }
+
               struct {
                 void* parent_frame;
                 void* plocals;
@@ -182,8 +188,6 @@ module FastRuby
               frame.return_value = Qnil;
               frame.thread_data = rb_current_thread_data();
               frame.targetted = 0;
-
-              int argc = body->nd_argc;
 
               VALUE block = Qfalse;
 
@@ -213,7 +217,6 @@ module FastRuby
               }
 
               #{strmakecall}
-            }
 
           return Qnil;
         }"
@@ -229,15 +232,10 @@ module FastRuby
         
         // clean all previously defined function methods
         VALUE class_instance_methods = rb_funcall(plocals->self,#{intern_num :instance_methods},0);
-        
-        int i;
-        for (i=0;i<RARRAY(class_instance_methods)->len;i++) {
-          char* method_name = RSTRING(rb_ary_entry(class_instance_methods,i))->ptr;
-          
-          if (memcmp(method_name, \"_#{method_name}\", #{method_name.to_s.size+1})==0) {
-            rb_undef_method(plocals->self, method_name);
-          }
-        } 
+
+        if (rb_respond_to(plocals->self, #{intern_num :clear_method_hash}) == Qtrue) {
+          rb_funcall(plocals->self,#{intern_num :clear_method_hash},0);
+        }
 
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,

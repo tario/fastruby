@@ -336,7 +336,22 @@ module FastRuby
                 #{literal_value signature}
                 );
 
-          rb_define_method(#{literal_value klass}, RSTRING(method_name)->ptr, #{alt_method_name}, #{size});
+          ID id = rb_intern(RSTRING(method_name)->ptr);
+          
+          rb_funcall(
+                #{literal_value FastRuby},
+                #{intern_num :set_builder_module},
+                1,
+                #{literal_value klass}
+                );
+          
+          rb_funcall(
+              #{literal_value klass},
+              #{intern_num :register_method_value}, 
+              2,
+              LONG2FIX(id),
+              LONG2FIX(#{alt_method_name})
+              );
         }
       "
     end
@@ -1016,27 +1031,24 @@ module FastRuby
             VALUE mname = #{literal_value mname};
             VALUE tree = #{literal_value method_tree};
             VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
-            VALUE mobject = rb_funcall(recvtype, #{intern_num :method_from_signature},3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
+            VALUE rb_str_signature = rb_funcall(
+                                      #{literal_value FastRuby},
+                                      #{intern_num :make_str_signature},
+                                      2,
+                                      mname,
+                                      signature);
+                                      
 
-            struct METHOD {
-              VALUE klass, rklass;
-              VALUE recv;
-              ID id, oid;
-              int safe_level;
-              NODE *body;
-            };
-
-            int len = 0;
+            ID id;
+            VALUE rb_method_hash;
             void* address = 0;
+            id = rb_intern(RSTRING(rb_str_signature)->ptr);
+            rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},0);
 
-            if (mobject != Qnil) {
-
-              struct METHOD *data;
-              Data_Get_Struct(mobject, struct METHOD, data);
-
-              if (nd_type(data->body) == NODE_CFUNC) {
-              address = data->body->nd_cfnc;
-              len = data->body->nd_argc;
+            if (rb_method_hash != Qnil) {
+              VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+              if (tmp != Qnil) {
+                  address = (void*)FIX2LONG(tmp);
               }
             }
 
@@ -1058,7 +1070,7 @@ module FastRuby
                 if (#{cruby_name} == 0) {
                   #{name} = (void*)#{ruby_wrapper};
                 } else {
-                  #{cruby_len} = len;
+                  #{cruby_len} = 0; // TODO: len
                   #{name} = (void*)#{cruby_wrapper};
                 }
               } else {
