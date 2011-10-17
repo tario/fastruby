@@ -48,4 +48,28 @@ describe FastRuby, "fastruby" do
     
     ::JU2.new.bar.should be == 9
   end
+  
+  it "should allow replace methods using ruby after they are called and compiled at runtime (through other method)" do
+    fastruby "
+      class ::JU3
+        def foo
+          6
+        end
+        
+        def bar
+          foo
+        end
+      end
+    "
+    
+    ::JU3.new.bar
+    
+      class ::JU3
+        def foo
+          9
+        end
+      end
+    
+    ::JU3.new.bar.should be == 9
+  end  
 end
