@@ -1,3 +1,7 @@
+0.0.14	Implemented method hash to store implementation pointers
+
+		Fixed inference of arguments on methods with splat arguments
+
 0.0.13	Argument splat method calls (not optimized yet)
 
 		Array arguments on methods (optional arguments, variable number of arguments)
