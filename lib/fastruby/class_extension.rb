@@ -18,22 +18,10 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/exceptions"
-require "fastruby/object"
-require "fastruby/exceptions"
-require "fastruby/custom_require"
-require "fastruby/set_tree"
-require "fastruby/class_extension"
-
-module FastRuby
-  class << self
-    attr_accessor :fastruby_script_path
-    attr_accessor :fastruby_load_path
+class Class
+  def method_added(method_name)
+    if self.respond_to? :clear_method_hash
+      self.clear_method_hash
+    end
   end
-
-  FastRuby.fastruby_script_path = File.expand_path(__FILE__)
-  FastRuby.fastruby_load_path = File.expand_path(File.dirname(__FILE__))
-
-  VERSION = "0.0.13" unless defined? FastRuby::VERSION
 end
-
