@@ -345,16 +345,28 @@ module FastRuby
                 #{literal_value klass}
                 );
           
+          VALUE rb_method_hash;
+          void** address = 0;
+          rb_method_hash = rb_funcall(#{literal_value klass}, #{intern_num :method_hash},0);
+
+          if (rb_method_hash != Qnil) {
+            VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+            if (tmp != Qnil) {
+                address = (void*)FIX2LONG(tmp);
+            }
+          }
           
-          void** mem = malloc(sizeof(void*));
-          *mem = #{alt_method_name};
+          if (address == 0) {
+            address = malloc(sizeof(void*));
+          }
+          *address = #{alt_method_name};
           
           rb_funcall(
               #{literal_value klass},
               #{intern_num :register_method_value}, 
               2,
               LONG2FIX(id),
-              LONG2FIX(mem)
+              LONG2FIX(address)
               );
         }
       "
@@ -975,15 +987,21 @@ module FastRuby
         toprocstrargs = "self"
       end
 
+      value_cast = ( ["VALUE"]*(args_tree.size) ).join(",") + ",VALUE,VALUE"
+      
       ruby_wrapper = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+        
           #{@frame_struct}* pframe = frame;
-          
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-
-          return #{
-            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
-            };
+  
+          if (*#{address_name} == 0) {
+            return #{
+              protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+              };
+          } else {
+            return ( (VALUE(*)(#{value_cast})) (*#{address_name}) )(self,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+          }
         }
         "
       }
