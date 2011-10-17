@@ -135,6 +135,7 @@ module FastRuby
           
           #{strmakemethodsignature}
 
+          void** address = 0;
           void* fptr = 0;
           ID id;
           VALUE rb_method_hash;
@@ -145,12 +146,12 @@ module FastRuby
           if (rb_method_hash != Qnil) {
             VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
             if (tmp != Qnil) {
-                fptr = (void*)FIX2LONG(tmp);
+                address = (void**)FIX2LONG(tmp);
+                fptr = *address;
             }
           }
 
           if (fptr == 0) {
-
             #{strmakesignature}
             
             rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
@@ -161,7 +162,8 @@ module FastRuby
             if (rb_method_hash != Qnil) {
               VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
               if (tmp != Qnil) {
-                  fptr = (void*)FIX2LONG(tmp);
+                  address = (void**)FIX2LONG(tmp);
+                  fptr = *address;
               }
             }
             

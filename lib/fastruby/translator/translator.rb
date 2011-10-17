@@ -345,12 +345,16 @@ module FastRuby
                 #{literal_value klass}
                 );
           
+          
+          void** mem = malloc(sizeof(void*));
+          *mem = #{alt_method_name};
+          
           rb_funcall(
               #{literal_value klass},
               #{intern_num :register_method_value}, 
               2,
               LONG2FIX(id),
-              LONG2FIX(#{alt_method_name})
+              LONG2FIX(mem)
               );
         }
       "
@@ -949,8 +953,7 @@ module FastRuby
 
     def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
       name = self.add_global_name("void*", 0);
-      cruby_name = self.add_global_name("void*", 0);
-      cruby_len = self.add_global_name("int", 0);
+      address_name = self.add_global_name("void**", 0);
       args_tree = call_tree[3]
       method_tree = nil
 
@@ -958,7 +961,6 @@ module FastRuby
         method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
       rescue NoMethodError
       end
-
 
       strargs_signature = (0..args_tree.size-2).map{|x| "VALUE arg#{x}"}.join(",")
       strargs = (0..args_tree.size-2).map{|x| "arg#{x}"}.join(",")
@@ -976,7 +978,7 @@ module FastRuby
       ruby_wrapper = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
           #{@frame_struct}* pframe = frame;
-
+          
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
 
           return #{
@@ -987,33 +989,6 @@ module FastRuby
       }
 
       value_cast = ( ["VALUE"]*(args_tree.size) ).join(",")
-
-      cruby_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
-          #{@frame_struct}* pframe = frame;
-
-          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-
-          // call to #{recvtype}::#{mname}
-
-          if (#{cruby_len} == -1) {
-            return #{
-              protected_block "((VALUE(*)(int,VALUE*,VALUE))#{cruby_name})(#{args_tree.size-1}, ((VALUE*)method_arguments)+1,*((VALUE*)method_arguments));", false, "method_arguments"
-              };
-
-          } else if (#{cruby_len} == -2) {
-            return #{
-              protected_block "((VALUE(*)(VALUE,VALUE))#{cruby_name})(*((VALUE*)method_arguments), rb_ary_new4(#{args_tree.size-1},((VALUE*)method_arguments)+1) );", false, "method_arguments"
-              };
-
-          } else {
-            return #{
-              protected_block "((VALUE(*)(#{value_cast}))#{cruby_name})(((VALUE*)method_arguments)[0] #{inprocstrargs});", false, "method_arguments"
-              };
-          }
-        }
-        "
-      }
 
       recvdump = nil
 
@@ -1041,7 +1016,7 @@ module FastRuby
 
             ID id;
             VALUE rb_method_hash;
-            void* address = 0;
+            void** address = 0;
             id = rb_intern(RSTRING(rb_str_signature)->ptr);
             rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},0);
 
@@ -1052,36 +1027,24 @@ module FastRuby
               }
             }
 
-            if (address==0) convention = #{literal_value :ruby};
-
-            #{convention_global_name ? convention_global_name + " = 0;" : ""}
-            if (recvtype != Qnil) {
-
-              if (convention == #{literal_value :fastruby}) {
-                #{convention_global_name ? convention_global_name + " = 1;" : ""}
-                #{name} = address;
-              } else if (convention == #{literal_value :fastruby_array}) {
-                // ruby, wrap rb_funcall
-                #{name} = (void*)#{ruby_wrapper};
-              } else if (convention == #{literal_value :cruby}) {
-                // cruby, wrap direct call
-                #{cruby_name} = address;
-
-                if (#{cruby_name} == 0) {
-                  #{name} = (void*)#{ruby_wrapper};
-                } else {
-                  #{cruby_len} = 0; // TODO: len
-                  #{name} = (void*)#{cruby_wrapper};
-                }
-              } else {
-                // ruby, wrap rb_funcall
-                #{name} = (void*)#{ruby_wrapper};
+            if (address==0) {
+              address = malloc(sizeof(void*));
+              
+              if (recvtype != Qnil) { 
+                rb_funcall(
+                    recvtype,
+                    #{intern_num :register_method_value}, 
+                    2,
+                    LONG2FIX(id),
+                    LONG2FIX(address)
+                    );
               }
-            } else {
-              // ruby, wrap rb_funcall
-              #{name} = (void*)#{ruby_wrapper};
+  
+              *address = 0; //(void*)#{ruby_wrapper};
             }
-
+            
+            #{address_name} = address;
+            #{name} = (void*)#{ruby_wrapper};
           }
         "
       else
