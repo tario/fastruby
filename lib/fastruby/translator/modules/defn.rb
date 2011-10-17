@@ -231,10 +231,6 @@ module FastRuby
 
       inline_block "
         #{global_klass_variable} = plocals->self;
-        
-        // clean all previously defined function methods
-        VALUE class_instance_methods = rb_funcall(plocals->self,#{intern_num :instance_methods},0);
-
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
                 #{global_klass_variable},
