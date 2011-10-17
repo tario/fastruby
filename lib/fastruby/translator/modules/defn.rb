@@ -235,10 +235,6 @@ module FastRuby
         // clean all previously defined function methods
         VALUE class_instance_methods = rb_funcall(plocals->self,#{intern_num :instance_methods},0);
 
-        if (rb_respond_to(plocals->self, #{intern_num :clear_method_hash}) == Qtrue) {
-          rb_funcall(plocals->self,#{intern_num :clear_method_hash},0);
-        }
-
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
                 #{global_klass_variable},
