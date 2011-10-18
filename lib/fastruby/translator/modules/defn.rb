@@ -32,7 +32,7 @@ module FastRuby
       hash = Hash.new
       value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
       
-      multiple_arguments = args_tree[1..-1].find{|x| x.to_s =~ /\*/}
+      multiple_arguments = false
       
       args_array_accessors = if multiple_arguments
         (0..args_tree.size-3).map{|x| "argv[#{x}]"} + ["argarray"]
@@ -40,13 +40,7 @@ module FastRuby
         (0..args_tree.size-2).map{|x| "argv[#{x}]"}
       end
       
-      strmethodargs = ""
-
-      if args_tree.size > 1
-        strmethodargs = "self,block,(VALUE)&frame,#{args_array_accessors.map(&:to_s).join(",") }"
-      else
-        strmethodargs = "self,block,(VALUE)&frame"
-      end
+      strmethodargs = "self,block,(VALUE)&frame"
       
       strmakesignature = if multiple_arguments
                           "
@@ -111,19 +105,19 @@ module FastRuby
                   }
                 "
               else
-                "if (argc_ == #{args_tree.size-1}) {
-                  return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs});
-                } else {
-                  rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-1}))\", argc_);
-                }"
+                "
+                  if (argc_ == 0) return ((VALUE(*)(VALUE,VALUE,VALUE))fptr)(#{strmethodargs});
+                    
+                  #{ (1..9).map{ |i|
+                    value_cast = ( ["VALUE"]*(i+3) ).join(",")
+                    "if (argc_ == #{i}) return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs}, #{(0..i-1).map{|x| "argv[#{x}]"}.join(",")});"
+                    }.join("\n");
+                  }
+                  
+                "
               end
 
       anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
-      
-          if (argc_ < #{strrequiredargs}) {
-            rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{strrequiredargs}))\", argc_);
-          }
-
           VALUE klass = #{global_klass_variable};
           char method_name[0x100];
 

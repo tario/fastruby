@@ -372,7 +372,7 @@ module FastRuby
       "
     end
 
-    def to_c_method(tree)
+    def to_c_method(tree, signature = nil)
       method_name = tree[1]
       args_tree = tree[2]
       impl_tree = tree[3][1]
@@ -381,7 +381,7 @@ module FastRuby
         initialize_method_structs(args_tree)
 
         strargs = if args_tree.size > 1
-          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")}" }.join(",") }"
+          "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
         else
           "VALUE block, VALUE _parent_frame"
         end
@@ -478,16 +478,69 @@ module FastRuby
         initialize_method_structs(args_tree)
 
         strargs = if args_tree.size > 1
-          "VALUE block, VALUE _parent_frame, #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")}" }.join(",") }"
+          "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
         else
           "VALUE block, VALUE _parent_frame"
         end
+        
+        is_splat_args = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
+        
+        if is_splat_args
+          
+          i = -1
+          
+          read_arguments_code = args_tree[1..-2].map { |arg|
+              arg = arg.to_s
+              i = i + 1
+              "plocals->#{arg} = arg#{i};\n"
+            }.join("")
+            
+            arguments_array = [(signature.size-1) - (args_tree.size-2)] + (args_tree.size-2..signature.size-2).map{|x| "arg#{x}"}
+            
+          read_arguments_code << "
+            plocals->#{args_tree[-1].to_s.gsub("*","")} = rb_ary_new3(
+                  #{arguments_array.join(",")} 
+                  );
+          "
+
+          validate_arguments_code = if signature.size >= args_tree.size-2
+            "
+            "
+          else
+            "
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size} for #{args_tree.size-2}))\");
+            "
+          end
+          
+        else
+          
+          i = -1
+          
+          read_arguments_code = args_tree[1..-1].map { |arg|
+              arg = arg.to_s
+              i = i + 1
+              "plocals->#{arg} = arg#{i};\n"
+            }.join("")
+            
+            
+          validate_arguments_code = if signature.size >= args_tree.size-1
+            "
+            "
+          else
+            "
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size} for #{args_tree.size-1}))\");
+            "
+          end
+          
+        end
+        
 
         ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+          #{validate_arguments_code}
 
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
-
+          
           frame.parent_frame = (void*)_parent_frame;
           frame.return_value = Qnil;
           frame.rescue = 0;
@@ -554,11 +607,7 @@ module FastRuby
 
           plocals->self = self;
 
-          #{args_tree[1..-1].map { |arg|
-            arg = arg.to_s
-            arg.gsub!("*","")
-            "plocals->#{arg} = #{arg};\n"
-          }.join("") }
+          #{read_arguments_code}
 
           pblock = (void*)block;
           if (pblock) {
@@ -1030,8 +1079,9 @@ module FastRuby
                                       2,
                                       mname,
                                       signature);
-                                      
 
+            rb_funcall(recvtype, #{intern_num :build}, 2, signature, mname);
+                                      
             ID id;
             VALUE rb_method_hash;
             void** address = 0;
