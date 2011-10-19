@@ -227,7 +227,8 @@ static VALUE clear_method_hash_addresses(VALUE klass) {
 }
 
 static void init_class_extension() {
-	rb_define_method(rb_cClass, "clear_method_hash_addresses",clear_method_hash_addresses,0);
+	VALUE rb_mFastRubyBuilderModule = rb_create_module_under(rb_mFastRuby, "BuilderModule");
+	rb_define_method(rb_mFastRubyBuilderModule, "clear_method_hash_addresses",clear_method_hash_addresses,0);
 }
 
 static void init_stack_chunk() {

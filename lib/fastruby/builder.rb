@@ -22,6 +22,9 @@ require "fastruby/inline_extension"
 require "fastruby/method_extension"
 require "fastruby/logging"
 require "fastruby/getlocals"
+require "fastruby_load_path"
+
+require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
 module FastRuby
 
@@ -224,8 +227,11 @@ module FastRuby
       @method_hash
     end
     
-    def clear_method_hash
-      @method_hash.clear if @method_hash
+    def method_added(method_name)
+      if self.respond_to? :clear_method_hash_addresses
+        FastRuby.unset_tree(self,method_name)
+        self.clear_method_hash_addresses
+      end
     end
 
     def fastruby_method(mname_)
