@@ -157,6 +157,8 @@ module FastRuby
       alt_options.delete(:main)
 
       inline_block "
+        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
+        
         #{global_klass_variable} = plocals->self;
         // set tree
         rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
@@ -168,7 +170,6 @@ module FastRuby
 
                 );
 
-        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
         "
 
     end

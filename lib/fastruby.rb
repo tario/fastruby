@@ -23,7 +23,6 @@ require "fastruby/object"
 require "fastruby/exceptions"
 require "fastruby/custom_require"
 require "fastruby/set_tree"
-require "fastruby/class_extension"
 
 module FastRuby
   class << self
@@ -37,3 +36,4 @@ module FastRuby
   VERSION = "0.0.13" unless defined? FastRuby::VERSION
 end
 
+require "fastruby/class_extension"

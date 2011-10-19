@@ -35,6 +35,12 @@ module FastRuby
       end
     end
   end
+  
+  def self.unset_tree(klass, method_name)
+    fastrubym = klass.fastruby_method(method_name)
+    fastrubym.tree = nil
+    nil
+  end
 
   def self.set_tree(klass, method_name, tree, snippet_hash, options = {})
     locals = Set.new

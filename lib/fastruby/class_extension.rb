@@ -18,9 +18,15 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
+require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
+
 class Class
   def method_added(method_name)
     if self.respond_to? :clear_method_hash
+      
+      FastRuby.unset_tree(self,method_name)
+      
+      self.clear_method_hash_addresses
       self.clear_method_hash
     end
   end

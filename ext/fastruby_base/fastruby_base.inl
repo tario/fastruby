@@ -207,6 +207,28 @@ static inline struct FASTRUBYTHREADDATA* rb_current_thread_data() {
 	Data_Get_Struct(rb_thread_data,struct FASTRUBYTHREADDATA,thread_data);
 	return thread_data;
 }
+        
+static VALUE clear_method_hash_addresses(VALUE klass) {
+
+  VALUE rb_method_hash = rb_funcall(klass, rb_intern("method_hash"),0);
+  
+  if (rb_method_hash != Qnil) {
+	  VALUE rb_values = rb_funcall(rb_method_hash, rb_intern("values"),0);
+	  void** address;
+	  int i;
+	  
+	  for (i = 0; i < RARRAY(rb_values)->len; i++) {
+	  	address = (void**)FIX2LONG(rb_ary_entry(rb_values,i));
+	  	*address = 0;
+	  }
+  }
+  
+  return Qnil;
+}
+
+static void init_class_extension() {
+	rb_define_method(rb_cClass, "clear_method_hash_addresses",clear_method_hash_addresses,0);
+}
 
 static void init_stack_chunk() {
 
