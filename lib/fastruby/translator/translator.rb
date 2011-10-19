@@ -1015,6 +1015,7 @@ module FastRuby
     def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
       name = self.add_global_name("void*", 0);
       address_name = self.add_global_name("void**", 0);
+      fastruby_method_name = self.add_global_name("VALUE", "Qnil");
       args_tree = call_tree[3]
       method_tree = nil
 
@@ -1037,13 +1038,31 @@ module FastRuby
       end
 
       value_cast = ( ["VALUE"]*(args_tree.size) ).join(",") + ",VALUE,VALUE"
+
+      recvdump = nil
+
+      begin
+         recvdump = literal_value recvtype
+      rescue
+      end
       
       ruby_wrapper = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
         
           #{@frame_struct}* pframe = frame;
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-  
+          
+          if (*#{address_name} == 0) {
+            if (#{fastruby_method_name} != Qnil) {
+              if (rb_ivar_get(#{fastruby_method_name},#{intern_num :@tree}) != Qnil) {
+                VALUE signature = #{literal_value signature};
+                VALUE recvtype = #{recvdump};
+                VALUE mname = #{literal_value mname};
+                
+                rb_funcall(recvtype, #{intern_num :build}, 2, signature, mname);
+              } 
+            }
+          }
           if (*#{address_name} == 0) {
             return #{
               protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
@@ -1055,14 +1074,6 @@ module FastRuby
         "
       }
 
-      value_cast = ( ["VALUE"]*(args_tree.size) ).join(",")
-
-      recvdump = nil
-
-      begin
-         recvdump = literal_value recvtype
-      rescue
-      end
 
       if recvdump and recvtype
         init_extra << "
@@ -1080,7 +1091,9 @@ module FastRuby
                                       mname,
                                       signature);
 
-            rb_funcall(recvtype, #{intern_num :build}, 2, signature, mname);
+
+            rb_gc_register_address(&#{fastruby_method_name});
+            #{fastruby_method_name} = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);
                                       
             ID id;
             VALUE rb_method_hash;
