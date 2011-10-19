@@ -32,91 +32,8 @@ module FastRuby
       hash = Hash.new
       value_cast = ( ["VALUE"]*(args_tree.size+2) ).join(",")
       
-      multiple_arguments = false
-      
-      args_array_accessors = if multiple_arguments
-        (0..args_tree.size-3).map{|x| "argv[#{x}]"} + ["argarray"]
-      else
-        (0..args_tree.size-2).map{|x| "argv[#{x}]"}
-      end
-      
       strmethodargs = "self,block,(VALUE)&frame"
       
-      strmakesignature = if multiple_arguments
-                          "
-                          VALUE argv_class[argc_+1];
-                          
-                          argv_class[0] = CLASS_OF(self); 
-                          for (i=0; i<#{args_tree.size-2}; i++) {
-                            argv_class[i+1] = CLASS_OF(argv[i]);
-                          }
-                          
-                          argv_class[#{args_tree.size-1}] = rb_cArray;
-                          
-                          VALUE signature = rb_ary_new4(#{args_tree.size},argv_class);
-                          "
-                       else
-                           "
-                          VALUE argv_class[argc_+1];
-                          
-                          argv_class[0] = CLASS_OF(self); 
-                          for (i=0; i<argc_; i++) {
-                            argv_class[i+1] = CLASS_OF(argv[i]);
-                          }
-                          
-                          VALUE signature = rb_ary_new4(argc_+1,argv_class);
-                          "
-                        end                           
-      
-      strmakemethodsignature = if multiple_arguments
-                    "
-                      int i;
-                      for (i=0; i<#{args_tree.size-2}; i++) {
-                        sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
-                      }
-                      sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(rb_cArray)));
-                    "
-                  else
-                    "
-                      int i;
-                      for (i=0; i<argc_; i++) {
-                        sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
-                      }
-                    "                      
-                  end
-                  
-      strrequiredargs = if multiple_arguments
-                          args_tree.size-2
-                        else
-                          args_tree.size-1
-                        end                  
-                   
-      strmakecall = if multiple_arguments
-                "
-                  if (argc_ > #{args_tree.size-2}) {
-                    VALUE argarray = rb_ary_new4(argc_-#{args_tree.size-2}, argv+#{args_tree.size-2});
-                    return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs});
-                  } else if (argc_ == #{args_tree.size-2}) {
-                    // pass pre-calculated method arguments plus an empty array
-                    VALUE argarray = rb_ary_new();
-                    return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs});
-                  } else {
-                    rb_raise(rb_eArgError, \"wrong number of arguments (%d for #{args_tree.size-2}))\", argc_);
-                  }
-                "
-              else
-                "
-                  if (argc_ == 0) return ((VALUE(*)(VALUE,VALUE,VALUE))fptr)(#{strmethodargs});
-                    
-                  #{ (1..9).map{ |i|
-                    value_cast = ( ["VALUE"]*(i+3) ).join(",")
-                    "if (argc_ == #{i}) return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs}, #{(0..i-1).map{|x| "argv[#{x}]"}.join(",")});"
-                    }.join("\n");
-                  }
-                  
-                "
-              end
-
       anonymous_method_name = anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
           VALUE klass = #{global_klass_variable};
           char method_name[0x100];
@@ -127,7 +44,10 @@ module FastRuby
           sprintf(method_name+1, \"#{method_name}\");
           sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(self))));
           
-          #{strmakemethodsignature}
+                      int i;
+                      for (i=0; i<argc_; i++) {
+                        sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
+                      }
 
           void** address = 0;
           void* fptr = 0;
@@ -146,7 +66,14 @@ module FastRuby
           }
 
           if (fptr == 0) {
-            #{strmakesignature}
+                          VALUE argv_class[argc_+1];
+                          
+                          argv_class[0] = CLASS_OF(self); 
+                          for (i=0; i<argc_; i++) {
+                            argv_class[i+1] = CLASS_OF(argv[i]);
+                          }
+                          
+                          VALUE signature = rb_ary_new4(argc_+1,argv_class);
             
             rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
   
@@ -212,7 +139,13 @@ module FastRuby
                 return Qnil;
               }
 
-              #{strmakecall}
+                  if (argc_ == 0) return ((VALUE(*)(VALUE,VALUE,VALUE))fptr)(#{strmethodargs});
+                    
+                  #{ (1..9).map{ |i|
+                    value_cast = ( ["VALUE"]*(i+3) ).join(",")
+                    "if (argc_ == #{i}) return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs}, #{(0..i-1).map{|x| "argv[#{x}]"}.join(",")});"
+                    }.join("\n");
+                  }
 
           return Qnil;
         }"
