@@ -220,10 +220,8 @@ static void init_stack_chunk() {
 	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
 }
 
-static VALUE clear_method_hash_addresses(VALUE klass) {
+static VALUE clear_method_hash_addresses(VALUE klass,VALUE rb_method_hash) {
 
-  VALUE rb_method_hash = rb_funcall(klass, rb_intern("method_hash"),0);
-  
   if (rb_method_hash != Qnil) {
 	  VALUE rb_values = rb_funcall(rb_method_hash, rb_intern("values"),0);
 	  void** address;
@@ -240,7 +238,7 @@ static VALUE clear_method_hash_addresses(VALUE klass) {
 
 static void init_class_extension() {
 	VALUE rb_mFastRubyBuilderModule = rb_define_module_under(rb_mFastRuby, "BuilderModule");
-	rb_define_method(rb_mFastRubyBuilderModule, "clear_method_hash_addresses",clear_method_hash_addresses,0);
+	rb_define_method(rb_mFastRubyBuilderModule, "clear_method_hash_addresses",clear_method_hash_addresses,1);
 }
 
 static VALUE fastruby_method_tree(VALUE self) {

@@ -347,7 +347,7 @@ module FastRuby
           
           VALUE rb_method_hash;
           void** address = 0;
-          rb_method_hash = rb_funcall(#{literal_value klass}, #{intern_num :method_hash},0);
+          rb_method_hash = rb_funcall(#{literal_value klass}, #{intern_num :method_hash},1,#{literal_value method_name});
 
           if (rb_method_hash != Qnil) {
             VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
@@ -364,7 +364,8 @@ module FastRuby
           rb_funcall(
               #{literal_value klass},
               #{intern_num :register_method_value}, 
-              2,
+              3,
+              #{literal_value method_name},
               LONG2FIX(id),
               LONG2FIX(address)
               );
@@ -1097,7 +1098,7 @@ module FastRuby
             VALUE rb_method_hash;
             void** address = 0;
             id = rb_intern(RSTRING(rb_str_signature)->ptr);
-            rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},0);
+            rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},1,mname);
 
             if (rb_method_hash != Qnil) {
               VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
@@ -1113,7 +1114,8 @@ module FastRuby
                 rb_funcall(
                     recvtype,
                     #{intern_num :register_method_value}, 
-                    2,
+                    3,
+                    #{literal_value mname},
                     LONG2FIX(id),
                     LONG2FIX(address)
                     );

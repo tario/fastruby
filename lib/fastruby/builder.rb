@@ -90,10 +90,10 @@ module FastRuby
       mname = FastRuby.make_str_signature(@method_name, signature)
 
       if @owner.respond_to? :method_hash
-        method_hash = @owner.method_hash || {}
+        method_hash = @owner.method_hash(@method_name.to_sym) || {}
         if (method_hash[mname.to_sym.__id__])
           FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"
-          return @owner.instance_method(mname)
+          return nil
         end
       end
       
@@ -217,19 +217,21 @@ module FastRuby
       fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
-    def register_method_value(key,value)
+    def register_method_value(method_name,key,value)
       @method_hash = Hash.new unless @method_hash
-      @method_hash[key] = value
+      @method_hash[method_name] = Hash.new unless @method_hash[method_name]
+      @method_hash[method_name][key] = value
     end
     
-    def method_hash
-      @method_hash
+    def method_hash(method_name)
+      @method_hash = Hash.new unless @method_hash
+      @method_hash[method_name]
     end
     
     def method_added(method_name)
       if self.respond_to? :clear_method_hash_addresses
         FastRuby.unset_tree(self,method_name)
-        self.clear_method_hash_addresses
+        self.clear_method_hash_addresses(method_hash(method_name))
       end
     end
 

@@ -55,7 +55,7 @@ module FastRuby
           VALUE rb_method_hash;
 
           id = rb_intern(method_name);
-          rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},0);
+          rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value method_name});
           
           if (rb_method_hash != Qnil) {
             VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
@@ -78,7 +78,7 @@ module FastRuby
             rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
   
             id = rb_intern(method_name);
-            rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},0);
+            rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value method_name});
             
             if (rb_method_hash != Qnil) {
               VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
