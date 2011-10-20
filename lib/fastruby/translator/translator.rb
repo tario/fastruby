@@ -495,7 +495,7 @@ module FastRuby
               "plocals->#{arg} = arg#{i};\n"
             }.join("")
             
-            arguments_array = [(signature.size-1) - (args_tree.size-2)] + (args_tree.size-2..signature.size-2).map{|x| "arg#{x}"}
+            arguments_array = [(signature.size-1) - (args_tree.size-2)] + (args_tree.size-2..signature.size-1).map{|x| "arg#{x}"}
             
           read_arguments_code << "
             plocals->#{args_tree[-1].to_s.gsub("*","")} = rb_ary_new3(
@@ -503,7 +503,7 @@ module FastRuby
                   );
           "
 
-          validate_arguments_code = if signature.size >= args_tree.size-2
+          validate_arguments_code = if signature.size-1 >= args_tree.size-2
             "
             "
           else
@@ -521,14 +521,13 @@ module FastRuby
               i = i + 1
               "plocals->#{arg} = arg#{i};\n"
             }.join("")
-            
-            
-          validate_arguments_code = if signature.size >= args_tree.size-1
+
+          validate_arguments_code = if signature.size-1 >= args_tree.size-1
             "
             "
           else
             "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size} for #{args_tree.size-1}))\");
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{args_tree.size-1}))\");
             "
           end
           

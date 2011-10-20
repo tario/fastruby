@@ -98,9 +98,8 @@ module FastRuby
 
         args[1..-1].each do |arg|
           argtype = infer_type(arg)
-          if argtype
-            signature << argtype
-          else
+          signature << argtype
+          unless argtype
             inference_complete = false
           end
         end
