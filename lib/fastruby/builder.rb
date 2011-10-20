@@ -46,7 +46,6 @@ module FastRuby
   end
 
   class Method
-    attr_accessor :tree
     attr_accessor :locals
     attr_accessor :options
     attr_accessor :snippet_hash

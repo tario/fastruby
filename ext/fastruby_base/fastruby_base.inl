@@ -208,6 +208,18 @@ static inline struct FASTRUBYTHREADDATA* rb_current_thread_data() {
 	return thread_data;
 }
         
+static void init_stack_chunk() {
+
+	rb_mFastRuby = rb_define_module("FastRuby");
+	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
+	rb_cFastRubyThreadData = rb_define_class_under(rb_mFastRuby, "ThreadData", rb_cObject);
+
+	id_fastruby_thread_data = rb_intern("fastruby_thread_data");
+
+	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
+	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
+}
+
 static VALUE clear_method_hash_addresses(VALUE klass) {
 
   VALUE rb_method_hash = rb_funcall(klass, rb_intern("method_hash"),0);
@@ -227,19 +239,39 @@ static VALUE clear_method_hash_addresses(VALUE klass) {
 }
 
 static void init_class_extension() {
-	VALUE rb_mFastRubyBuilderModule = rb_create_module_under(rb_mFastRuby, "BuilderModule");
+	VALUE rb_mFastRubyBuilderModule = rb_define_module_under(rb_mFastRuby, "BuilderModule");
 	rb_define_method(rb_mFastRubyBuilderModule, "clear_method_hash_addresses",clear_method_hash_addresses,0);
 }
 
-static void init_stack_chunk() {
-
-	rb_mFastRuby = rb_define_module("FastRuby");
-	rb_cStackChunk = rb_define_class_under(rb_mFastRuby, "StackChunk", rb_cObject);
-	rb_cFastRubyThreadData = rb_define_class_under(rb_mFastRuby, "ThreadData", rb_cObject);
-
-	id_fastruby_thread_data = rb_intern("fastruby_thread_data");
-
-	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
-	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
+static VALUE fastruby_method_tree(VALUE self) {
+	VALUE rb_tree_pointer = rb_ivar_get(self, rb_intern("@tree"));
+	if (rb_tree_pointer == Qnil) return Qnil;
+	VALUE* tree_pointer = (VALUE*)FIX2LONG(rb_tree_pointer);
+	return *tree_pointer;
 }
 
+static VALUE fastruby_method_tree_pointer(VALUE self) {
+	VALUE rb_tree_pointer = rb_ivar_get(self, rb_intern("@tree"));
+
+	if (rb_tree_pointer == Qnil) {
+		VALUE* tree_pointer = malloc(sizeof(VALUE*));
+		*tree_pointer = Qnil;
+		rb_tree_pointer = LONG2FIX(tree_pointer);
+		rb_ivar_set(self, rb_intern("@tree"), rb_tree_pointer);
+	}
+
+	return rb_tree_pointer;
+}
+
+static VALUE fastruby_method_tree_eq(VALUE self, VALUE val) {
+	VALUE* tree_pointer = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(self));
+	*tree_pointer = val;
+	return Qnil;
+}
+
+static void init_fastruby_method() {
+	VALUE rb_cFastRubyMethod = rb_define_class_under(rb_mFastRuby, "Method", rb_cObject);
+	rb_define_method(rb_cFastRubyMethod, "tree_pointer", fastruby_method_tree_pointer,0);
+	rb_define_method(rb_cFastRubyMethod, "tree", fastruby_method_tree,0);
+	rb_define_method(rb_cFastRubyMethod, "tree=", fastruby_method_tree_eq,1);
+}
