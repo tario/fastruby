@@ -1014,7 +1014,7 @@ module FastRuby
     def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
       name = self.add_global_name("void*", 0);
       address_name = self.add_global_name("void**", 0);
-      fastruby_method_name = self.add_global_name("VALUE", "Qnil");
+      tree_pointer_name = self.add_global_name("VALUE*", 0);
       args_tree = call_tree[3]
       method_tree = nil
 
@@ -1052,14 +1052,14 @@ module FastRuby
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
           
           if (*#{address_name} == 0) {
-            if (#{fastruby_method_name} != Qnil) {
-              if (rb_ivar_get(#{fastruby_method_name},#{intern_num :@tree}) != Qnil) {
+            if (#{tree_pointer_name} != 0) {
+              if (*#{tree_pointer_name} != Qnil) {
                 VALUE signature = #{literal_value signature};
                 VALUE recvtype = #{recvdump};
                 VALUE mname = #{literal_value mname};
-                
+                  
                 rb_funcall(recvtype, #{intern_num :build}, 2, signature, mname);
-              } 
+              }
             }
           }
           if (*#{address_name} == 0) {
@@ -1091,9 +1091,8 @@ module FastRuby
                                       signature);
 
 
-            rb_gc_register_address(&#{fastruby_method_name});
-            #{fastruby_method_name} = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);
-                                      
+            #{tree_pointer_name} = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(recvtype)); 
+            
             ID id;
             VALUE rb_method_hash;
             void** address = 0;
