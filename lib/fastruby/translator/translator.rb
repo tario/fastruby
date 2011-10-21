@@ -1015,6 +1015,7 @@ module FastRuby
     def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
       name = self.add_global_name("void*", 0);
       address_name = self.add_global_name("void**", 0);
+      cfunc_address_name = self.add_global_name("void**", 0);
       tree_pointer_name = self.add_global_name("VALUE*", 0);
       args_tree = call_tree[3]
       method_tree = nil
@@ -1052,6 +1053,8 @@ module FastRuby
           #{@frame_struct}* pframe = frame;
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
           
+          void* fptr = 0;
+          
           if (*#{address_name} == 0) {
             if (#{tree_pointer_name} != 0) {
               if (*#{tree_pointer_name} != Qnil) {
@@ -1063,17 +1066,23 @@ module FastRuby
               }
             }
           }
-          if (*#{address_name} == 0) {
+          
+          fptr = *#{address_name};
+          
+          if (fptr == 0) {
+            fptr = *#{cfunc_address_name};
+          } 
+          
+          if (fptr == 0) {
             return #{
               protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
               };
           } else {
-            return ( (VALUE(*)(#{value_cast})) (*#{address_name}) )(self,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+            return ( (VALUE(*)(#{value_cast})) (fptr) )(self,(VALUE)block,(VALUE)frame#{inprocstrargs});  
           }
         }
         "
       }
-
 
       if recvdump and recvtype
         init_extra << "
@@ -1095,8 +1104,10 @@ module FastRuby
             #{tree_pointer_name} = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(recvtype)); 
             
             ID id;
+            ID default_id = rb_intern(\"default\");
             VALUE rb_method_hash;
             void** address = 0;
+            void** default_address = 0;
             id = rb_intern(RSTRING(rb_str_signature)->ptr);
             rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},1,mname);
 
@@ -1104,6 +1115,27 @@ module FastRuby
               VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
               if (tmp != Qnil) {
                   address = (void*)FIX2LONG(tmp);
+              }
+              
+              tmp = rb_hash_aref(rb_method_hash, LONG2FIX(default_id));
+              if (tmp != Qnil) {
+                 default_address = (void*)FIX2LONG(tmp);
+              }
+            }
+            
+            if (default_address==0) {
+              default_address = malloc(sizeof(void*));
+              *default_address = 0;
+            
+              if (recvtype != Qnil) { 
+                rb_funcall(
+                    recvtype,
+                    #{intern_num :register_method_value}, 
+                    3,
+                    #{literal_value mname},
+                    LONG2FIX(default_id),
+                    LONG2FIX(default_address)
+                    );
               }
             }
 
@@ -1125,6 +1157,7 @@ module FastRuby
             }
             
             #{address_name} = address;
+            #{cfunc_address_name} = default_address;
             #{name} = (void*)#{ruby_wrapper};
           }
         "
@@ -1132,6 +1165,8 @@ module FastRuby
         init_extra << "
         // ruby, wrap rb_funcall
         #{name} = (void*)#{ruby_wrapper};
+            #{cfunc_address_name} = malloc(sizeof(void*));
+            *#{cfunc_address_name} = 0;
         "
       end
 

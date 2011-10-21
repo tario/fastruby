@@ -25,6 +25,13 @@ struct FASTRUBYTHREADDATA {
 	VALUE rb_stack_chunk;
 };
 
+struct METHOD {
+    VALUE klass, rklass;
+    VALUE recv;
+    ID id, oid;
+    int safe_level;
+    NODE *body;
+};
 
 static inline void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	// initialize pointers with zeros
