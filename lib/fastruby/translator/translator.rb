@@ -1047,7 +1047,19 @@ module FastRuby
       rescue
       end
       
-      ruby_wrapper = anonymous_function{ |funcname| "
+      pureruby_wrapper = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+          #{@frame_struct}* pframe = frame;
+          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+  
+          return #{
+            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+            };
+        }
+      "
+      }
+      
+      generic_wrapper = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
         
           #{@frame_struct}* pframe = frame;
@@ -1153,20 +1165,18 @@ module FastRuby
                     );
               }
   
-              *address = 0; //(void*)#{ruby_wrapper};
+              *address = 0; //(void*)
             }
             
             #{address_name} = address;
             #{cfunc_address_name} = default_address;
-            #{name} = (void*)#{ruby_wrapper};
+            #{name} = (void*)#{generic_wrapper};
           }
         "
       else
         init_extra << "
         // ruby, wrap rb_funcall
-        #{name} = (void*)#{ruby_wrapper};
-            #{cfunc_address_name} = malloc(sizeof(void*));
-            *#{cfunc_address_name} = 0;
+        #{name} = (void*)#{pureruby_wrapper};
         "
       end
 
