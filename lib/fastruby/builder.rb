@@ -96,6 +96,9 @@ module FastRuby
           return nil
         end
       end
+
+      FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
+
       
       require "fastruby/translator/translator"
       require "rubygems"
