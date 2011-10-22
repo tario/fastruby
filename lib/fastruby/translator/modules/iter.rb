@@ -539,6 +539,7 @@ module FastRuby
           #{funcall_call_code}
         "
       else
+        encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)
 
         if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
@@ -550,7 +551,7 @@ module FastRuby
                 // call to #{call_tree[2]}
                 #{call_frame_struct_code}
 
-                VALUE ret = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
+                VALUE ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
                 plocals->call_frame = old_call_frame;
                 return ret;
               }
@@ -563,7 +564,7 @@ module FastRuby
                 #{call_frame_struct_code}
 
                 // call to #{call_tree[2]}
-                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
+                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
                 plocals->call_frame = old_call_frame;
                 return ret;
               }
@@ -572,10 +573,14 @@ module FastRuby
         end
         
         inline_block "
-          if (#{convention_global_name}) {
-            return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
-          } else {
+          if (#{@last_address_name} == 0) {
             #{funcall_call_code}
+          } else {
+            if (*#{@last_address_name} == 0) {
+              #{funcall_call_code}
+            } else {
+              return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
+            }
           }
         "
       end

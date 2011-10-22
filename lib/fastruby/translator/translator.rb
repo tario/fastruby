@@ -1015,6 +1015,7 @@ module FastRuby
     def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil)
       name = self.add_global_name("void*", 0);
       address_name = self.add_global_name("void**", 0);
+      @last_address_name = address_name
       cfunc_address_name = self.add_global_name("void**", 0);
       tree_pointer_name = self.add_global_name("VALUE*", 0);
       args_tree = call_tree[3]
