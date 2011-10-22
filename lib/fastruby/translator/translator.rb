@@ -1017,6 +1017,7 @@ module FastRuby
       address_name = self.add_global_name("void**", 0);
       @last_address_name = address_name
       cfunc_address_name = self.add_global_name("void**", 0);
+      cfunc_real_address_name  = self.add_global_name("void*", 0);
       tree_pointer_name = self.add_global_name("VALUE*", 0);
       args_tree = call_tree[3]
       method_tree = nil
@@ -1097,6 +1098,16 @@ module FastRuby
         "
       }
 
+
+      cfunc_value_cast = (["VALUE"]*args_tree.size).join(",")
+      cfunc_wrapper = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+            VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+            return ( (VALUE(*)(#{cfunc_value_cast})) (#{cfunc_real_address_name}) )(self#{inprocstrargs});
+        }
+        "
+      }
+
       if recvdump and recvtype
         init_extra << "
           {
@@ -1137,7 +1148,15 @@ module FastRuby
             
             if (default_address==0) {
               default_address = malloc(sizeof(void*));
+              NODE* body = rb_method_node(recvtype,#{intern_num mname});
               *default_address = 0;
+
+              if (nd_type(body) == NODE_CFUNC) {
+                if (body->nd_argc == #{args_tree.size-1}) {
+                  *default_address = #{cfunc_wrapper};
+                  #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                }
+              }
             
               if (recvtype != Qnil) { 
                 rb_funcall(
