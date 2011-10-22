@@ -509,7 +509,7 @@ module FastRuby
             "
           else
             "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size} for #{args_tree.size-2}))\");
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size} for #{args_tree.size-2})\");
             "
           end
           
@@ -528,7 +528,7 @@ module FastRuby
             "
           else
             "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{args_tree.size-1}))\");
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{args_tree.size-1})\");
             "
           end
           
