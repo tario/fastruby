@@ -533,7 +533,8 @@ module FastRuby
           };
           "        
 
-      if call_args_tree.size > 1 ? call_args_tree.last[0] == :splat : false
+      recvtype = nil if call_args_tree.size > 1 ? call_args_tree.last[0] == :splat : false
+      unless recvtype
         inline_block "
           #{funcall_call_code}
         "
