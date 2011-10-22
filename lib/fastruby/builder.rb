@@ -55,33 +55,6 @@ module FastRuby
       @owner = owner
     end
 
-    def convention(signature, inference_complete)
-        recvtype = @owner
-        if recvtype.respond_to? :fastruby_method and inference_complete
-
-          method_tree = nil
-          begin
-            method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
-          rescue NoMethodError, NameError
-          end
-
-          if method_tree
-            
-            args_tree = method_tree[2]
-            
-            if args_tree.any?{|x|x.to_s.match(/\*/)}
-              :fastruby_array
-            else
-              :fastruby
-            end
-          else
-            :cruby
-          end
-        else
-          :cruby
-        end
-    end
-
     def build(signature, noreturn = false)
       return nil unless tree
       
@@ -214,10 +187,6 @@ module FastRuby
   module BuilderModule
     def build(signature, method_name, noreturn = false)
       fastruby_method(method_name.to_sym).build(signature, noreturn)
-    end
-
-    def convention(signature, method_name, inference_complete)
-      fastruby_method(method_name.to_sym).convention(signature, inference_complete)
     end
 
     def register_method_value(method_name,key,value)

@@ -1104,7 +1104,6 @@ module FastRuby
             VALUE signature = #{literal_value signature};
             VALUE mname = #{literal_value mname};
             VALUE tree = #{literal_value method_tree};
-            VALUE convention = rb_funcall(recvtype, #{intern_num :convention}, 3,signature,mname,#{inference_complete ? "Qtrue" : "Qfalse"});
             VALUE rb_str_signature = rb_funcall(
                                       #{literal_value FastRuby},
                                       #{intern_num :make_str_signature},
