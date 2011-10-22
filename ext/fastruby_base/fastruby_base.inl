@@ -243,9 +243,27 @@ static VALUE clear_method_hash_addresses(VALUE klass,VALUE rb_method_hash) {
   return Qnil;
 }
 
+static VALUE has_fastruby_function(VALUE self, VALUE rb_method_hash, VALUE mname) {
+	ID id = rb_intern(RSTRING(mname)->ptr);
+	VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+	
+	if (tmp != Qnil) {
+		void** address = (void**)FIX2LONG(tmp);
+		
+		if (*address == 0) {
+			return Qfalse;
+		} else {
+			return Qtrue;
+		}
+	}
+	
+	return Qfalse;
+}
+
 static void init_class_extension() {
 	VALUE rb_mFastRubyBuilderModule = rb_define_module_under(rb_mFastRuby, "BuilderModule");
 	rb_define_method(rb_mFastRubyBuilderModule, "clear_method_hash_addresses",clear_method_hash_addresses,1);
+	rb_define_method(rb_mFastRubyBuilderModule, "has_fastruby_function",has_fastruby_function,2);
 }
 
 static VALUE fastruby_method_tree(VALUE self) {

@@ -91,7 +91,7 @@ module FastRuby
 
       if @owner.respond_to? :method_hash
         method_hash = @owner.method_hash(@method_name.to_sym) || {}
-        if (method_hash[mname.to_sym.__id__])
+        if (@owner.has_fastruby_function(method_hash,mname.to_s))
           FastRuby.logger.info "NOT Building #{@owner}::#{@method_name} for signature #{signature.inspect}, it's already done"
           return nil
         end
