@@ -463,10 +463,9 @@ module FastRuby
 
         call_frame_struct_code = "
                 #{@block_struct} block;
-                #{@locals_struct} *plocals = (void*)param;
 
                 block.block_function_address = (void*)#{anonymous_function(&block_code)};
-                block.block_function_param = (void*)param;
+                block.block_function_param = (void*)plocals;
 
                 // create a call_frame
                 #{@frame_struct} call_frame;
@@ -541,35 +540,26 @@ module FastRuby
       else
         encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)
 
-        if call_args_tree.size > 1
+        fastruby_call_code = if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
 
-          str_called_code_args = call_tree[3][1..-1].map{|subtree| to_c subtree}.join(",")
-
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param, VALUE pframe) {
+            "
                 // call to #{call_tree[2]}
                 #{call_frame_struct_code}
 
                 VALUE ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
                 plocals->call_frame = old_call_frame;
                 return ret;
-              }
             "
-            }
-
         else
-            caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param, VALUE pframe) {
+            "
                 #{call_frame_struct_code}
 
                 // call to #{call_tree[2]}
                 VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
                 plocals->call_frame = old_call_frame;
                 return ret;
-              }
             "
-            }
         end
         
         inline_block "
@@ -579,7 +569,7 @@ module FastRuby
             if (*#{@last_address_name} == 0) {
               #{funcall_call_code}
             } else {
-              return #{anonymous_function(&caller_code)}((VALUE)plocals, (VALUE)pframe);
+              #{fastruby_call_code}
             }
           }
         "
