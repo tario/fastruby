@@ -86,7 +86,7 @@ class Object
     else
 
       objs.sort{|x,y|
-          (y =~ /Inline_Object/ ? 1 : 0) - (x =~ /Inline_Object/ ? 1 : 0)
+          File.new(x).ctime <=> File.new(y).ctime
         }.each do |obj|
 
         begin
