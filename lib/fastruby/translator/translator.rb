@@ -1075,7 +1075,7 @@ module FastRuby
                 VALUE signature = #{literal_value signature};
                 VALUE recvtype = #{recvdump};
                 VALUE mname = #{literal_value mname};
-                  
+                
                 rb_funcall(recvtype, #{intern_num :build}, 2, signature, mname);
               }
             }
@@ -1104,6 +1104,23 @@ module FastRuby
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
             VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
             return ( (VALUE(*)(#{cfunc_value_cast})) (#{cfunc_real_address_name}) )(self#{inprocstrargs});
+        }
+        "
+      }
+
+      cfunc_wrapper_1 = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+            VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(#{args_tree.size-1},method_arguments+1,self);
+        }
+        "
+      }
+
+      cfunc_wrapper_2 = anonymous_function{ |funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+            VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+            VALUE args = rb_ary_new3(#{args_tree.size-1}#{inprocstrargs} );
+            return ( (VALUE(*)(VALUE,VALUE)) (#{cfunc_real_address_name}) )(self,args);
         }
         "
       }
@@ -1154,6 +1171,12 @@ module FastRuby
               if (nd_type(body) == NODE_CFUNC) {
                 if (body->nd_argc == #{args_tree.size-1}) {
                   *default_address = #{cfunc_wrapper};
+                  #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                } else if (body->nd_argc == -1) {
+                  *default_address = #{cfunc_wrapper_1};
+                  #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                } else if (body->nd_argc == -2) {
+                  *default_address = #{cfunc_wrapper_2};
                   #{cfunc_real_address_name} = (void*)body->nd_cfnc;
                 }
               }
