@@ -1181,17 +1181,19 @@ module FastRuby
               default_address = malloc(sizeof(void*));
               NODE* body = rb_method_node(recvtype,#{intern_num mname});
               *default_address = 0;
-
-              if (nd_type(body) == NODE_CFUNC) {
-                if (body->nd_argc == #{args_tree.size-1}) {
-                  *default_address = #{cfunc_wrapper};
-                  #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                } else if (body->nd_argc == -1) {
-                  *default_address = #{cfunc_wrapper_1};
-                  #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                } else if (body->nd_argc == -2) {
-                  *default_address = #{cfunc_wrapper_2};
-                  #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+              
+              if (body != 0) {
+                if (nd_type(body) == NODE_CFUNC) {
+                  if (body->nd_argc == #{args_tree.size-1}) {
+                    *default_address = #{cfunc_wrapper};
+                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                  } else if (body->nd_argc == -1) {
+                    *default_address = #{cfunc_wrapper_1};
+                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                  } else if (body->nd_argc == -2) {
+                    *default_address = #{cfunc_wrapper_2};
+                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                  }
                 }
               }
             
