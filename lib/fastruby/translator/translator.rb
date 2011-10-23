@@ -1116,13 +1116,13 @@ module FastRuby
         "
       }
       
-      toprocstrargs = (0..15).map{|x| "arg#{x}"}.join(",")
-      strargs_signature = (0..15).map{|x| "VALUE arg#{x}"}.join(",")
+      toprocstrargs = (0..25).map{|x| "arg#{x}"}.join(",")
+      strargs_signature = (0..25).map{|x| "VALUE arg#{x}"}.join(",")
 
       cfunc_wrapper_1 = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
             VALUE self = params[0];
-            VALUE method_arguments[16] = {#{toprocstrargs}};
+            VALUE method_arguments[26] = {#{toprocstrargs}};
             return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(FIX2LONG(params[1]),method_arguments,self);
         }
         "
