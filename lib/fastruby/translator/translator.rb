@@ -1141,7 +1141,9 @@ module FastRuby
                                       signature);
 
 
-            #{tree_pointer_name} = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(recvtype)); 
+
+            VALUE fastruby_method = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);
+            #{tree_pointer_name} = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(fastruby_method));
             
             ID id;
             ID default_id = rb_intern(\"default\");
