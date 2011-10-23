@@ -1083,15 +1083,18 @@ module FastRuby
           
           fptr = *#{address_name};
           
-          if (fptr == 0) {
-            fptr = *#{cfunc_address_name};
-            
-            if (fptr != 0) {
-//              return ( (VALUE(*)(#{value_cast},VALUE)) (fptr) )(self,#{args_tree.size-1},(VALUE)block,(VALUE)frame#{inprocstrargs});
-
-              VALUE params[2] = {self,LONG2FIX(#{args_tree.size-1})};
-              return ( (VALUE(*)(#{value_cast})) (fptr) )((VALUE)params,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+          #{
+            if args_tree.size < 25
+            "
+            if (fptr == 0) {
+              fptr = *#{cfunc_address_name};
+              if (fptr != 0) {
+                VALUE params[2] = {self,LONG2FIX(#{args_tree.size-1})};
+                return ( (VALUE(*)(#{value_cast})) (fptr) )((VALUE)params,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+              }
             }
+            "
+            end
           } 
           
           if (fptr == 0) {
