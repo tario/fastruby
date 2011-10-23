@@ -1,4 +1,6 @@
-0.0.14	Implemented method hash to store implementation pointers
+0.0.14	Support for method replacement (aka "monkey patching")
+
+		Implemented method hash to store implementation pointers
 
 		Fixed inference of arguments on methods with splat arguments
 
