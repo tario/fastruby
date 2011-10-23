@@ -25,5 +25,5 @@ require "fastruby/custom_require"
 require "fastruby/set_tree"
 
 module FastRuby
-  VERSION = "0.0.13" unless defined? FastRuby::VERSION
+  VERSION = "0.0.14" unless defined? FastRuby::VERSION
 end
