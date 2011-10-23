@@ -54,4 +54,29 @@ describe FastRuby, "fastruby" do
   (8..12).each do |i|
     test_fastruby_arguments(i)
   end
+  
+  def self.test_invalid_fastruby_arguments(argnum)
+    it "should allow #{argnum} arguments calling fastruby" do
+      
+          arguments_name = (0..argnum-1).map{|x| "a"+x.to_s}.join(",")
+          arguments = (0..argnum-1).map(&:to_s).join(",")
+      
+            fastruby "
+          class ::CYR1_#{argnum}
+              def foo(#{arguments_name})
+                [#{arguments_name}]
+              end
+          end
+            "
+          
+          array = eval("[#{arguments}]")
+          
+          lambda {
+          eval("::CYR1_#{argnum}").new.foo(*array).should be == array
+          }.should raise_error(ArgumentError) 
+    end
+  end
+  
+  test_invalid_fastruby_arguments(15)
+  
 end
