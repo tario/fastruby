@@ -147,7 +147,7 @@ module FastRuby
                     }.join("\n");
                   }
 
-          return Qnil;
+              rb_raise(rb_eArgError, \"too many arguments: %d\", argc_);
         }"
       }
 
