@@ -23,5 +23,10 @@ describe FastRuby, "fastruby" do
   test_arguments(10)
   test_arguments(15)
   test_arguments(20)
-  test_arguments(200)
+  
+  (23..27).each do |i|
+    test_arguments(i)
+  end
+  
+  test_arguments(20)
 end
