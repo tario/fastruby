@@ -1085,6 +1085,13 @@ module FastRuby
           
           if (fptr == 0) {
             fptr = *#{cfunc_address_name};
+            
+            if (fptr != 0) {
+//              return ( (VALUE(*)(#{value_cast},VALUE)) (fptr) )(self,#{args_tree.size-1},(VALUE)block,(VALUE)frame#{inprocstrargs});
+
+              VALUE params[2] = {self,LONG2FIX(#{args_tree.size-1})};
+              return ( (VALUE(*)(#{value_cast})) (fptr) )((VALUE)params,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+            }
           } 
           
           if (fptr == 0) {
@@ -1101,25 +1108,30 @@ module FastRuby
 
       cfunc_value_cast = (["VALUE"]*args_tree.size).join(",")
       cfunc_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+        static VALUE #{funcname}(VALUE* params, void* block,void* frame#{strargs_signature}){
+            VALUE self = params[0];
             VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
             return ( (VALUE(*)(#{cfunc_value_cast})) (#{cfunc_real_address_name}) )(self#{inprocstrargs});
         }
         "
       }
+      
+      toprocstrargs = (0..15).map{|x| "arg#{x}"}.join(",")
+      strargs_signature = (0..15).map{|x| "VALUE arg#{x}"}.join(",")
 
       cfunc_wrapper_1 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
-            VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(#{args_tree.size-1},method_arguments+1,self);
+        static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
+            VALUE self = params[0];
+            VALUE method_arguments[16] = {#{toprocstrargs}};
+            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(FIX2LONG(params[1]),method_arguments,self);
         }
         "
       }
 
       cfunc_wrapper_2 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
-            VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-            VALUE args = rb_ary_new3(#{args_tree.size-1}#{inprocstrargs} );
+        static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
+            VALUE self = params[0];
+            VALUE args = rb_ary_new3(FIX2LONG(params[1]),#{toprocstrargs});
             return ( (VALUE(*)(VALUE,VALUE)) (#{cfunc_real_address_name}) )(self,args);
         }
         "
