@@ -72,4 +72,31 @@ describe FastRuby, "fastruby" do
     
     ::JU3.new.bar.should be == 9
   end  
+  
+  it "should allow replace methods using indentical code string" do
+    code = "
+      class ::JU4
+        def foo
+          6
+        end
+      end
+    "
+    
+    fastruby code
+    
+    ::JU4.new.foo.should be == 6
+    
+    fastruby "class ::JU4
+        def foo
+          9
+        end
+      end
+    "
+
+    ::JU4.new.foo.should be == 9
+
+    fastruby code
+
+    ::JU4.new.foo.should be == 6
+  end  
 end
