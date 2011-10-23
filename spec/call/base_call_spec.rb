@@ -29,4 +29,29 @@ describe FastRuby, "fastruby" do
   end
   
   test_arguments(20)
+  
+    
+  def self.test_fastruby_arguments(argnum)
+    it "should allow #{argnum} arguments calling fastruby" do
+      
+          arguments_name = (0..argnum-1).map{|x| "a"+x.to_s}.join(",")
+          arguments = (0..argnum-1).map(&:to_s).join(",")
+      
+            fastruby "
+          class ::CYR1_#{argnum}
+              def foo(#{arguments_name})
+                [#{arguments_name}]
+              end
+          end
+            "
+          
+          array = eval("[#{arguments}]")
+          
+          eval("::CYR1_#{argnum}").new.foo(*array).should be == array 
+    end
+  end
+  
+  (8..12).each do |i|
+    test_fastruby_arguments(i)
+  end
 end
