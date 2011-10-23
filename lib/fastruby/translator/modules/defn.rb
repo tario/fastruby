@@ -141,7 +141,7 @@ module FastRuby
 
                   if (argc_ == 0) return ((VALUE(*)(VALUE,VALUE,VALUE))fptr)(#{strmethodargs});
                     
-                  #{ (1..9).map{ |i|
+                  #{ (1..15).map{ |i|
                     value_cast = ( ["VALUE"]*(i+3) ).join(",")
                     "if (argc_ == #{i}) return ((VALUE(*)(#{value_cast}))fptr)(#{strmethodargs}, #{(0..i-1).map{|x| "argv[#{x}]"}.join(",")});"
                     }.join("\n");
