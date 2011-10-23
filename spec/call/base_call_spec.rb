@@ -23,4 +23,5 @@ describe FastRuby, "fastruby" do
   test_arguments(10)
   test_arguments(15)
   test_arguments(20)
+  test_arguments(200)
 end
