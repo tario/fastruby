@@ -63,20 +63,33 @@ module FastRuby
       if splat_arg
         ret = inline_block "
           VALUE splat_array = #{to_c(splat_arg[1])};
-          VALUE block_args[RARRAY(splat_array)->len + #{tree.size}];
           
-          int i;
-
-          #{ 
-            (0..tree.size-3).map{|i|
-              "block_args[#{i}] = #{to_c(tree[i+1])}"
-            }.join(";\n")
-          };
-          for (i=0; i<RARRAY(splat_array)->len; i++) {
-            block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
+          if (CLASS_OF(splat_array) == rb_cArray) {
+            VALUE block_args[RARRAY(splat_array)->len + #{tree.size}];
+            int i;
+            #{ 
+              (0..tree.size-3).map{|i|
+                "block_args[#{i}] = #{to_c(tree[i+1])}"
+              }.join(";\n")
+            };
+            
+            for (i=0; i<RARRAY(splat_array)->len; i++) {
+              block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
+            }
+            
+            return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, RARRAY(splat_array)->len + #{tree.size-2});
+          } else {
+            VALUE block_args[1+#{tree.size}];
+            #{ 
+              (0..tree.size-3).map{|i|
+                "block_args[#{i}] = #{to_c(tree[i+1])}"
+              }.join(";\n")
+            };
+            
+            block_args[#{tree.size-2}] = splat_array;
+            return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, #{tree.size-1});
           }
           
-          return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, RARRAY(splat_array)->len + #{tree.size-2});
         "
       else
         ret = if tree.size > 1
