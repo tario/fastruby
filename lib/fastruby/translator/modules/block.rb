@@ -71,7 +71,7 @@ module FastRuby
             (0..tree.size-3).map{|i|
               "block_args[#{i}] = #{to_c(tree[i+1])}"
             }.join(";\n")
-          }
+          };
           for (i=0; i<RARRAY(splat_array)->len; i++) {
             block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
           }
