@@ -36,10 +36,33 @@ module FastRuby
         args = tree[3]
         return _raise(args[1],args[2])
       end
-
+      
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
+      
+      # search block_pass on arguments
+      block_pass_arg = args.find{|arg| if arg == :arglist
+            false
+          else
+          arg[0] == :block_pass
+            end} 
+      if block_pass_arg
+        
+        call_tree = tree.dup
+        call_tree[3] = args.select{|arg| if arg == :arglist 
+            true
+            else
+              arg[0] != :block_pass
+              end
+              }
+        
+        block_tree = s(:call, block_pass_arg[1], :call, s(:arglist))
+        
+        replace_iter_tree = s(:iter, call_tree, nil, block_tree).to_fastruby_sexp
+        
+        return to_c(replace_iter_tree)
+      end
 
       mname = :require_fastruby if mname == :require
 
