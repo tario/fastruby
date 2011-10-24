@@ -57,4 +57,24 @@ describe FastRuby, "fastruby" do
       x.should be == "non-array"
     end
   end
+  
+  class ::VO4
+    
+    def bar
+      yield(1,2,3,4)
+    end
+    
+    fastruby "
+      def foo
+        bar do |*y|
+          y
+        end
+      end
+    "
+  end
+  
+  it "should allow masgn arguments on block passes" do
+    ::VO4.new.foo.should be == [1,2,3,4]
+  end
+  
 end
