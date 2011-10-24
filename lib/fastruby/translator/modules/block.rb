@@ -26,7 +26,7 @@ module FastRuby
     def to_c_yield(tree)
 
       block_code = proc { |name| "
-        static VALUE #{name}(VALUE frame_param, VALUE* block_args) {
+        static VALUE #{name}(VALUE frame_param, VALUE* block_args, int size) {
 
           #{@locals_struct} *plocals;
           #{@frame_struct} *pframe;
@@ -36,7 +36,7 @@ module FastRuby
           if (FIX2LONG(plocals->block_function_address) == 0) {
             #{_raise("rb_eLocalJumpError", "no block given")};
           } else {
-            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))FIX2LONG(plocals->block_function_address))(#{tree.size-1}, block_args, FIX2LONG(plocals->block_function_param), (VALUE)pframe);
+            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))FIX2LONG(plocals->block_function_address))(size, block_args, FIX2LONG(plocals->block_function_param), (VALUE)pframe);
           }
         }
       "
@@ -58,12 +58,34 @@ module FastRuby
         @yield_signature = new_yield_signature
       end
 
-      ret = if tree.size > 1
-          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}})"
-        else
-          anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){})"
-        end
+      splat_arg = tree.find{|x| x == :yield ? false : x[0] == :splat}
+      ret = nil      
+      if splat_arg
+        ret = inline_block "
+          VALUE splat_array = #{to_c(splat_arg[1])};
+          VALUE block_args[RARRAY(splat_array)->len + #{tree.size}];
+          
+          int i;
 
+          #{ 
+            (0..tree.size-3).map{|i|
+              "block_args[#{i}] = #{to_c(tree[i+1])}"
+            }.join(";\n")
+          }
+          for (i=0; i<RARRAY(splat_array)->len; i++) {
+            block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
+          }
+          
+          return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, RARRAY(splat_array)->len + #{tree.size-2});
+        "
+      else
+        ret = if tree.size > 1
+            anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}},#{tree.size-1})"
+          else
+            anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){}, #{tree.size-1})"
+          end
+      end
+      
       protected_block(ret, false)
     end
 
