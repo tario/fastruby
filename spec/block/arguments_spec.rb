@@ -50,5 +50,11 @@ describe FastRuby, "fastruby" do
       y.should be == 4
       z.should be == 5
     end
-  end  
+  end
+  
+  it "should take only the object argument when trying to splat a non-array" do
+    ::VO1.new.foo("non-array") do |x|
+      x.should be == "non-array"
+    end
+  end
 end
