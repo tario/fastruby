@@ -34,4 +34,21 @@ describe FastRuby, "fastruby" do
     end
   end
   
+  class ::VO3
+    fastruby "
+      def foo(x)
+        yield(1,2,*x)
+      end
+    "
+  end
+
+  it "should allow pass two normal args and one splat argument to yield" do
+    ::VO3.new.foo([3,4,5]) do |a,b,x,y,z|
+      a.should be == 1
+      b.should be == 2
+      x.should be == 3
+      y.should be == 4
+      z.should be == 5
+    end
+  end  
 end
