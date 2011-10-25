@@ -43,6 +43,7 @@ module FastRuby
     def self.get_locals(tree)
       processor = GetLocalsProcessor.new
       processor.process(tree)
+      processor.locals << :__xblock_arguments
       processor.locals
     end
   end

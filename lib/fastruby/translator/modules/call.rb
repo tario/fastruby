@@ -57,9 +57,10 @@ module FastRuby
               end
               }
         
-        block_tree = s(:call, block_pass_arg[1], :call, s(:arglist))
+        block_arguments_tree = s(:masgn, s(:array, s(:splat, s(:lasgn, :__xblock_arguments))))
+        block_tree = s(:call, block_pass_arg[1], :call, s(:arglist, s(:splat, s(:lvar, :__xblock_arguments))))
         
-        replace_iter_tree = s(:iter, call_tree, nil, block_tree).to_fastruby_sexp
+        replace_iter_tree = s(:iter, call_tree, block_arguments_tree, block_tree).to_fastruby_sexp
         
         return to_c(replace_iter_tree)
       end
