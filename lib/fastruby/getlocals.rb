@@ -34,6 +34,10 @@ module FastRuby
       if tree.node_type == :lasgn
        @locals << tree[1]
       end
+      
+      if tree[0] == :block_pass
+        @locals << :__xblock_arguments
+      end
 
       tree.select{|subtree| subtree.instance_of? FastRuby::FastRubySexp}.each do |subtree|
         process(subtree)
@@ -43,7 +47,6 @@ module FastRuby
     def self.get_locals(tree)
       processor = GetLocalsProcessor.new
       processor.process(tree)
-      processor.locals << :__xblock_arguments
       processor.locals
     end
   end
