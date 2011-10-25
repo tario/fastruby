@@ -147,7 +147,7 @@ module FastRuby
               str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
               {
                 int i;
-                for (i=#{i};i<#{i}+RARRAY(arg)->len;i++){
+                for (i=#{i};i<RARRAY(arg)->len;i++){
                   rb_ary_store(plocals->#{arg.last.last},i-#{i},rb_ary_entry(arg,i));
                 }
               }
