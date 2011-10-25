@@ -93,8 +93,28 @@ describe FastRuby, "fastruby" do
     "
   end
   
-  it "should allow masgn arguments on block passes" do
+  it "should allow masgn arguments on block passes (fastruby call)" do
     ::VO5.new.foo.should be == [1,2,3,4]
+  end
+  
+  
+  class ::VO6
+    
+    def bar
+      yield(1,2,3,4)
+    end
+    
+    fastruby "
+      def foo
+        bar do |a,b,*y|
+          y
+        end
+      end
+    "
+  end
+  
+  it "should allow normal arguments with masgn arguments on block passes" do
+    ::VO6.new.foo.should be == [3,4]
   end
   
   
