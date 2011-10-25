@@ -137,10 +137,22 @@ module FastRuby
         elsif args_tree.first == :lasgn
           str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
         elsif args_tree.first == :masgn
-          arguments = args_tree[1][1..-1].map(&:last)
-
+          arguments = args_tree[1][1..-1]
+          
           (0..arguments.size-1).each do |i|
-            str_arg_initialization << "plocals->#{arguments[i]} = rb_ary_entry(arg,#{i});\n"
+            arg = arguments[i]
+            if arg[0] == :lasgn 
+              str_arg_initialization << "plocals->#{arguments[i].last} = rb_ary_entry(arg,#{i});\n"
+            elsif arg[0] == :splat
+              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
+              {
+                int i;
+                for (i=#{i};i<#{i}+RARRAY(arg)->len;i++){
+                  rb_ary_store(plocals->#{arg.last.last},i-#{i},rb_ary_entry(arg,i));
+                }
+              }
+               "
+            end
           end
         end
         rb_funcall_caller_code = nil
@@ -404,10 +416,15 @@ module FastRuby
         elsif args_tree.first == :lasgn
           fastruby_str_arg_initialization = "plocals->#{args_tree[1]} = argv[0];"
         elsif args_tree.first == :masgn
-          arguments = args_tree[1][1..-1].map(&:last)
-
+          arguments = args_tree[1][1..-1]
+          
           (0..arguments.size-1).each do |i|
-            fastruby_str_arg_initialization << "plocals->#{arguments[i]} = #{i} < argc ? argv[#{i}] : Qnil;\n"
+            arg = arguments[i]
+            if arg == :lasgn 
+              fastruby_str_arg_initialization << "plocals->#{arg.last} = #{i} < argc ? argv[#{i}] : Qnil;\n"
+            elsif arg == :splat
+              fastruby_str_arg_initialization << "plocals->#{arg.last} = INT2FIX(123);\n"
+            end 
           end
         end
 
