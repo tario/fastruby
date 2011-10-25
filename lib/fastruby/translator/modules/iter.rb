@@ -420,10 +420,17 @@ module FastRuby
           
           (0..arguments.size-1).each do |i|
             arg = arguments[i]
-            if arg == :lasgn 
+            if arg[0] == :lasgn 
               fastruby_str_arg_initialization << "plocals->#{arg.last} = #{i} < argc ? argv[#{i}] : Qnil;\n"
-            elsif arg == :splat
-              fastruby_str_arg_initialization << "plocals->#{arg.last} = INT2FIX(123);\n"
+            elsif arg[0] == :splat
+              fastruby_str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
+              {
+                int i;
+                for (i=#{i};i<argc;i++){
+                  rb_ary_store(plocals->#{arg.last.last},i-#{i},argv[i]);
+                }
+              }
+               "
             end 
           end
         end
