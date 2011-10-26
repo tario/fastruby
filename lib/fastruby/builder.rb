@@ -81,7 +81,13 @@ module FastRuby
       context.locals = locals
       context.options = options
 
-      args_tree = tree[2]
+      args_tree = if tree[0] == :defn
+         tree[2]
+      elsif tree[0] == :defs
+         tree[3]
+      else
+        raise ArgumentError, "unknown type of method definition #{tree[0]}"
+      end
 
       # create random method name
       context.snippet_hash = snippet_hash

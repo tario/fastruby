@@ -74,17 +74,19 @@ module FastRuby
 
           if method_tree
             mobject = recvtype.build(signature, call_tree[2])
-            yield_signature = mobject.yield_signature
-
-            if not args_tree
-            elsif args_tree.first == :lasgn
-              if yield_signature[0]
-              extra_inference[args_tree.last] = yield_signature[0]
-              end
-            elsif args_tree.first == :masgn
-              yield_args = args_tree[1][1..-1].map(&:last)
-              (0...yield_signature.size-1).each do |i|
-                extra_inference[yield_args[i]] = yield_signature[i]
+            if mobject 
+              yield_signature = mobject.yield_signature
+  
+              if not args_tree
+              elsif args_tree.first == :lasgn
+                if yield_signature[0]
+                extra_inference[args_tree.last] = yield_signature[0]
+                end
+              elsif args_tree.first == :masgn
+                yield_args = args_tree[1][1..-1].map(&:last)
+                (0...yield_signature.size-1).each do |i|
+                  extra_inference[yield_args[i]] = yield_signature[i]
+                end
               end
             end
           end

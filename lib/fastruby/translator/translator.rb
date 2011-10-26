@@ -384,13 +384,23 @@ module FastRuby
     end
 
     def to_c_method(tree, signature = nil)
-      method_name = tree[1]
-      args_tree = tree[2].select{|x| x.to_s[0] != ?&}
-      block_argument = tree[2].find{|x| x.to_s[0] == ?&}
-      impl_tree = tree[3][1]
+      
+      if tree[0] == :defn
+        method_name = tree[1]
+        original_args_tree = tree[2]
+        block_argument = tree[2].find{|x| x.to_s[0] == ?&}
+        impl_tree = tree[3][1]
+      elsif tree[0] == :defs
+        method_name = tree[2]
+        original_args_tree = tree[3]
+        block_argument = tree[3].find{|x| x.to_s[0] == ?&}
+        impl_tree = tree[4][1]
+      end
+
+      args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
       if (options[:main])
-        initialize_method_structs(tree[2])
+        initialize_method_structs(original_args_tree)
 
         strargs = if args_tree.size > 1
           "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
@@ -487,7 +497,7 @@ module FastRuby
         ret
       else
 
-        initialize_method_structs(tree[2])
+        initialize_method_structs(original_args_tree)
 
         strargs = if args_tree.size > 1
           "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
