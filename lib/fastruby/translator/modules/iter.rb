@@ -157,7 +157,7 @@ module FastRuby
             if arg[0] == :lasgn 
               str_arg_initialization << "plocals->#{arguments[i].last} = rb_ary_entry(arg,#{i});\n"
             elsif arg[0] == :splat
-              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
+              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(RARRAY(arg)->len-#{i});\n
               
                 int i;
                 for (i=#{i};i<RARRAY(arg)->len;i++){
