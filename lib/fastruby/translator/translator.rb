@@ -223,10 +223,11 @@ module FastRuby
 
       method_name = tree[2]
       args_tree = tree[3].select{|x| x.to_s[0] != ?&}
+      block_argument = tree[3].find{|x| x.to_s[0] == ?&}
 
       impl_tree = tree[4][1]
 
-      initialize_method_structs(args_tree)
+      initialize_method_structs(tree[3])
 
       strargs = if args_tree.size > 1
         
@@ -243,6 +244,15 @@ module FastRuby
           arg.gsub!("*","")
           "plocals->#{arg} = #{arg};\n"
         }.join("") }
+
+        #{if block_argument
+         proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
+
+          "plocals->#{block_argument.to_s.gsub("&","")} = #{to_c(proc_reyield_block_tree)}"
+        else
+          ""
+        end
+        };
 
         plocals->block_function_address = LONG2FIX(block_address);
         plocals->block_function_param = LONG2FIX(block_param);
