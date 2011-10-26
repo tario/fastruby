@@ -25,8 +25,8 @@ module FastRuby
     def to_c_defn(tree)
 
       method_name = tree[1]
-      args_tree = tree[2]
-
+      args_tree = tree[2].select{|x| x.to_s[0] != ?&}
+      
       global_klass_variable = add_global_name("VALUE", "Qnil");
 
       hash = Hash.new

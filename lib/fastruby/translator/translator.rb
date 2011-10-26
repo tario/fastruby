@@ -375,7 +375,7 @@ module FastRuby
 
     def to_c_method(tree, signature = nil)
       method_name = tree[1]
-      args_tree = tree[2]
+      args_tree = tree[2].select{|x| x.to_s[0] != ?&}
       impl_tree = tree[3][1]
 
       if (options[:main])
