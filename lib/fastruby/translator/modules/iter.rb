@@ -147,11 +147,13 @@ module FastRuby
               str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
               {
                 if (TYPE(arg) != T_ARRAY) {
-                  arg = rb_ary_new4(1,&arg);
-                } else {
-                  if (RARRAY(arg)->len <= 1) {
+                  if (arg != Qnil) {
                     arg = rb_ary_new4(1,&arg);
+                  } else {
+                    arg = rb_ary_new2(0);
                   }
+                } else if (RARRAY(arg)->len <= 1) {
+                  arg = rb_ary_new4(1,&arg);
                 }
 
                 int i;
