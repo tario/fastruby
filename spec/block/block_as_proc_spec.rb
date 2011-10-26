@@ -73,4 +73,26 @@ describe FastRuby, "fastruby" do
     end
   end
 
+  class ::VYE5
+    fastruby "
+      def bar(x)
+        def x.foo(&block)
+          block.call
+        end
+      end
+    "
+  end
+
+  it "should allow singleton method receiveing and call block" do
+    x = ::VYEE.new
+    ::VYE5.new.bar(x)
+
+    executed = 0
+    x.foo do
+      executed = 1
+    end
+
+    executed.should be == 1
+  end
+
 end
