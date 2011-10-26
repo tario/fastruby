@@ -175,7 +175,7 @@ module FastRuby
     end
 
     def to_c_defs(tree)
-      args_tree = tree[3];
+      args_tree = tree[3].select{|x| x.to_s[0]!=?&};
 
       tmp = FastRuby.build_defs(tree)
 

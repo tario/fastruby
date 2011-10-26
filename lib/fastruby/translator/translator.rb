@@ -222,7 +222,7 @@ module FastRuby
     def to_c_method_defs(tree)
 
       method_name = tree[2]
-      args_tree = tree[3]
+      args_tree = tree[3].select{|x| x.to_s[0] != ?&}
 
       impl_tree = tree[4][1]
 

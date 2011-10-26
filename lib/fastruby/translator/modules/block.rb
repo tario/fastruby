@@ -103,6 +103,9 @@ module FastRuby
     end
 
     def to_c_block(tree)
+      if tree.size == 1
+        return inline_block("return Qnil;")
+      end
 
       str = ""
       str = tree[1..-2].map{ |subtree|
