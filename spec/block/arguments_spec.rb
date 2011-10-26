@@ -163,4 +163,20 @@ describe FastRuby, "fastruby" do
   it "should read single argument on block" do
     ::VO9.new.foo.should be == 32
   end
+
+
+  class ::VO10
+    fastruby "
+      def foo
+        pr = proc do |*x|
+          x
+        end
+        pr.call([32])
+      end
+    "
+  end
+
+  it "should allow splat arguments on proc block when the argument is an array" do
+    ::VO10.new.foo.should be == [[32]]
+  end
 end
