@@ -179,4 +179,36 @@ describe FastRuby, "fastruby" do
   it "should allow splat arguments on proc block when the argument is an array" do
     ::VO10.new.foo.should be == [[32]]
   end
+  
+
+  class ::VO11
+    fastruby "
+      def foo
+        pr = proc do |*x|
+          x
+        end
+        pr.call([])
+      end
+    "
+  end
+
+  it "should allow splat arguments on proc block when the argument is an array empty" do
+    ::VO11.new.foo.should be == [[]]
+  end
+
+  class ::VO12
+    fastruby "
+      def foo
+        pr = proc do |*x|
+          x
+        end
+        pr.call()
+      end
+    "
+  end
+
+  it "should allow splat arguments on proc block when no arguments are passed" do
+    ::VO12.new.foo.should be == []
+  end
+  
 end
