@@ -131,20 +131,12 @@ module FastRuby
         end
       end
 
-
         if not args_tree
-          str_arg_initialization = ""
         elsif args_tree.first == :lasgn
-          str_arg_initialization = "plocals->#{args_tree[1]} = arg;"
+          str_arg_initialization << "plocals->#{args_tree[1]} = arg;"
         elsif args_tree.first == :masgn
-          arguments = args_tree[1][1..-1]
           
-          (0..arguments.size-1).each do |i|
-            arg = arguments[i]
-            if arg[0] == :lasgn 
-              str_arg_initialization << "plocals->#{arguments[i].last} = rb_ary_entry(arg,#{i});\n"
-            elsif arg[0] == :splat
-              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
+          str_arg_initialization << "
               {
                 if (TYPE(arg) != T_ARRAY) {
                   if (arg != Qnil) {
@@ -155,12 +147,22 @@ module FastRuby
                 } else if (RARRAY(arg)->len <= 1) {
                   arg = rb_ary_new4(1,&arg);
                 }
-
+              }
+              "          
+          
+          arguments = args_tree[1][1..-1]
+          
+          (0..arguments.size-1).each do |i|
+            arg = arguments[i]
+            if arg[0] == :lasgn 
+              str_arg_initialization << "plocals->#{arguments[i].last} = rb_ary_entry(arg,#{i});\n"
+            elsif arg[0] == :splat
+              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
+              
                 int i;
                 for (i=#{i};i<RARRAY(arg)->len;i++){
                   rb_ary_store(plocals->#{arg.last.last},i-#{i},rb_ary_entry(arg,i));
                 }
-              }
                "
             end
           end
