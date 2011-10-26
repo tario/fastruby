@@ -147,4 +147,20 @@ describe FastRuby, "fastruby" do
     ::VO8.new.foo.should be == [32,33,34]
   end
   
+  class ::VO9
+      def bar
+        yield(32)
+      end
+    fastruby "
+      def foo
+        bar do |x|
+          x
+        end
+      end
+    "
+  end
+
+  it "should read single argument on block" do
+    ::VO9.new.foo.should be == 32
+  end
 end
