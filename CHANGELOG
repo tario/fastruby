@@ -1,3 +1,9 @@
+0.0.15	Minor fixes to splat arguments on blocks
+
+		Support for receving block as proc (i.e. def foo(&block); end)
+
+		Support for passing proc as block (i.e. foo(&block))
+ 
 0.0.14	Support for method replacement ("monkey patching")
 
 		Internal: Implemented method hash to store implementation pointers
