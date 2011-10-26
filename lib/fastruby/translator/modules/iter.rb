@@ -149,7 +149,7 @@ module FastRuby
                 if (TYPE(arg) != T_ARRAY) {
                   arg = rb_ary_new4(1,&arg);
                 } else {
-                  if (RARRAY(arg)->len == 1) {
+                  if (RARRAY(arg)->len <= 1) {
                     arg = rb_ary_new4(1,&arg);
                   }
                 }
