@@ -437,16 +437,6 @@ module FastRuby
                   #{arguments_array.join(",")} 
                   );
           "
-
-          validate_arguments_code = if signature.size-1 >= argnum
-            "
-            "
-          else
-            "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size} for #{args_tree.size-2})\");
-            "
-          end
-          
         else
           
           i = -1
@@ -456,6 +446,7 @@ module FastRuby
               i = i + 1
               "plocals->#{arg} = arg#{i};\n"
             }.join("")
+        end
 
           validate_arguments_code = if signature.size-1 >= argnum
             "
@@ -465,9 +456,7 @@ module FastRuby
               rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{args_tree.size-1})\");
             "
           end
-          
-        end
-        
+
         if block_argument
 
           proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
