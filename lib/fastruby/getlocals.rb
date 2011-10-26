@@ -35,6 +35,12 @@ module FastRuby
        @locals << tree[1]
       end
       
+      if tree[0] == :args
+        if tree.find{|x| x.to_s[0] == ?&}
+          @locals << :__xproc_arguments
+        end
+      end
+
       if tree[0] == :block_pass
         @locals << :__xblock_arguments
       end

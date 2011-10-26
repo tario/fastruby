@@ -214,7 +214,7 @@ module FastRuby
         VALUE active;
         VALUE targetted;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","")};\n"}.join};
+        #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","").gsub("&","")};\n"}.join};
         }"
 
     end
@@ -376,10 +376,11 @@ module FastRuby
     def to_c_method(tree, signature = nil)
       method_name = tree[1]
       args_tree = tree[2].select{|x| x.to_s[0] != ?&}
+      block_argument = tree[2].find{|x| x.to_s[0] == ?&}
       impl_tree = tree[3][1]
 
       if (options[:main])
-        initialize_method_structs(args_tree)
+        initialize_method_structs(tree[2])
 
         strargs = if args_tree.size > 1
           "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
@@ -476,7 +477,7 @@ module FastRuby
         ret
       else
 
-        initialize_method_structs(args_tree)
+        initialize_method_structs(tree[2])
 
         strargs = if args_tree.size > 1
           "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
@@ -534,6 +535,14 @@ module FastRuby
           
         end
         
+        if block_argument
+
+          proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
+
+          read_arguments_code << "
+            plocals->#{block_argument.to_s.gsub("&","")} = #{to_c proc_reyield_block_tree.to_fastruby_sexp};
+          "
+        end
 
         ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
           #{validate_arguments_code}
