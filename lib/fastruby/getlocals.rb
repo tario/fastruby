@@ -36,6 +36,13 @@ module FastRuby
       end
       
       if tree[0] == :args
+
+        tree[1..-1].each do |subtree|
+          if subtree.instance_of? Symbol
+             @locals << subtree.to_s.gsub("*","").gsub("&","").to_sym
+          end
+        end
+
         if tree.find{|x| x.to_s[0] == ?&}
           @locals << :__xproc_arguments
         end

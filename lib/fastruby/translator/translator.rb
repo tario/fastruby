@@ -213,7 +213,6 @@ module FastRuby
         VALUE active;
         VALUE targetted;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
-        #{args_tree[1..-1].map{|arg| "VALUE #{arg.to_s.gsub("*","").gsub("&","")};\n"}.join};
         }"
 
     end
