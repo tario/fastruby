@@ -73,4 +73,39 @@ describe FastRuby, "fastruby" do
   end
 
 
+  class ::VY4
+      def foo(a,b,c)
+        yield(a,b,c)
+      end
+      
+    
+    fastruby "
+      def bar(x,block)
+        foo(*x,&block)
+      end
+    "
+  end
+
+  it "should allow block as proc when calling from fastruby with splat arguments" do
+    executed = 0
+    recv_a = nil
+    recv_b = nil
+    recv_c = nil
+    
+    block = proc do |a,b,c|
+      recv_a = a
+      recv_b = b
+      recv_c = c
+      executed = 1
+    end
+    
+    ::VY4.new.bar([1,2,3],block)
+    
+    recv_a.should be == 1
+    recv_b.should be == 2
+    recv_c.should be == 3
+    executed.should be == 1
+  end
+
+
 end
