@@ -404,7 +404,7 @@ module FastRuby
       else
 
         initialize_method_structs(original_args_tree)
-
+        
         strargs = if args_tree.size > 1
           "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
         else
@@ -412,6 +412,14 @@ module FastRuby
         end
         
         is_splat_args = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
+        
+        argnum = args_tree[1..-1].count{ |x|
+            if x.instance_of? Symbol
+              not x.to_s.match(/\*/) and not x.to_s.match(/\&/)
+            else
+              false
+            end
+          }
         
         if is_splat_args
           
@@ -431,7 +439,7 @@ module FastRuby
                   );
           "
 
-          validate_arguments_code = if signature.size-1 >= args_tree.size-2
+          validate_arguments_code = if signature.size-1 >= argnum
             "
             "
           else
@@ -450,7 +458,7 @@ module FastRuby
               "plocals->#{arg} = arg#{i};\n"
             }.join("")
 
-          validate_arguments_code = if signature.size-1 >= args_tree.size-1
+          validate_arguments_code = if signature.size-1 >= argnum
             "
             "
           else
