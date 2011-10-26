@@ -117,5 +117,20 @@ describe FastRuby, "fastruby" do
     ::VO6.new.foo.should be == [3,4]
   end
   
+  class ::VO7
+    fastruby "
+      def foo
+        pr = proc do |*x|
+          x
+        end
+        pr.call(32)
+      end
+    "
+  end
+
+  it "should allow normal arguments with masgn arguments on block passes" do
+    ::VO7.new.foo.should be == [32]
+  end
+
   
 end
