@@ -146,6 +146,10 @@ module FastRuby
             elsif arg[0] == :splat
               str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(#{arguments.size-1-i});\n
               {
+                if (TYPE(arg) != T_ARRAY) {
+                  arg = rb_ary_new4(1,&arg);
+                }
+
                 int i;
                 for (i=#{i};i<RARRAY(arg)->len;i++){
                   rb_ary_store(plocals->#{arg.last.last},i-#{i},rb_ary_entry(arg,i));
