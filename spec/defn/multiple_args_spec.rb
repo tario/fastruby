@@ -279,4 +279,24 @@ describe FastRuby, "fastruby" do
 
       ::CF18.new.foo(1,2,3,4,5).should be == "12345"
   end
+  
+  
+  class ::CFF
+    
+  end
+  it "should allow define splat arguments on singleton method" do
+      fastruby "
+        class ::CF19
+          def bar(x)
+            def x.foo(*y)
+            end
+          end
+        end
+      "
+
+      x = ::CFF.new
+      ::CF19.new.bar(x)
+      x.foo(1,2,3,4,5)
+  end
+    
 end
