@@ -42,22 +42,6 @@ module FastRuby
       "
       }
 
-      new_yield_signature = tree[1..-1].map{|subtree| infer_type subtree}
-      # merge the new_yield_signature with the new
-      if @yield_signature
-        if new_yield_signature.size == @yield_signature.size
-          (0..new_yield_signature.size-1).each do |i|
-            if @yield_signature[i] != new_yield_signature[i]
-              @yield_signature[i] = nil
-            end
-          end
-        else
-          @yield_signature = new_yield_signature.map{|x| nil}
-        end
-      else
-        @yield_signature = new_yield_signature
-      end
-
       splat_arg = tree.find{|x| x == :yield ? false : x[0] == :splat}
       ret = nil      
       if splat_arg

@@ -161,18 +161,6 @@ module FastRuby
       unless options[:no_cache]
         FastRuby.cache.insert(snippet_hash, so_name) unless no_cache
       end
-
-      ret = Object.new
-
-      ret.extend MethodExtent
-      ret.yield_signature = context.yield_signature
-
-      ret
-
-    end
-
-    module MethodExtent
-      attr_accessor :yield_signature
     end
   end
 

@@ -38,7 +38,6 @@ module FastRuby
     attr_reader :no_cache
     attr_reader :init_extra
     attr_reader :extra_code
-    attr_reader :yield_signature
     
     TranslatorModules.instance.load_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/")
     TranslatorModules.instance.modls.each do |modl|
@@ -621,16 +620,6 @@ module FastRuby
       return yield
     ensure
       @on_block = old_on_block
-    end
-
-    def with_extra_inference(extra_inference)
-      previous_infer_lvar_map = @infer_lvar_map
-      begin
-        @infer_lvar_map = @infer_lvar_map.merge(extra_inference)
-        yield
-      ensure
-        @infer_lvar_map = previous_infer_lvar_map
-      end
     end
 
     def directive(tree)

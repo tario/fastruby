@@ -49,8 +49,6 @@ module FastRuby
       mobject = nil
       len = nil
 
-      extra_inference = {}
-
       if recvtype
 
         inference_complete = true
@@ -62,33 +60,6 @@ module FastRuby
             signature << argtype
           else
             inference_complete = false
-          end
-        end
-
-        if recvtype.respond_to? :fastruby_method and inference_complete
-          method_tree = nil
-          begin
-            method_tree = recvtype.instance_method(call_tree[2]).fastruby.tree
-          rescue NoMethodError
-          end
-
-          if method_tree
-            mobject = recvtype.build(signature, call_tree[2])
-            if mobject 
-              yield_signature = mobject.yield_signature
-  
-              if not args_tree
-              elsif args_tree.first == :lasgn
-                if yield_signature[0]
-                extra_inference[args_tree.last] = yield_signature[0]
-                end
-              elsif args_tree.first == :masgn
-                yield_args = args_tree[1][1..-1].map(&:last)
-                (0...yield_signature.size-1).each do |i|
-                  extra_inference[yield_args[i]] = yield_signature[i]
-                end
-              end
-            end
           end
         end
       end
@@ -104,8 +75,6 @@ module FastRuby
       str_arg_initialization = ""
 
       str_impl = ""
-
-      with_extra_inference(extra_inference) do
 
         on_block do
           # if impl_tree is a block, implement the last node with a return
@@ -131,7 +100,6 @@ module FastRuby
             str_impl = "last_expression = Qnil;"
           end
         end
-      end
 
         if not args_tree
         elsif args_tree.first == :lasgn
