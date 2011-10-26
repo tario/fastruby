@@ -54,4 +54,23 @@ describe FastRuby, "fastruby" do
     }.should_not raise_error
   end
 
+  class ::VYEE
+  end
+
+  class ::VYE4
+    fastruby "
+      def bar(x)
+        def x.foo(&block)
+        end
+      end
+    "
+  end
+
+  it "should allow singleton method receiveing block" do
+    x = ::VYEE.new
+    ::VYE4.new.bar(x)
+    x.foo do
+    end
+  end
+
 end
