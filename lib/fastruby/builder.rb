@@ -27,24 +27,6 @@ require "fastruby_load_path"
 require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
 module FastRuby
-
-  def self.build_defs(tree, *options)
-    method_name = tree[2].to_s
-
-    FastRuby.logger.info "Building singleton method #{self}::#{@method_name}"
-
-    locals = GetLocalsProcessor.get_locals(tree)
-    locals << :self
-
-    context = FastRuby::Context.new(false)
-    context.locals = locals
-    context.options = options
-
-    context.alt_method_name = "singleton_" + method_name + rand(100000000).to_s
-
-    [context.extra_code + context.to_c_method_defs(tree), context.alt_method_name, context.init_extra]
-  end
-
   class Method
     attr_accessor :locals
     attr_accessor :options
