@@ -128,9 +128,23 @@ describe FastRuby, "fastruby" do
     "
   end
 
-  it "should allow normal arguments with masgn arguments on block passes" do
+  it "should allow splat arguments on proc block" do
     ::VO7.new.foo.should be == [32]
   end
 
+  class ::VO8
+    fastruby "
+      def foo
+        pr = proc do |*x|
+          x
+        end
+        pr.call(32,33,34)
+      end
+    "
+  end
+
+  it "should allow multiple splat arguments on proc block" do
+    ::VO8.new.foo.should be == [32,33,34]
+  end
   
 end
