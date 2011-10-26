@@ -299,4 +299,19 @@ describe FastRuby, "fastruby" do
       x.foo(1,2,3,4,5)
   end
     
+  it "should read splat arguments on singleton method" do
+      fastruby "
+        class ::CF20
+          def bar(x)
+            def x.foo(*y)
+              y
+            end
+          end
+        end
+      "
+
+      x = ::CFF.new
+      ::CF20.new.bar(x)
+      x.foo(1,2,3,4,5).should be == [1,2,3,4,5]
+  end
 end
