@@ -244,5 +244,38 @@ describe FastRuby, "fastruby" do
     }.should be == 77
   end
 
+  fastruby "
+      class CFX14
+        def foo
+          55
+        end
+      end
+    "
+
+  fastruby "
+      class CFX15
+        def foo(cfx14,b = cfx14.foo)
+        end
+      end
+    "
+
+  it "should execute default blocks when no argument is passed" do
+    cfx14 = CFX14.new
+    cfx15 = CFX15.new
+    
+    cfx14.should_receive :foo
+    
+    cfx15.foo(cfx14)
+  end
+
+  it "should not execute default blocks when argument is passed" do
+    cfx14 = CFX14.new
+    cfx15 = CFX15.new
+    
+    cfx14.should_not_receive :foo
+    
+    cfx15.foo(cfx14,99)
+  end
+
   
 end
