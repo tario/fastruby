@@ -76,4 +76,19 @@ describe FastRuby, "fastruby" do
     cfx5.foo(99,88).should be == [99,88]
   end
 
+  it "should raise ArgumentError when no arguments are passed" do
+    lambda {
+      cfx5 = CFX5.new
+      cfx5.foo
+    }.should raise_error(ArgumentError)
+  end
+
+  it "should raise ArgumentError when three arguments are passed" do
+    lambda {
+      cfx5 = CFX5.new
+      cfx5.foo(1,2,3)
+    }.should raise_error(ArgumentError)
+  end
+
+
 end
