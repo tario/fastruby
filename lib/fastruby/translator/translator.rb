@@ -461,7 +461,7 @@ module FastRuby
 
             normalargsnum = args_tree[1..-1].count{|subtree|
               if subtree.instance_of? Symbol
-                unless subtree.to_s.match(/\*/)
+                unless subtree.to_s.match(/\*/) or subtree.to_s.match(/\&/)
                   next true
                 end
               end
