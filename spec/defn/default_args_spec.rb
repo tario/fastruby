@@ -139,4 +139,62 @@ describe FastRuby, "fastruby" do
     CFX8.new.foo(55,66,67,68).should be == [66,67,68]
   end
 
+  fastruby "
+      class CFX9
+        def foo(a,x=44,*y)
+          a
+        end
+      end
+    "
+
+  it "should allow splat arguments with default arguments accepting one argument" do
+    CFX9.new.foo(55).should be == 55
+  end
+
+  it "should allow splat arguments with default arguments accepting two argument" do
+    CFX9.new.foo(55,66).should be == 55
+  end
+
+  it "should allow splat arguments with default arguments accepting three argument" do
+    CFX9.new.foo(55,66,77).should be == 55
+  end
+
+  fastruby "
+      class CFX10
+        def foo(a,x=44,*y)
+          x
+        end
+      end
+    "
+  it "should allow splat arguments with default arguments accepting one argument" do
+    CFX10.new.foo(55).should be == 44
+  end
+
+  it "should allow splat arguments with default arguments accepting two argument" do
+    CFX10.new.foo(55,66).should be == 66
+  end
+
+  it "should allow splat arguments with default arguments accepting three argument" do
+    CFX10.new.foo(55,66,77).should be == 66
+  end
+
+  fastruby "
+      class CFX11
+        def foo(a,x=44,*y)
+          y
+        end
+      end
+    "
+
+  it "should allow splat arguments with default arguments accepting one argument" do
+    CFX11.new.foo(55).should be == []
+  end
+
+  it "should allow splat arguments with default arguments accepting two argument" do
+    CFX11.new.foo(55,66).should be == []
+  end
+
+  it "should allow splat arguments with default arguments accepting three argument" do
+    CFX11.new.foo(55,66,77).should be == [77]
+  end
 end
