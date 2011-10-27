@@ -459,9 +459,8 @@ module FastRuby
             false
           }
 
-
-          read_arguments_code = args_tree[1..-1].map { |arg|
-              arg = arg.to_s
+          read_arguments_code = args_tree[1..-1].map { |arg_|
+              arg = arg_.to_s
               i = i + 1
 
               if i < signature.size-1
@@ -469,8 +468,12 @@ module FastRuby
               else
                 
                 if default_block_tree
-                  initialize_tree = default_block_tree[i+1]
-                  to_c(initialize_tree) + ";\n"
+                  initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
+                  if initialize_tree
+                    to_c(initialize_tree) + ";\n"
+                  else
+                    ""
+                  end
                 else
                   ";\n"
                 end
