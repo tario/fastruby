@@ -58,4 +58,22 @@ describe FastRuby, "fastruby" do
     cfx4.foo(99,88).should be == [99,88]
   end
 
+  fastruby "
+    class CFX5
+      def foo(a,b=4)
+        [a,b]
+      end
+    end
+  "
+
+  it "should allow one mandatory and one optional argument and should return the passed value when one argument is passed" do
+    cfx5 = CFX5.new
+    cfx5.foo(99).should be == [99,4]
+  end
+
+  it "should allow one mandatory and one optional argument and should return the passed value when two arguments are passed" do
+    cfx5 = CFX5.new
+    cfx5.foo(99,88).should be == [99,88]
+  end
+
 end
