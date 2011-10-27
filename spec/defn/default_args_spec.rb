@@ -197,4 +197,25 @@ describe FastRuby, "fastruby" do
   it "should allow splat arguments with default arguments accepting three argument" do
     CFX11.new.foo(55,66,77).should be == [77]
   end
+  
+  fastruby "
+      class CFX12
+        def foo(a=0,&block)
+          a
+        end
+      end
+    "
+
+  it "should allow splat arguments with default with block arguments accepting no argument" do
+    CFX12.new.foo() {
+      
+    }.should be == 0
+  end
+
+  it "should allow splat arguments with default with block arguments accepting one argument" do
+    CFX12.new.foo(44) {
+      
+    }.should be == 44
+  end
+  
 end
