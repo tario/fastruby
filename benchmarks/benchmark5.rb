@@ -66,6 +66,8 @@ y2 = Y2.new
 x2 = X2.new
 
 Y.build([Y,X],:bar) 
+X.build([X],:foo)
+X.build([X],:bar)
 
 require 'benchmark'
 
