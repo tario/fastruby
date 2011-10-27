@@ -449,6 +449,17 @@ module FastRuby
 
           i = -1
 
+          default_block_tree = args_tree[1..-1].find{|subtree|
+            unless subtree.instance_of? Symbol
+              if subtree[0] == :block
+                next true
+              end
+            end
+
+            false
+          }
+
+
           read_arguments_code = args_tree[1..-1].map { |arg|
               arg = arg.to_s
               i = i + 1
@@ -456,19 +467,14 @@ module FastRuby
               if i < signature.size-1
                 "plocals->#{arg} = arg#{i};\n"
               else
-                initialize_tree = args_tree[1..-1].find{|subtree|
-                  unless subtree.instance_of? Symbol
-                    if subtree[0] == :block
-                      if subtree[1][1].to_s == arg then
-                       next true
-                      end
-                    end
-                  end
-                  
-                  false
-                }
                 
-                to_c(initialize_tree) + ";\n"
+                if default_block_tree
+                  initialize_tree = default_block_tree[i+1]
+                  to_c(initialize_tree) + ";\n"
+                else
+                  ";\n"
+                end
+
               end
 
             }.join("")
