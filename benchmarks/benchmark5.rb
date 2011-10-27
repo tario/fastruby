@@ -20,8 +20,8 @@ class Y
 			i = 1000000
 			
 			lvar_type(i,Fixnum)
+			lvar_type(x2,X)
 	
-			x2 = 0
 			ret = 0
 			while i > 0
 				x.foo do |x2|
