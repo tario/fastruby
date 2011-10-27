@@ -411,7 +411,7 @@ module FastRuby
         end
         
         is_splat_args = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
-        
+
         argnum = args_tree[1..-1].count{ |x|
             if x.instance_of? Symbol
               not x.to_s.match(/\*/) and not x.to_s.match(/\&/)
@@ -419,6 +419,10 @@ module FastRuby
               false
             end
           }
+          
+        argnum = argnum - args_tree[1..-1].count{|x|
+            not x.instance_of? Symbol
+        }
         
         if is_splat_args
           
@@ -438,13 +442,31 @@ module FastRuby
                   );
           "
         else
-          
+
           i = -1
-          
+
           read_arguments_code = args_tree[1..-1].map { |arg|
               arg = arg.to_s
               i = i + 1
-              "plocals->#{arg} = arg#{i};\n"
+
+              if i < signature.size-1
+                "plocals->#{arg} = arg#{i};\n"
+              else
+                initialize_tree = args_tree[1..-1].find{|subtree|
+                  unless subtree.instance_of? Symbol
+                    if subtree[0] == :block
+                      if subtree[1][1].to_s == arg then
+                       next true
+                      end
+                    end
+                  end
+                  
+                  false
+                }
+                
+                to_c(initialize_tree) + ";\n"
+              end
+
             }.join("")
         end
 
