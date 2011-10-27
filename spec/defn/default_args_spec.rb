@@ -218,4 +218,25 @@ describe FastRuby, "fastruby" do
     }.should be == 44
   end
   
+  fastruby "
+      class CFX13
+        def foo(a=0,&block)
+          block.call
+        end
+      end
+    "
+
+  it "should allow splat arguments with default with block arguments accepting no argument" do
+    CFX13.new.foo() {
+      66
+    }.should be == 66
+  end
+
+  it "should allow splat arguments with default with block arguments accepting one argument" do
+    CFX13.new.foo(44) {
+      77
+    }.should be == 77
+  end
+
+  
 end
