@@ -186,6 +186,12 @@ describe FastRuby, "fastruby" do
       end
     "
 
+  it "should raise ArgumentError with splat arguments with default arguments when no arguments are passed" do
+    lambda {
+      CFX11.new.foo
+    }.should raise_error(ArgumentError)
+  end
+
   it "should allow splat arguments with default arguments accepting one argument" do
     CFX11.new.foo(55).should be == []
   end
