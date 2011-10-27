@@ -456,32 +456,45 @@ module FastRuby
     
               false
             }
+            
+            i = -1
 
-            if splat_arg
-              
-              i = -1
-              
-              read_arguments_code = args_tree[1..-2].map { |arg_|
-                  arg = arg_.to_s
-                  i = i + 1
-                  
-                  if arg_.instance_of? Symbol
-                    unless arg.match(/\*/)
+            normalargsnum = args_tree[1..-1].count{|subtree|
+              if subtree.instance_of? Symbol
+                unless subtree.to_s.match(/\*/)
+                  next true
+                end
+              end
+                    
+              false
+            }
+
+            read_arguments_code = args_tree[1..-1].map { |arg_|
+                arg = arg_.to_s
+                i = i + 1
+    
+                if i < normalargsnum
+                  if i < signature.size-1
                     "plocals->#{arg} = arg#{i};\n"
+                  else
+                      
+                    if default_block_tree
+                      initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
+                      if initialize_tree
+                        to_c(initialize_tree) + ";\n"
+                      else
+                        ""
+                      end
+                    else
+                        ";\n"
                     end
                   end
-                }.join("")
-                
-                normalargsnum = args_tree[1..-1].count{|subtree|
-                    if subtree.instance_of? Symbol
-                      unless subtree.to_s.match(/\*/)
-                        next true
-                      end
-                    end
-                    
-                    false
-                  }
-                  
+                else
+                  ""
+                end
+              }.join("")
+              
+            if splat_arg
                   if signature.size-1 < normalargsnum then
                     read_arguments_code << "
                       plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(0);
@@ -495,32 +508,7 @@ module FastRuby
                             );
                     "
                   end
-            else
     
-              i = -1
-    
-              read_arguments_code = args_tree[1..-1].map { |arg_|
-                  arg = arg_.to_s
-                  i = i + 1
-    
-                  if i < signature.size-1
-                    "plocals->#{arg} = arg#{i};\n"
-                  else
-                    
-                    if default_block_tree
-                      initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
-                      if initialize_tree
-                        to_c(initialize_tree) + ";\n"
-                      else
-                        ""
-                      end
-                    else
-                      ";\n"
-                    end
-    
-                  end
-    
-                }.join("")
             end
           
           
