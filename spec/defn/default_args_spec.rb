@@ -99,4 +99,44 @@ describe FastRuby, "fastruby" do
     "
   end
 
+  fastruby "
+      class CFX7
+        def foo(x=44,*y)
+          x
+        end
+      end
+    "
+
+  it "should allow splat arguments with default arguments accepting no arguments " do
+    CFX7.new.foo.should be == 44
+  end
+
+  it "should allow splat arguments with default arguments accepting one argument" do
+    CFX7.new.foo(55).should be == 55
+  end
+
+  fastruby "
+      class CFX8
+        def foo(x=44,*y)
+          y
+        end
+      end
+    "
+
+  it "should allow splat arguments with default arguments accepting no arguments" do
+    CFX8.new.foo.should be == []
+  end
+
+  it "should allow splat arguments with default arguments accepting one arguments" do
+    CFX8.new.foo(55).should be == []
+  end
+
+  it "should allow splat arguments with default arguments accepting two arguments" do
+    CFX8.new.foo(55,66).should be == [66]
+  end
+
+  it "should allow splat arguments with default arguments accepting three arguments" do
+    CFX8.new.foo(55,66,67,68).should be == [66,67,68]
+  end
+
 end
