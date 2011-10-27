@@ -90,5 +90,13 @@ describe FastRuby, "fastruby" do
     }.should raise_error(ArgumentError)
   end
 
+  it "should allow splat arguments with default arguments " do
+    fastruby "
+      class CFX6
+        def foo(x=44,*y)
+        end
+      end
+    "
+  end
 
 end
