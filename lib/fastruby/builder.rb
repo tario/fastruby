@@ -75,13 +75,17 @@ module FastRuby
       context.snippet_hash = snippet_hash
       context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
 
-      (1..signature.size).each do |i|
+      (1..signature.size-1).each do |i|
         arg = args_tree[i]
-        if arg
-          if arg.to_s.match(/\*/)
-            context.infer_lvar_map[arg.to_s.gsub("*","").to_sym] = Array
-          else
-            context.infer_lvar_map[arg.to_sym] = signature[i]
+        
+        if arg.instance_of? Symbol
+          
+          if arg
+            if arg.to_s.match(/\*/)
+              context.infer_lvar_map[arg.to_s.gsub("*","").to_sym] = Array
+            else
+              context.infer_lvar_map[arg.to_sym] = signature[i]
+            end
           end
         end
       end
