@@ -277,5 +277,27 @@ describe FastRuby, "fastruby" do
     cfx15.foo(cfx14,99)
   end
 
+  it "should allow if on default argument" do
+    fastruby "
+      class ::CFX16
+        def foo(a, b = if a
+              87
+            else
+              55
+            end
+          )
+          b
+        end
+      end
+    "
+
+
+    cfx16 = ::CFX16.new
+    
+    cfx16.foo(false).should be == 55
+    cfx16.foo(true).should be == 87
+    cfx16.foo(true,99).should be == 99
+    cfx16.foo(false,99).should be == 99
+  end
   
 end
