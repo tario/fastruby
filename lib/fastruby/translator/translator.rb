@@ -420,10 +420,14 @@ module FastRuby
             end
           }
           
-        argnum = argnum - args_tree[1..-1].count{|x|
-            not x.instance_of? Symbol
-        }
-        
+        args_tree[1..-1].each do |subtree|
+          unless subtree.instance_of? Symbol
+            if subtree[0] == :block
+              argnum = argnum - (subtree.size-1)
+            end
+          end
+        end
+
         if is_splat_args
           
           i = -1
