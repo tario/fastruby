@@ -1,4 +1,6 @@
-0.0.15	Minor fixes to splat arguments on blocks
+0.0.15	Support for default arguments (e.g. def foo(a, b=c.to_s, c=99) )
+
+		Minor fixes to splat arguments on blocks
 
 		Support for receving block as proc (i.e. def foo(&block); end)
 
