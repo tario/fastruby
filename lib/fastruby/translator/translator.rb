@@ -412,7 +412,7 @@ module FastRuby
         
         is_splat_args = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
 
-        argnum = args_tree[1..-1].count{ |x|
+        maxargnum = args_tree[1..-1].count{ |x|
             if x.instance_of? Symbol
               not x.to_s.match(/\*/) and not x.to_s.match(/\&/)
             else
@@ -420,77 +420,91 @@ module FastRuby
             end
           }
           
+        minargnum = maxargnum
+          
         args_tree[1..-1].each do |subtree|
           unless subtree.instance_of? Symbol
             if subtree[0] == :block
-              argnum = argnum - (subtree.size-1)
+              minargnum = minargnum - (subtree.size-1)
             end
           end
         end
+        
+        if args_tree[1..-1].find{|x| x.to_s.match(/\*/)}
+          maxargnum = 2147483647
+        end
+        
+        read_arguments_code = ""
 
-        if is_splat_args
-          
-          i = -1
-          
-          read_arguments_code = args_tree[1..-2].map { |arg|
-              arg = arg.to_s
-              i = i + 1
-              "plocals->#{arg} = arg#{i};\n"
-            }.join("")
-            
-            arguments_array = [(signature.size-1) - (args_tree.size-2)] + (args_tree.size-2..signature.size-1).map{|x| "arg#{x}"}
-            
-          read_arguments_code << "
-            plocals->#{args_tree[-1].to_s.gsub("*","")} = rb_ary_new3(
-                  #{arguments_array.join(",")} 
-                  );
-          "
+
+        validate_arguments_code = if signature.size-1 < minargnum
+            "
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{minargnum})\");
+            "
+        elsif signature.size-1 > maxargnum
+            "
+              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{maxargnum})\");
+            "
         else
-
-          i = -1
-
-          default_block_tree = args_tree[1..-1].find{|subtree|
-            unless subtree.instance_of? Symbol
-              if subtree[0] == :block
-                next true
-              end
-            end
-
-            false
-          }
-
-          read_arguments_code = args_tree[1..-1].map { |arg_|
-              arg = arg_.to_s
-              i = i + 1
-
-              if i < signature.size-1
-                "plocals->#{arg} = arg#{i};\n"
-              else
+              
+            if is_splat_args
+              
+              i = -1
+              
+              read_arguments_code = args_tree[1..-2].map { |arg|
+                  arg = arg.to_s
+                  i = i + 1
+                  "plocals->#{arg} = arg#{i};\n"
+                }.join("")
                 
-                if default_block_tree
-                  initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
-                  if initialize_tree
-                    to_c(initialize_tree) + ";\n"
-                  else
-                    ""
+                arguments_array = [(signature.size-1) - (args_tree.size-2)] + (args_tree.size-2..signature.size-1).map{|x| "arg#{x}"}
+                
+              read_arguments_code << "
+                plocals->#{args_tree[-1].to_s.gsub("*","")} = rb_ary_new3(
+                      #{arguments_array.join(",")} 
+                      );
+              "
+            else
+    
+              i = -1
+    
+              default_block_tree = args_tree[1..-1].find{|subtree|
+                unless subtree.instance_of? Symbol
+                  if subtree[0] == :block
+                    next true
                   end
-                else
-                  ";\n"
                 end
-
-              end
-
-            }.join("")
+    
+                false
+              }
+              
+              read_arguments_code = args_tree[1..-1].map { |arg_|
+                  arg = arg_.to_s
+                  i = i + 1
+    
+                  if i < signature.size-1
+                    "plocals->#{arg} = arg#{i};\n"
+                  else
+                    
+                    if default_block_tree
+                      initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
+                      if initialize_tree
+                        to_c(initialize_tree) + ";\n"
+                      else
+                        ""
+                      end
+                    else
+                      ";\n"
+                    end
+    
+                  end
+    
+                }.join("")
+            end
+          
+          
+            ""
         end
-
-          validate_arguments_code = if signature.size-1 >= argnum
-            "
-            "
-          else
-            "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{args_tree.size-1})\");
-            "
-          end
 
         if block_argument
 
