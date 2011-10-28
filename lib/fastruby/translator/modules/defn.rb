@@ -112,7 +112,7 @@ private
       
       anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
           VALUE klass = #{global_klass_variable};
-          char method_name[0x100];
+          char method_name[argc_*40+64];
 
           method_name[0] = '_';
           method_name[1] = 0;
