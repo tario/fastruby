@@ -58,9 +58,7 @@ I will stabilize the API and document it for next releases. I promise
 == Known Limitations & Issues
 
 * callcc is not supported, it works but using it may result in unexpected behaviour
-* recursive methods will be slow since the optimization of method calls only works with already defined methods
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call is pretty fast)
-* When calling fastruby methods from normal ruby, the max. number of arguments allowed is 15
 * replacement of methods using identical code strings will work, but it will generate duplicated objects on the cache each time te snippet run
 
 == Usage
