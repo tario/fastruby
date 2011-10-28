@@ -404,11 +404,7 @@ module FastRuby
 
         initialize_method_structs(original_args_tree)
         
-        strargs = if args_tree.size > 1
-          "VALUE self, VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
-        else
-          "VALUE self, VALUE block, VALUE _parent_frame"
-        end
+        strargs = "VALUE self, VALUE block, VALUE _parent_frame, int argc, VALUE* argv"
         
         splat_arg = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
 
@@ -475,7 +471,7 @@ module FastRuby
     
                 if i < normalargsnum
                   if i < signature.size-1
-                    "plocals->#{arg} = arg#{i};\n"
+                    "plocals->#{arg} = argv[#{i}];\n"
                   else
                       
                     if default_block_tree
@@ -500,7 +496,7 @@ module FastRuby
                       plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(0);
                       "
                   else
-                      arguments_array = [(signature.size-1) - (normalargsnum)] + (normalargsnum..signature.size-1).map{|x| "arg#{x}"}
+                      arguments_array = [(signature.size-1) - (normalargsnum)] + (normalargsnum..signature.size-1).map{|x| "argv[#{x}]"}
                       
                     read_arguments_code << "
                       plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(
@@ -1087,7 +1083,7 @@ module FastRuby
               protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
               };
           } else {
-            return ( (VALUE(*)(#{value_cast})) (fptr) )(self,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+            return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*)) (fptr) )(self,(VALUE)block,(VALUE)frame,#{args_tree.size-1},method_arguments+1);  
           }
         }
         "
