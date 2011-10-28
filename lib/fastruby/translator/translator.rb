@@ -308,12 +308,12 @@ module FastRuby
         initialize_method_structs(original_args_tree)
 
         strargs = if args_tree.size > 1
-          "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
+          "VALUE self, VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
         else
-          "VALUE block, VALUE _parent_frame"
+          "VALUE self, VALUE block, VALUE _parent_frame"
         end
 
-        ret = "VALUE #{@alt_method_name || method_name}() {
+        ret = "VALUE #{@alt_method_name || method_name}(VALUE self) {
 
           #{@locals_struct} *plocals;
           #{@frame_struct} frame;
@@ -399,15 +399,15 @@ module FastRuby
         }"
 
         add_main
-        ret
+        extra_code << ret
       else
 
         initialize_method_structs(original_args_tree)
         
         strargs = if args_tree.size > 1
-          "VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
+          "VALUE self, VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
         else
-          "VALUE block, VALUE _parent_frame"
+          "VALUE self, VALUE block, VALUE _parent_frame"
         end
         
         splat_arg = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
@@ -620,8 +620,14 @@ module FastRuby
         }"
 
         add_main
-        ret
+        extra_code << ret
       end
+      
+      "
+        static VALUE dummy_#{method_name}_#{alt_method_name}_#{rand(1000000000000000000000000000000000)}(VALUE a) {
+          return Qnil;
+        }
+      "
     end
 
     def locals_accessor
