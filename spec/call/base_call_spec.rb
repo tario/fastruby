@@ -77,6 +77,7 @@ describe FastRuby, "fastruby" do
     end
   end
   
-  test_invalid_fastruby_arguments(15)
-  
+  #test_invalid_fastruby_arguments(15)
+
+  test_fastruby_arguments(1024)
 end
