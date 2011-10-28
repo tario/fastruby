@@ -496,11 +496,9 @@ module FastRuby
                       plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(0);
                       "
                   else
-                      arguments_array = [(signature.size-1) - (normalargsnum)] + (normalargsnum..signature.size-1).map{|x| "argv[#{x}]"}
-                      
                     read_arguments_code << "
-                      plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(
-                            #{arguments_array.join(",")} 
+                      plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new4(
+                            #{(signature.size-1) - (normalargsnum)}, argv+#{normalargsnum} 
                             );
                     "
                   end
