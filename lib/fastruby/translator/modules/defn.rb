@@ -209,7 +209,7 @@ private
                 }
 
                 if (frame.targetted == 0) {
-                    rb_jump_tag(aux);
+                    frb_jump_tag(aux);
                 }
 
                 return Qnil;

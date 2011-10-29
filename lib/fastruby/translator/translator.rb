@@ -67,6 +67,12 @@ module FastRuby
         void* block_function_param;
       }"
 
+        extra_code << "
+          static void frb_jump_tag(int state) {
+            VALUE exception = rb_funcall(#{literal_value FastRuby::JumpTagException}, #{intern_num :new},1,INT2FIX(state)); 
+            rb_exc_raise(exception);
+          }
+        "
 
       extra_code << "
         #include \"node.h\"
@@ -144,6 +150,7 @@ module FastRuby
 */
 
         "
+        
       end
     end
 
@@ -789,7 +796,7 @@ module FastRuby
               if (frame.targetted == 1) {
                 return frame.return_value;
               } else {
-                rb_jump_tag(aux);
+                frb_jump_tag(aux);
               }
             }
 
@@ -832,7 +839,7 @@ module FastRuby
               if (frame.targetted == 1) {
                 return frame.return_value;
               } else {
-                rb_jump_tag(aux);
+                frb_jump_tag(aux);
               }
             }
 
@@ -844,32 +851,49 @@ module FastRuby
         rescue_args = "(VALUE)pframe"
       end
 
-      wrapper_code = " 
-            if (pframe->last_error != Qnil) {
-                // raise emulation
-                pframe->thread_data->exception = pframe->last_error;
-                longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-                return Qnil;
+      wrapper_code = "
+            if (str.state >= 0x80) {
+              longjmp(pframe->jmp, str.state);
+            } else {
+              if (str.last_error != Qnil) {
+                  // raise emulation
+                  pframe->thread_data->exception = str.last_error;
+                  longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+                  return Qnil;
+              }
             }
         "
+        
+        return_err_struct = "struct {
+            VALUE last_error;
+            int state;
+          }
+          "
 
         rescue_body = anonymous_function{ |name| "
           static VALUE #{name}(VALUE param, VALUE err) {
-            #{@frame_struct} *pframe = (void*)param;
+            #{return_err_struct} *pstr = (void*)param;
             
-            pframe->last_error = err;
+            if (rb_obj_is_instance_of(err, #{literal_value FastRuby::JumpTagException})) {
+              pstr->state = FIX2INT(rb_funcall(err, #{intern_num :state}, 0));
+            } else {
+              pstr->last_error = err;
+            }
             
             return Qnil;
           }
         "
       }
 
-#      rescue_code = "rb_protect(#{body},#{rescue_args},&state)"
-      rescue_code = "rb_rescue2(#{body}, #{rescue_args}, #{rescue_body}, (VALUE)pframe, rb_eException, (VALUE)0)"
+      rescue_code = "rb_rescue2(#{body}, #{rescue_args}, #{rescue_body}, (VALUE)&str, rb_eException, (VALUE)0)"
 
       if always_rescue
         inline_block "
-          int state;
+          #{return_err_struct} str;
+          
+          str.state = 0;
+          str.last_error = Qnil;
+          
           pframe->last_error = Qnil;
           VALUE result = #{rescue_code};
 
@@ -880,7 +904,11 @@ module FastRuby
       else
         inline_block "
           VALUE result;
-          int state;
+          #{return_err_struct} str;
+          
+          str.state = 0;
+          str.last_error = Qnil;
+          
           pframe->last_error = Qnil;
 
           if (pframe->rescue) {

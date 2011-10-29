@@ -21,4 +21,12 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class TypeMismatchAssignmentException < Exception
   end
+  
+  class JumpTagException < Exception
+    attr_reader :state
+    
+    def initialize(state_)
+      @state = state_
+    end
+  end
 end

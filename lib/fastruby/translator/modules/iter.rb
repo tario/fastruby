@@ -333,7 +333,7 @@ module FastRuby
                           rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
                         } else {
                           ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                          rb_jump_tag(aux);
+                          frb_jump_tag(aux);
                         }
                       } else {
                         rb_raise(rb_eLocalJumpError, \"unexpected return\");
@@ -376,7 +376,7 @@ module FastRuby
                 } else if (aux == FASTRUBY_TAG_REDO) {
                   // do nothing and let execute the block again
                 } else {
-                  rb_jump_tag(aux);
+                  frb_jump_tag(aux);
                   return frame.return_value;
                 }
             }
