@@ -124,8 +124,9 @@ describe FastRuby, "fastruby" do
         a
       end
       
-      def another_method
+      def another_method(n)
         a = 9999
+	    another_method(n-1) if n>0
       end
     
       def foo
@@ -133,7 +134,7 @@ describe FastRuby, "fastruby" do
         $called = nil
         
         ret = bar
-        another_method
+        another_method(200)
         
         unless $called
           $called = 1
