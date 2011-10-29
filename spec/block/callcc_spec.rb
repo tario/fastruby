@@ -111,5 +111,41 @@ describe FastRuby, "fastruby" do
     ::N5.new.foo(4).should be == 44
   end
 
+  class ::N6
+    fastruby "
+    
+      def bar
+        a = 5555
+        
+        callcc do |cc|
+          $cc = cc
+        end
+        
+        a
+      end
+      
+      def another_method
+        a = 9999
+      end
+    
+      def foo
+        
+        $called = nil
+        
+        ret = bar
+        another_method
+        
+        unless $called
+          $called = 1
+          $cc.call
+        end
+        
+        ret
+      end
+    "
+  end
 
+  it "should execute callcc loops and preserve local variables when another method is called after callcc" do
+    ::N6.new.foo.should be == 5555
+  end
 end
