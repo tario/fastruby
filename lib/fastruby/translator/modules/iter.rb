@@ -523,6 +523,27 @@ module FastRuby
               } else if (node == #{@procnew_node_gvar} && pframe->next_recv == rb_cProc) {
                 caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_proc_new)};
+              } else if (node == #{@callcc_node_gvar}) {
+                
+                // freeze all stacks
+                struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+  
+                if (thread_data != 0) {
+                  VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
+
+                  // freeze the complete chain of stack chunks
+                  while (rb_stack_chunk != Qnil) {
+                    struct STACKCHUNK* stack_chunk;
+                    Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+  
+                    stack_chunk_freeze(stack_chunk);
+  
+                    rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                  }
+                }
+              
+                caller_func = #{anonymous_function(&rb_funcall_caller_code)};
+                block_func = #{anonymous_function(&rb_funcall_block_code)};
               } else {
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code)};

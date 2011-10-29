@@ -103,11 +103,13 @@ module FastRuby
       @lambda_node_gvar = add_global_name("NODE*", 0);
       @proc_node_gvar = add_global_name("NODE*", 0);
       @procnew_node_gvar = add_global_name("NODE*", 0);
+      @callcc_node_gvar = add_global_name("NODE*", 0);
 
       init_extra << "
         #{@lambda_node_gvar} = rb_method_node(rb_cObject, #{intern_num :lambda});
         #{@proc_node_gvar} = rb_method_node(rb_cObject, #{intern_num :proc});
         #{@procnew_node_gvar} = rb_method_node(CLASS_OF(rb_cProc), #{intern_num :new});
+        #{@callcc_node_gvar} = rb_method_node(rb_mKernel, #{intern_num :callcc});
       "
 
       @common_func = common_func
