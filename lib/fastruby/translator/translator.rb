@@ -844,25 +844,28 @@ module FastRuby
         rescue_args = "(VALUE)pframe"
       end
 
-      wrapper_code = "        if (state != 0) {
-          if (state < 0x80) {
-
-            if (state == TAG_RAISE) {
+      wrapper_code = " 
+            if (pframe->last_error != Qnil) {
                 // raise emulation
-                pframe->thread_data->exception = rb_eval_string(\"$!\");
+                pframe->thread_data->exception = pframe->last_error;
                 longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
                 return Qnil;
-            } else {
-              rb_jump_tag(state);
             }
-          } else {
-            longjmp(pframe->jmp, state);
-          }
-
-        }
         "
 
-      rescue_code = "rb_protect(#{body},#{rescue_args},&state)"
+        rescue_body = anonymous_function{ |name| "
+          static VALUE #{name}(VALUE param, VALUE err) {
+            #{@frame_struct} *pframe = (void*)param;
+            
+            pframe->last_error = err;
+            
+            return Qnil;
+          }
+        "
+      }
+
+#      rescue_code = "rb_protect(#{body},#{rescue_args},&state)"
+      rescue_code = "rb_rescue2(#{body}, #{rescue_args}, #{rescue_body}, (VALUE)pframe, rb_eException, (VALUE)0)"
 
       if always_rescue
         inline_block "
