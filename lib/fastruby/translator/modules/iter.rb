@@ -420,7 +420,7 @@ module FastRuby
             }
             
             if (rb_obj_is_kind_of(arg,rb_cCont)) {
-              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+              struct FASTRUBYTHREADDATA* thread_data = frame.thread_data;
               rb_ivar_set(arg,#{intern_num :__stack_chunk},thread_data->rb_stack_chunk);
             }
 
