@@ -103,26 +103,13 @@ class Object
     end
   end
 
-  def self.execute_tree(argument,*options_hashes)
+  def self.execute_tree(tree,*options_hashes)
     options_hash = {:validate_lvar_types => true}
     options_hashes.each do |opt|
       options_hash.merge!(opt)
     end
 
     require "fastruby/fastruby_sexp"
-    if argument.instance_of? FastRuby::FastRubySexp
-      tree = argument
-    elsif argument.instance_of? String
-      require "rubygems"
-      require "ruby_parser"
-      require "fastruby/sexp_extension"
-      tree = RubyParser.new.parse(argument).to_fastruby_sexp
-    else
-      require "pry"
-      binding.pry
-      raise ArgumentError
-    end
-
     method_name = tree[1]
 
     self_ = options_hash[:self]
@@ -141,22 +128,5 @@ class Object
     $refered_from_code_array = Array.new unless $refered_from_code_array
     $refered_from_code_array << self
   end
-
-  private
-      def self.to_class_name(argument)
-        require "sexp"
-        if argument.instance_of? Symbol
-          argument.to_s
-        elsif argument.instance_of? Sexp
-          if argument[0] == :colon3
-            "::" + to_class_name(argument[1])
-          elsif argument[0] == :colon2
-            to_class_name(argument[1]) + "::" + to_class_name(argument[2])
-          elsif argument[0] == :const
-            to_class_name(argument[1])
-          end
-        end
-      end
-
 end
 
