@@ -776,14 +776,20 @@ module FastRuby
     def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       body = nil
       rescue_args = nil
-      if repass_var
+
         body =  anonymous_function{ |name| "
           static VALUE #{name}(VALUE param) {
 
             #{@frame_struct} frame;
 
             typeof(frame)* pframe;
-            typeof(frame)* parent_frame = ((typeof(pframe))((void**)param)[0]);
+            
+            #{if repass_var
+            "typeof(frame)* parent_frame = ((typeof(pframe))((void**)param)[0]);"
+            else
+            "typeof(frame)* parent_frame = (typeof(pframe))param;"
+            end
+            }
 
             frame.parent_frame = 0;
             frame.return_value = Qnil;
@@ -812,55 +818,19 @@ module FastRuby
               }
             }
 
-            VALUE #{repass_var} = (VALUE)((void**)param)[1];
+            #{if repass_var 
+              "VALUE #{repass_var} = (VALUE)((void**)param)[1];"
+            end
+            }
             return #{inner_code};
             }
           "
         }
 
+      if repass_var
         rescue_args = ""
         rescue_args = "(VALUE)(VALUE[]){(VALUE)pframe,(VALUE)#{repass_var}}"
       else
-
-        body = anonymous_function{ |name| "
-          static VALUE #{name}(VALUE param) {
-            #{@frame_struct} frame;
-
-            typeof(frame)* pframe;
-            typeof(frame)* parent_frame = (typeof(pframe))param;
-
-            frame.parent_frame = 0;
-            frame.return_value = Qnil;
-            frame.rescue = 0;
-            frame.last_error = Qnil;
-            frame.targetted = 0;
-            frame.thread_data = parent_frame->thread_data;
-            frame.next_recv = parent_frame->next_recv;
-            if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
-
-            pframe = &frame;
-
-            #{
-            nolocals ? "frame.plocals = 0;" : "#{@locals_struct}* plocals = parent_frame->plocals;
-            frame.plocals = plocals;
-            "
-            }
-
-            int aux = setjmp(frame.jmp);
-            if (aux != 0) {
-
-              if (frame.targetted == 1) {
-                return frame.return_value;
-              } else {
-                frb_jump_tag(aux);
-              }
-            }
-
-            return #{inner_code};
-            }
-          "
-        }
-
         rescue_args = "(VALUE)pframe"
       end
 
