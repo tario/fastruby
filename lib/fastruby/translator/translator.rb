@@ -599,7 +599,7 @@ module FastRuby
               frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
 
-            if (plocals->targetted == Qfalse) {
+            if (plocals->targetted == Qfalse || aux != FASTRUBY_TAG_RETURN) {
               longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
             }
 
