@@ -390,6 +390,48 @@ module FastRuby
         "
         }
 
+        rb_funcall_block_code_callcc = proc { |name| "
+          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+            // block for call to #{call_tree[2]}
+            VALUE last_expression = Qnil;
+
+            #{@frame_struct} frame;
+            #{@frame_struct} *pframe = (void*)&frame;
+            #{@locals_struct} *plocals = (void*)_plocals;
+
+            frame.plocals = plocals;
+            frame.parent_frame = 0;
+            frame.return_value = Qnil;
+            frame.rescue = 0;
+            frame.targetted = 0;
+            frame.thread_data = rb_current_thread_data();
+
+            int aux = setjmp(frame.jmp);
+            if (aux != 0) {
+
+                if (aux == FASTRUBY_TAG_NEXT) {
+                  return pframe->thread_data->accumulator;
+                } else if (aux == FASTRUBY_TAG_REDO) {
+                  // do nothing and let execute the block again
+                } else {
+                  frb_jump_tag(aux);
+                  return frame.return_value;
+                }
+            }
+            
+            if (rb_obj_is_kind_of(arg,rb_cCont)) {
+              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+              rb_ivar_set(arg,#{intern_num :__stack_chunk},thread_data->rb_stack_chunk);
+            }
+
+            #{str_arg_initialization}
+            #{str_impl}
+
+            return last_expression;
+          }
+        "
+        }
+
 
         fastruby_str_arg_initialization = ""
 
@@ -543,7 +585,7 @@ module FastRuby
                 }
               
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
-                block_func = #{anonymous_function(&rb_funcall_block_code)};
+                block_func = #{anonymous_function(&rb_funcall_block_code_callcc)};
               } else {
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code)};
