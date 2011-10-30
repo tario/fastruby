@@ -114,11 +114,7 @@ module FastRuby
               def builder.generate_ext
                 ext = []
 
-                if @include_ruby_first
-                  @inc.unshift "#include \"ruby.h\""
-                else
-                  @inc.push "#include \"ruby.h\""
-                end
+                @inc.unshift "#include \"ruby.h\""
 
                 ext << @inc
                 ext << nil
