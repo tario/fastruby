@@ -544,31 +544,15 @@ module FastRuby
                 }
         "
         
-          funcall_call_code = "
-          return #{
-            frame_call(
-              protected_block(inline_block("
+          precode = "
+              struct FASTRUBYTHREADDATA* thread_data = 0;
+              VALUE saved_rb_stack_chunk = Qnil; 
 
               pframe->next_recv = #{recv_tree ? to_c(recv_tree) : "plocals->self"};
 
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
-              void* caller_func;
-              void* block_func;
 
-              struct FASTRUBYTHREADDATA* thread_data = 0;
-              VALUE saved_rb_stack_chunk = Qnil; 
-
-              if (
-                node == #{@proc_node_gvar} ||
-                node == #{@lambda_node_gvar}
-                )  {
-
-                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
-                block_func = #{anonymous_function(&rb_funcall_block_code_with_lambda)};
-              } else if (node == #{@procnew_node_gvar} && pframe->next_recv == rb_cProc) {
-                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
-                block_func = #{anonymous_function(&rb_funcall_block_code_proc_new)};
-              } else if (node == #{@callcc_node_gvar}) {
+              if (node == #{@callcc_node_gvar}) {
                 
                 // freeze all stacks
                 thread_data = rb_current_thread_data();
@@ -587,26 +571,51 @@ module FastRuby
                     rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
                   }
                 }
+              }
+            "
+          
+          postcode = "
+              if (node == #{@callcc_node_gvar}) {
+                thread_data->rb_stack_chunk = saved_rb_stack_chunk;  
+              }
+          "              
+          
+        
+          funcall_call_code = "
+          return #{
+            frame_call(
+              protected_block(inline_block("
               
+              NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
+              void* caller_func;
+              void* block_func;
+
+              if (
+                node == #{@proc_node_gvar} ||
+                node == #{@lambda_node_gvar}
+                )  {
+
+                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
+                block_func = #{anonymous_function(&rb_funcall_block_code_with_lambda)};
+              } else if (node == #{@procnew_node_gvar} && pframe->next_recv == rb_cProc) {
+                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
+                block_func = #{anonymous_function(&rb_funcall_block_code_proc_new)};
+              } else if (node == #{@callcc_node_gvar}) {
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_callcc)};
               } else {
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code)};
               }
+              
 
-              VALUE ret = rb_iterate(
+              return rb_iterate(
                 caller_func,
                 (VALUE)pframe,
                 block_func,
                 (VALUE)plocals);
 
-              if (node == #{@callcc_node_gvar}) {
-                thread_data->rb_stack_chunk = saved_rb_stack_chunk;  
-              }
-              
-              return ret;
-              "), true)
+              "), true), precode, postcode
             )
           };
           "        

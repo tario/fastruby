@@ -169,7 +169,7 @@ module FastRuby
       name
     end
 
-    def frame_call(inner_code)
+    def frame_call(inner_code, precode = "", postcode = "")
       inline_block "
 
 
@@ -189,24 +189,33 @@ module FastRuby
         VALUE old_call_frame = plocals->call_frame;
         plocals->call_frame = LONG2FIX(&call_frame);
 
+        #{precode}
+
                 int aux = setjmp(call_frame.jmp);
                 if (aux != 0) {
                   if (call_frame.targetted == 0) {
+                    #{postcode}
                     longjmp(old_pframe->jmp,aux);
                   }
 
                   if (aux == FASTRUBY_TAG_BREAK) {
                     plocals->call_frame = old_call_frame;
+                    #{postcode}
                     return call_frame.return_value;
                   } else if (aux == FASTRUBY_TAG_RETRY ) {
                     // do nothing and let the call execute again
                   } else {
                     plocals->call_frame = old_call_frame;
+                    #{postcode}
                     return call_frame.return_value;
                   }
                 }
+                
 
         VALUE ret = #{inner_code};
+        
+        #{postcode}
+        
         plocals->call_frame = old_call_frame;
         return ret;
       "
@@ -782,6 +791,7 @@ module FastRuby
             frame.last_error = Qnil;
             frame.targetted = 0;
             frame.thread_data = parent_frame->thread_data;
+            frame.next_recv = parent_frame->next_recv;
             if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
             pframe = &frame;
@@ -825,6 +835,7 @@ module FastRuby
             frame.last_error = Qnil;
             frame.targetted = 0;
             frame.thread_data = parent_frame->thread_data;
+            frame.next_recv = parent_frame->next_recv;
             if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
             pframe = &frame;
