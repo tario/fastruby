@@ -36,4 +36,30 @@ describe FastRuby, "fastruby" do
     }.should_not raise_exception
   end
 
+  it "should trap exception raised on ensure after return on parent frame" do
+    
+    fastruby <<ENDSTR
+    
+    class L3
+      def foo
+        yield
+      ensure
+        raise RuntimeError
+      end
+    
+      def bar
+        foo do
+          return 4
+        end
+      end
+    end
+    
+ENDSTR
+    
+    lambda {
+      ::L3.new.bar
+    }.should raise_exception(RuntimeError)
+    
+  end
+
 end
