@@ -555,6 +555,9 @@ module FastRuby
               void* caller_func;
               void* block_func;
 
+              struct FASTRUBYTHREADDATA* thread_data = 0;
+              VALUE saved_rb_stack_chunk = Qnil; 
+
               if (
                 node == #{@proc_node_gvar} ||
                 node == #{@lambda_node_gvar}
@@ -568,10 +571,11 @@ module FastRuby
               } else if (node == #{@callcc_node_gvar}) {
                 
                 // freeze all stacks
-                struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+                thread_data = rb_current_thread_data();
   
                 if (thread_data != 0) {
                   VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
+                  saved_rb_stack_chunk = rb_stack_chunk;
 
                   // freeze the complete chain of stack chunks
                   while (rb_stack_chunk != Qnil) {
@@ -591,12 +595,17 @@ module FastRuby
                 block_func = #{anonymous_function(&rb_funcall_block_code)};
               }
 
-              return rb_iterate(
+              VALUE ret = rb_iterate(
                 caller_func,
                 (VALUE)pframe,
                 block_func,
                 (VALUE)plocals);
 
+              if (node == #{@callcc_node_gvar}) {
+                thread_data->rb_stack_chunk = saved_rb_stack_chunk;  
+              }
+              
+              return ret;
               "), true)
             )
           };
