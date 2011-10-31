@@ -149,4 +149,43 @@ describe FastRuby, "fastruby" do
   it "should execute callcc loops and preserve local variables when another method is called after callcc" do
     ::N6.new.foo.should be == 5555
   end
+  
+  
+  it "shouldn't raise LocalJumpError from proc being called on callcc de-initialized stack" do
+    
+fastruby <<ENDSTR
+
+class Z
+  def foo
+    val = nil
+    
+    pr = Proc.new do 
+      return val
+    end
+    
+    val = callcc do |cc|
+      $cc = cc
+    end
+    
+    pr.call
+  end
+
+  def bar
+    ret = foo
+
+    if ret.instance_of? Continuation
+      ret.call(4)
+    else
+      $cc.call(ret-1) if ret > 0
+    end
+  end
+end
+
+ENDSTR
+    
+    
+    lambda {
+      Z.new.bar
+    }.should_not raise_error(LocalJumpError)
+  end
 end
