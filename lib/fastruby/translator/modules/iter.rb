@@ -589,6 +589,9 @@ module FastRuby
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
               void* caller_func;
               void* block_func;
+              
+              if (pframe->thread_data == 0) pframe->thread_data = rb_current_thread_data();
+              void* last_plocals = pframe->thread_data->last_plocals;
 
               if (
                 node == #{@proc_node_gvar} ||
@@ -609,12 +612,24 @@ module FastRuby
               }
               
 
-              return rb_iterate(
+              VALUE ret = rb_iterate(
                 caller_func,
                 (VALUE)pframe,
                 block_func,
                 (VALUE)plocals);
+                
+              // restore last_plocals
+              pframe->thread_data->last_plocals = last_plocals;
+              
+              // mark all scopes as active
+              typeof(plocals) current_plocals = last_plocals;
+              
+              while (current_plocals) {
+                current_plocals->active = Qtrue;
+                current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
+              }
 
+              return ret;
               "), true), precode, postcode
             )
           };
