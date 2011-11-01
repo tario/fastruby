@@ -1,4 +1,6 @@
-0.0.15	Fixed fastruby protocol to support unlimited number of arguments from ruby
+0.0.15	Support for continuation objects and callcc
+
+		Fixed fastruby protocol to support unlimited number of arguments from ruby
 
 		Support for default arguments (e.g. def foo(a, b=c.to_s, c=99) )
 
