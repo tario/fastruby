@@ -619,23 +619,25 @@ module FastRuby
                 block_func,
                 (VALUE)plocals);
 
-
-              // remove active flags of abandoned stack
-              current_plocals = pframe->thread_data->last_plocals;
-              while (current_plocals) {
-                current_plocals->active = Qfalse;
-                current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
-              }
-              
-              // restore last_plocals
-              pframe->thread_data->last_plocals = last_plocals;
-              
-              // mark all scopes as active
-              current_plocals = last_plocals;
-              
-              while (current_plocals) {
-                current_plocals->active = Qtrue;
-                current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
+              if (node == #{@callcc_node_gvar}) {
+  
+                // remove active flags of abandoned stack
+                current_plocals = pframe->thread_data->last_plocals;
+                while (current_plocals) {
+                  current_plocals->active = Qfalse;
+                  current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
+                }
+                
+                // restore last_plocals
+                pframe->thread_data->last_plocals = last_plocals;
+                
+                // mark all scopes as active
+                current_plocals = last_plocals;
+                
+                while (current_plocals) {
+                  current_plocals->active = Qtrue;
+                  current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
+                }
               }
 
               return ret;
