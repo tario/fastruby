@@ -23,6 +23,7 @@ struct FASTRUBYTHREADDATA {
 	VALUE exception;
 	VALUE accumulator;
 	VALUE rb_stack_chunk;
+	void* last_plocals;
 };
 
 struct METHOD {
@@ -196,6 +197,7 @@ static inline VALUE rb_thread_data_create() {
 	thread_data->exception = Qnil;
 	thread_data->accumulator = Qnil;
 	thread_data->rb_stack_chunk = Qnil;
+	thread_data->last_plocals = 0;
 
 	return ret;
 }

@@ -224,6 +224,7 @@ module FastRuby
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
         VALUE return_value;
+        VALUE parent_locals;
         VALUE pframe;
         VALUE block_function_address;
         VALUE block_function_param;
@@ -348,7 +349,7 @@ module FastRuby
           VALUE rb_previous_stack_chunk = Qnil;
           VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
           struct STACKCHUNK* stack_chunk = 0;
-
+          
           if (rb_stack_chunk != Qnil) {
             Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
@@ -369,6 +370,11 @@ module FastRuby
           int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
 
           plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          
+          plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
+          void* old_parent_locals = frame.thread_data->last_plocals;
+          frame.thread_data->last_plocals = plocals;
+          
           plocals->active = Qtrue;
           plocals->targetted = Qfalse;
           plocals->pframe = LONG2FIX(&frame);
@@ -388,6 +394,7 @@ module FastRuby
             }
 
             plocals->active = Qfalse;
+            frame.thread_data->last_plocals = old_parent_locals;
             return plocals->return_value;
           }
 
@@ -412,6 +419,8 @@ module FastRuby
           }
 
           plocals->active = Qfalse;
+          
+          frame.thread_data->last_plocals = old_parent_locals;
           return ret;
 
         }"
@@ -577,6 +586,11 @@ module FastRuby
           int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
 
           plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
+          
+          plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
+          void* old_parent_locals = frame.thread_data->last_plocals;
+          frame.thread_data->last_plocals = plocals;
+          
           frame.plocals = plocals;
           plocals->active = Qtrue;
           plocals->targetted = Qfalse;
@@ -600,9 +614,13 @@ module FastRuby
             }
 
             if (plocals->targetted == Qfalse || aux != FASTRUBY_TAG_RETURN) {
+              frame.thread_data->last_plocals = old_parent_locals;
+              
               longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
             }
 
+            frame.thread_data->last_plocals = old_parent_locals;
+            
             return plocals->return_value;
           }
 
@@ -628,6 +646,9 @@ module FastRuby
           }
 
           plocals->active = Qfalse;
+          
+          frame.thread_data->last_plocals = old_parent_locals;
+          
           return __ret;
         }"
 
@@ -653,6 +674,7 @@ module FastRuby
        @locals = locals
         @locals_struct = "struct {
         VALUE return_value;
+        VALUE parent_locals;
         VALUE pframe;
         VALUE block_function_address;
         VALUE block_function_param;
