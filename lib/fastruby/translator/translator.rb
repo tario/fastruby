@@ -906,42 +906,6 @@ module FastRuby
       end
     end
 
-    def func_frame
-      "
-        #{@locals_struct} *plocals = malloc(sizeof(typeof(*plocals)));
-        #{@frame_struct} frame;
-        #{@frame_struct} *pframe;
-
-        frame.plocals = plocals;
-        frame.parent_frame = (void*)_parent_frame;
-        frame.return_value = Qnil;
-        frame.rescue = 0;
-        frame.targetted = 0;
-        frame.thread_data = ((typeof(pframe))_parent_frame)->thread_data;
-        if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
-
-        plocals->pframe = LONG2FIX(&frame);
-        plocals->targetted = Qfalse;
-
-        pframe = (void*)&frame;
-
-        #{@block_struct} *pblock;
-        VALUE last_expression = Qnil;
-
-        int aux = setjmp(pframe->jmp);
-        if (aux != 0) {
-
-          if (plocals->targetted == Qfalse) {
-            longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
-          }
-
-          return plocals->return_value;
-        }
-
-        plocals->self = self;
-      "
-    end
-
     def c_escape(str)
       str.inspect
     end
