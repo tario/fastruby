@@ -155,7 +155,7 @@ describe FastRuby, "fastruby" do
     
 fastruby <<ENDSTR
 
-class Z
+class ::N7
   def foo
     val = nil
     
@@ -184,8 +184,50 @@ end
 ENDSTR
     
     
+    n7 = ::N7.new
     lambda {
-      Z.new.bar
+      n7.bar
     }.should_not raise_error(LocalJumpError)
   end
+  
+  it "should raise LocalJumpError from proc defined on abandoned stack after Continuation#call" do
+  
+fastruby <<ENDSTR
+class ::N8
+  def bar
+    ret = callcc do |cc|
+      $cc_n8 = cc
+    end
+    
+    if ret == 9
+      $pr_n8.call
+    end
+    
+    ret
+  end
+  
+  def foo3
+    $cc_n8.call(9)
+  end
+  
+  def foo2
+    $pr_n8 = Proc.new do
+      return
+    end
+    
+    foo3
+  end
+  
+  def foo
+    return if bar == 9
+    foo2
+  end
+end
+ENDSTR
+
+    n8 = ::N8.new
+    lambda {
+      n8.foo
+    }.should raise_error(LocalJumpError)
+  end  
 end
