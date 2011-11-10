@@ -18,7 +18,7 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "sha1"
+require "digest"
 require "fileutils"
 
 module FastRuby
@@ -37,7 +37,7 @@ module FastRuby
     end
 
     def hash_snippet(snippet, addition)
-      SHA1.hexdigest(snippet + addition)
+      Digest::SHA1.hexdigest(snippet + addition)
     end
 
     def insert(hash,path)
