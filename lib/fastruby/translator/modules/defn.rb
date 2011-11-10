@@ -41,7 +41,9 @@ module FastRuby
       alt_options.delete(:main)
 
       inline_block "
-        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
+      
+        rb_funcall(INT2FIX(0), #{intern_num :to_s},0);
+        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);
         
         #{global_klass_variable} = plocals->self;
         // set tree
