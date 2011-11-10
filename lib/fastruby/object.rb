@@ -81,7 +81,7 @@ class Object
 
       return unless tree
         method_name = "_anonymous_" + rand(100000000000).to_s
-        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), :main => method_name, :self => self, :snippet_hash => snippet_hash, *[options_hash])
+        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), {:main => method_name, :self => self, :snippet_hash => snippet_hash}.merge(options_hash))
 
     else
 
