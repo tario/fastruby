@@ -741,8 +741,8 @@ module FastRuby
               #{@frame_struct} *pframe = (void*)param;
               #{@locals_struct} *plocals = (void*)pframe->plocals;
               #{code};
-              
-              rb_funcall(Qnil, #{intern_num :to_s},0);
+
+              usleep(0);
               
               return Qnil;
             }
