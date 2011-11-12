@@ -1,6 +1,9 @@
 #include "ruby.h"
+
+#ifdef RUBY_1_8
 #include "node.h"
 #include "env.h"
+#endif
 
 VALUE rb_cStackChunk;
 VALUE rb_cFastRubyThreadData;
@@ -25,6 +28,44 @@ struct FASTRUBYTHREADDATA {
 	VALUE rb_stack_chunk;
 	void* last_plocals;
 };
+
+#ifdef RUBY_1_8
+#define _RARRAY_LEN(x) (RARRAY(x)->len)
+#define _RSTRING_PTR(x) (RSTRING(x)->ptr)
+#endif
+
+#ifdef RUBY_1_9
+
+typedef struct RNode {
+    unsigned long flags;
+    char *nd_file;
+    union {
+	struct RNode *node;
+	ID id;
+	VALUE value;
+	VALUE (*cfunc)(ANYARGS);
+	ID *tbl;
+    } u1;
+    union {
+	struct RNode *node;
+	ID id;
+	long argc;
+	VALUE value;
+    } u2;
+    union {
+	struct RNode *node;
+	ID id;
+	long state;
+	struct rb_global_entry *entry;
+	long cnt;
+	VALUE value;
+    } u3;
+} NODE;
+
+
+#define _RARRAY_LEN(x) (RARRAY(x)->as.heap.len)
+#define _RSTRING_PTR(x) (RSTRING(x)->as.heap.ptr)
+#endif
 
 struct METHOD {
     VALUE klass, rklass;
@@ -235,8 +276,7 @@ static VALUE clear_method_hash_addresses(VALUE klass,VALUE rb_method_hash) {
 	  VALUE rb_values = rb_funcall(rb_method_hash, rb_intern("values"),0);
 	  void** address;
 	  int i;
-	  
-	  for (i = 0; i < RARRAY(rb_values)->len; i++) {
+	  for (i = 0; i < _RARRAY_LEN(rb_values); i++) {
 	  	address = (void**)FIX2LONG(rb_ary_entry(rb_values,i));
 	  	*address = 0;
 	  }
@@ -246,7 +286,7 @@ static VALUE clear_method_hash_addresses(VALUE klass,VALUE rb_method_hash) {
 }
 
 static VALUE has_fastruby_function(VALUE self, VALUE rb_method_hash, VALUE mname) {
-	ID id = rb_intern(RSTRING(mname)->ptr);
+	ID id = rb_intern(_RSTRING_PTR(mname));
 	VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
 	
 	if (tmp != Qnil) {
