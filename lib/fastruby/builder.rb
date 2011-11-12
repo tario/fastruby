@@ -105,10 +105,15 @@ module FastRuby
 
       begin
 
+        if RUBY_VERSION =~ /^1\.8/
+          RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_8"
+        elsif RUBY_VERSION =~ /^1\.9/
+          RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_9"
+        end
+
         @owner.class_eval do
           inline :C  do |builder|
             builder.inc << context.extra_code
-            builder.include "<node.h>"
             builder.init_extra = context.init_extra
 
               def builder.generate_ext

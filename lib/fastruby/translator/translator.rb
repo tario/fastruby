@@ -75,8 +75,6 @@ module FastRuby
         "
 
       extra_code << "
-        #include \"node.h\"
-
         #define FASTRUBY_TAG_RETURN 0x80
         #define FASTRUBY_TAG_NEXT 0x81
         #define FASTRUBY_TAG_BREAK 0x82
