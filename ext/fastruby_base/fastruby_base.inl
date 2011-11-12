@@ -1,4 +1,5 @@
 #include "ruby.h"
+#include "setjmp.h"
 
 #ifdef RUBY_1_8
 #include "node.h"

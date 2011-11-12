@@ -135,7 +135,15 @@ module FastRuby
         "
 
         extra_code << "static VALUE __rb_cvar_set(VALUE recv,ID idvar, VALUE value, int warn) {
-          rb_cvar_set(recv,idvar,value,warn);
+          #{if RUBY_VERSION =~ /^1\.9/
+            "rb_cvar_set(recv,idvar,value);"
+            elsif RUBY_VERSION =~ /^1\.8/
+            "rb_cvar_set(recv,idvar,value,warn);"
+            else
+              raise RuntimeError, "unsupported ruby version #{RUBY_VERSION}"
+            end 
+          }
+         
           return value;
         }
         "
