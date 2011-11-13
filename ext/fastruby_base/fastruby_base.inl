@@ -65,7 +65,7 @@ typedef struct RNode {
 
 
 #define _RARRAY_LEN(x) (RARRAY(x)->as.heap.len)
-#define _RSTRING_PTR(x) (RSTRING(x)->as.heap.ptr)
+#define _RSTRING_PTR(x) RSTRING_PTR(x)
 #endif
 
 struct METHOD {
