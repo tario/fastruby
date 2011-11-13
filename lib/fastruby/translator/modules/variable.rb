@@ -159,7 +159,11 @@ module FastRuby
       elsif nt == :const
       "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{literal_value "constant"} : Qnil"
       elsif nt == :call
-      "Qnil"
+        if RUBY_VERSION =~ /^1\.8/
+        "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
+        else
+        "Qnil"
+        end
       elsif nt == :yield
         "rb_block_given_p() ? #{literal_value "yield"} : Qnil"
       elsif nt == :ivar
