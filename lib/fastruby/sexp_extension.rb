@@ -26,12 +26,20 @@ class Object
   end
 end
 
+module FastRuby
+  class FastRubySexp
+    def self.from_sexp(value)
+      ary = FastRuby::FastRubySexp.new
+      value.each do |x|
+        ary << x.to_fastruby_sexp
+      end
+      ary
+    end
+  end
+end
+
 class Sexp
   def to_fastruby_sexp
-    ary = FastRuby::FastRubySexp.new
-    each do |x|
-      ary << x.to_fastruby_sexp
-    end
-    ary
+    FastRuby::FastRubySexp.from_sexp(self)
   end
 end

@@ -546,8 +546,10 @@ module FastRuby
 
           proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
 
+          require "fastruby/sexp_extension"
+
           read_arguments_code << "
-            plocals->#{block_argument.to_s.gsub("&","")} = #{to_c proc_reyield_block_tree.to_fastruby_sexp};
+            plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
           "
         end
 
