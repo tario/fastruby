@@ -281,7 +281,7 @@ module FastRuby
                 #{literal_value signature}
                 );
 
-          ID id = rb_intern(RSTRING(method_name)->ptr);
+          ID id = rb_intern(RSTRING_PTR(method_name));
           
           rb_funcall(
                 #{literal_value FastRuby},
@@ -1168,7 +1168,7 @@ module FastRuby
             VALUE rb_method_hash;
             void** address = 0;
             void** default_address = 0;
-            id = rb_intern(RSTRING(rb_str_signature)->ptr);
+            id = rb_intern(RSTRING_PTR(rb_str_signature));
             rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},1,mname);
 
             if (rb_method_hash != Qnil) {
