@@ -1087,7 +1087,7 @@ module FastRuby
           fptr = *#{address_name};
           
           #{
-            if args_tree.size < 25
+            if args_tree.size < 25 and RUBY_VERSION =~ /^1\.8/
             "
             if (fptr == 0) {
               fptr = *#{cfunc_address_name};
@@ -1185,9 +1185,13 @@ module FastRuby
             
             if (default_address==0) {
               default_address = malloc(sizeof(void*));
-              NODE* body = rb_method_node(recvtype,#{intern_num mname});
               *default_address = 0;
-              
+
+#ifdef RUBY_1_8
+
+			// this only works with ruby1.8
+
+              NODE* body = rb_method_node(recvtype,#{intern_num mname});
               if (body != 0) {
                 if (nd_type(body) == NODE_CFUNC) {
                   if (body->nd_argc == #{args_tree.size-1}) {
@@ -1202,7 +1206,8 @@ module FastRuby
                   }
                 }
               }
-            
+#endif
+
               if (recvtype != Qnil) { 
                 rb_funcall(
                     recvtype,

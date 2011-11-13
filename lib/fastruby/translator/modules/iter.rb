@@ -549,7 +549,7 @@ module FastRuby
               VALUE saved_rb_stack_chunk = Qnil; 
 
               pframe->next_recv = #{recv_tree ? to_c(recv_tree) : "plocals->self"};
-
+#ifdef RUBY_1_8
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
 
               if (node == #{@callcc_node_gvar}) {
@@ -572,12 +572,15 @@ module FastRuby
                   }
                 }
               }
+#endif              
             "
           
           postcode = "
+#ifdef RUBY_1_8
               if (node == #{@callcc_node_gvar}) {
                 thread_data->rb_stack_chunk = saved_rb_stack_chunk;  
               }
+#endif              
           "              
           
         
@@ -586,13 +589,15 @@ module FastRuby
             frame_call(
               protected_block(inline_block("
               
-              NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
               void* caller_func;
               void* block_func;
               typeof(plocals) current_plocals;
               
               if (pframe->thread_data == 0) pframe->thread_data = rb_current_thread_data();
               void* last_plocals = pframe->thread_data->last_plocals;
+
+#ifdef RUBY_1_8
+              NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
 
               if (
                 node == #{@proc_node_gvar} ||
@@ -608,9 +613,12 @@ module FastRuby
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_callcc)};
               } else {
+#endif
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code)};
+#ifdef RUBY_1_8
               }
+#endif
               
 
               VALUE ret = rb_iterate(
@@ -619,6 +627,7 @@ module FastRuby
                 block_func,
                 (VALUE)plocals);
 
+#ifdef RUBY_1_8
               if (node == #{@callcc_node_gvar}) {
   
                 // remove active flags of abandoned stack
@@ -639,6 +648,7 @@ module FastRuby
                   current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
                 }
               }
+#endif
 
               return ret;
               "), true), precode, postcode
