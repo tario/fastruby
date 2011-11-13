@@ -23,6 +23,13 @@ require "fastruby/object"
 require "fastruby/exceptions"
 require "fastruby/custom_require"
 require "fastruby/set_tree"
+require "base64"
+
+class Object
+  def self.decode64(value)
+    Base64.decode64(value)
+  end
+end
 
 module FastRuby
   VERSION = "0.0.15" unless defined? FastRuby::VERSION

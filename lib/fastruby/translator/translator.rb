@@ -980,10 +980,18 @@ module FastRuby
             rb_funcall(#{name},#{intern_num :gc_register_object},0);
           "
         else
+          
+          require "base64"
 
           init_extra << "
-            #{name} = rb_marshal_load(rb_str_new(#{c_escape str}, #{str.size}));
-            rb_funcall(#{name},#{intern_num :gc_register_object},0);
+          
+            {
+              VALUE encoded_str = rb_str_new2(#{Base64.encode64(str).inspect});
+              VALUE str = rb_funcall(rb_cObject, #{intern_num :decode64}, 1, encoded_str);
+              #{name} = rb_marshal_load(str);
+              
+              rb_funcall(#{name},#{intern_num :gc_register_object},0);
+            }
 
           "
         end
