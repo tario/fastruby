@@ -21,6 +21,20 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module Inline
 class C
 	attr_reader :inc
+	
+	  def module_name
+      unless defined? @module_name then
+        module_name = if @mod.name
+           @mod.name.gsub('::','__')
+         else
+           rand(1000000000000000).to_s
+         end
+        md5 = Digest::MD5.new
+        @sig.keys.sort_by { |x| x.to_s }.each { |m| md5 << m.to_s }
+        @module_name = "Inline_#{module_name}_#{md5}"
+      end
+      @module_name
+	  end
 
     def generate(src, options={})
       options = {:expand_types=>options} unless Hash === options

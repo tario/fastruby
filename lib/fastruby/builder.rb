@@ -18,7 +18,6 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "fastruby/inline_extension"
 require "fastruby/method_extension"
 require "fastruby/logging"
 require "fastruby/getlocals"
@@ -58,6 +57,7 @@ module FastRuby
       require "fastruby/translator/translator"
       require "rubygems"
       require "inline"
+      require "fastruby/inline_extension"
 
       context = FastRuby::Context.new
       context.locals = locals
