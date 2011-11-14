@@ -86,7 +86,7 @@ module FastRuby
             }
             
             int argc = #{args.size-2};
-            VALUE argv[#{args.size} + RARRAY(array)->len];
+            VALUE argv[#{args.size} + _RARRAY_LEN(array)];
             
             #{
               i = -1
@@ -96,7 +96,7 @@ module FastRuby
               }.join(";\n")
             };
             
-            int array_len = RARRAY(array)->len;
+            int array_len = _RARRAY_LEN(array);
             
             int i;
             for (i=0; i<array_len;i++) {

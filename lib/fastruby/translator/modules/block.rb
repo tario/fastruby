@@ -49,7 +49,7 @@ module FastRuby
           VALUE splat_array = #{to_c(splat_arg[1])};
           
           if (CLASS_OF(splat_array) == rb_cArray) {
-            VALUE block_args[RARRAY(splat_array)->len + #{tree.size}];
+            VALUE block_args[_RARRAY_LEN(splat_array) + #{tree.size}];
             int i;
             #{ 
               (0..tree.size-3).map{|i|
@@ -57,11 +57,11 @@ module FastRuby
               }.join(";\n")
             };
             
-            for (i=0; i<RARRAY(splat_array)->len; i++) {
+            for (i=0; i<_RARRAY_LEN(splat_array); i++) {
               block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
             }
             
-            return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, RARRAY(splat_array)->len + #{tree.size-2});
+            return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, _RARRAY_LEN(splat_array) + #{tree.size-2});
           } else {
             VALUE block_args[1+#{tree.size}];
             #{ 

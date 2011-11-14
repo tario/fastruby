@@ -114,7 +114,7 @@ module FastRuby
                   } else {
                     arg = rb_ary_new2(0);
                   }
-                } else if (RARRAY(arg)->len <= 1) {
+                } else if (_RARRAY_LEN(arg) <= 1) {
                   arg = rb_ary_new4(1,&arg);
                 }
               }
@@ -127,10 +127,10 @@ module FastRuby
             if arg[0] == :lasgn 
               str_arg_initialization << "plocals->#{arguments[i].last} = rb_ary_entry(arg,#{i});\n"
             elsif arg[0] == :splat
-              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(RARRAY(arg)->len-#{i});\n
+              str_arg_initialization << "plocals->#{arg.last.last} = rb_ary_new2(_RARRAY_LEN(arg)-#{i});\n
               
                 int i;
-                for (i=#{i};i<RARRAY(arg)->len;i++){
+                for (i=#{i};i<_RARRAY_LEN(arg);i++){
                   rb_ary_store(plocals->#{arg.last.last},i-#{i},rb_ary_entry(arg,i));
                 }
                "
@@ -158,7 +158,7 @@ module FastRuby
                   }
                   
                   int argc = #{call_args_tree.size-2};
-                  VALUE argv[#{call_args_tree.size} + RARRAY(array)->len];
+                  VALUE argv[#{call_args_tree.size} + _RARRAY_LEN(array)];
                   
                   #{
                     i = -1
@@ -168,7 +168,7 @@ module FastRuby
                     }.join(";\n")
                   };
                   
-                  int array_len = RARRAY(array)->len;
+                  int array_len = _RARRAY_LEN(array);
                   
                   int i;
                   for (i=0; i<array_len;i++) {
