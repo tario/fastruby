@@ -105,12 +105,15 @@ module FastRuby
 
       begin
 
-        if RUBY_VERSION =~ /^1\.8/
-          RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_8 -Wno-clobbered"
-        elsif RUBY_VERSION =~ /^1\.9/
-          RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_9 -Wno-clobbered"
+        unless $inline_extra_flags
+          $inline_extra_flags = true
+          if RUBY_VERSION =~ /^1\.8/
+            RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_8 -Wno-clobbered"
+          elsif RUBY_VERSION =~ /^1\.9/
+            RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_9 -Wno-clobbered"
+          end
         end
-
+        
         @owner.class_eval do
           inline :C  do |builder|
             builder.inc << context.extra_code
