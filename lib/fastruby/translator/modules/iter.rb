@@ -103,7 +103,17 @@ module FastRuby
 
         if not args_tree
         elsif args_tree.first == :lasgn
-          str_arg_initialization << "plocals->#{args_tree[1]} = arg;"
+          if RUBY_VERSION =~ /^1\.8/
+            str_arg_initialization << "plocals->#{args_tree[1]} = arg;"
+          elsif RUBY_VERSION =~ /^1\.9/
+            str_arg_initialization << "
+              if (TYPE(arg) != T_ARRAY) {
+                plocals->#{args_tree[1]} = arg;
+              } else {
+                plocals->#{args_tree[1]} = rb_ary_entry(arg,0);
+              }
+              "
+          end
         elsif args_tree.first == :masgn
           
           str_arg_initialization << "
