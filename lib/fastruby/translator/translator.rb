@@ -1303,7 +1303,7 @@ module FastRuby
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
-          VALUE last_expression;
+          VALUE last_expression = Qnil;
           #{@frame_struct} frame, *pframe, *parent_frame;
           #{@locals_struct} *plocals;
 
