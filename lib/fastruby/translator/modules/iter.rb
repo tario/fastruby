@@ -419,7 +419,7 @@ module FastRuby
                 }
             }
             
-            if (rb_obj_is_kind_of(arg,rb_cCont)) {
+            if (rb_obj_is_kind_of(arg, rb_const_get(rb_cObject, #{intern_num :Continuation}))) {
               struct FASTRUBYTHREADDATA* thread_data = frame.thread_data;
               rb_ivar_set(arg,#{intern_num :__stack_chunk},thread_data->rb_stack_chunk);
             }
@@ -598,6 +598,10 @@ module FastRuby
 
 #ifdef RUBY_1_8
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
+#endif
+#ifdef RUBY_1_9
+              void* node = rb_method_entry(CLASS_OF(pframe->next_recv), #{intern_num mname});
+#endif
 
               if (
                 node == #{@proc_node_gvar} ||
@@ -613,12 +617,9 @@ module FastRuby
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_callcc)};
               } else {
-#endif
                 caller_func = #{anonymous_function(&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code)};
-#ifdef RUBY_1_8
               }
-#endif
               
 
               VALUE ret = rb_iterate(
@@ -627,7 +628,6 @@ module FastRuby
                 block_func,
                 (VALUE)plocals);
 
-#ifdef RUBY_1_8
               if (node == #{@callcc_node_gvar}) {
   
                 // remove active flags of abandoned stack
@@ -648,7 +648,6 @@ module FastRuby
                   current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
                 }
               }
-#endif
 
               return ret;
               "), true), precode, postcode

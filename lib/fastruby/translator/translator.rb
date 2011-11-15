@@ -112,8 +112,20 @@ module FastRuby
         #{@procnew_node_gvar} = rb_method_node(CLASS_OF(rb_cProc), #{intern_num :new});
         #{@callcc_node_gvar} = rb_method_node(rb_mKernel, #{intern_num :callcc});
       "
+     elsif RUBY_VERSION =~ /^1\.9/
 
-	end
+      @lambda_node_gvar = add_global_name("void*", 0);
+      @proc_node_gvar = add_global_name("void*", 0);
+      @procnew_node_gvar = add_global_name("void*", 0);
+      @callcc_node_gvar = add_global_name("void*", 0);
+      
+      init_extra << "
+        #{@lambda_node_gvar} = rb_method_entry(rb_cObject, #{intern_num :lambda});
+        #{@proc_node_gvar} = rb_method_entry(rb_cObject, #{intern_num :proc});
+        #{@procnew_node_gvar} = rb_method_entry(CLASS_OF(rb_const_get(rb_cObject, #{intern_num :Proc})), #{intern_num :new});
+        #{@callcc_node_gvar} = rb_method_entry(rb_mKernel, #{intern_num :callcc});
+      "
+	   end
 
       @common_func = common_func
       if common_func

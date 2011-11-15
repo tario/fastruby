@@ -37,6 +37,8 @@ struct FASTRUBYTHREADDATA {
 
 #ifdef RUBY_1_9
 
+void* rb_method_entry(VALUE klass, ID id);
+
 typedef struct RNode {
     unsigned long flags;
     char *nd_file;
