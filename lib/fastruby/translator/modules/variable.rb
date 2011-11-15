@@ -162,7 +162,7 @@ module FastRuby
         if RUBY_VERSION =~ /^1\.8/
         "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
         else
-        "Qnil"
+        "rb_method_entry(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
         end
       elsif nt == :yield
         "rb_block_given_p() ? #{literal_value "yield"} : Qnil"
