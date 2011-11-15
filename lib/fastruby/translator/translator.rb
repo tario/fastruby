@@ -768,8 +768,6 @@ module FastRuby
               #{@locals_struct} *plocals = (void*)pframe->plocals;
               #{code};
 
-              usleep(0);
-              
               return Qnil;
             }
            "
