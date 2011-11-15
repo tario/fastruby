@@ -59,6 +59,8 @@ module FastRuby
       else_tree = tree[3]
 
       inline_block "
+      
+          usleep(0);
           if (RTEST(#{to_c condition_tree})) {
             last_expression = #{to_c impl_tree};
           }#{else_tree ?
