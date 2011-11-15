@@ -116,19 +116,26 @@ module FastRuby
           end
         elsif args_tree.first == :masgn
           
-          str_arg_initialization << "
-              {
-                if (TYPE(arg) != T_ARRAY) {
-                  if (arg != Qnil) {
+          if RUBY_VERSION =~ /^1\.8/
+            str_arg_initialization << "
+                {
+                  if (TYPE(arg) != T_ARRAY) {
+                    if (arg != Qnil) {
+                      arg = rb_ary_new4(1,&arg);
+                    } else {
+                      arg = rb_ary_new2(0);
+                    }
+                  } else if (_RARRAY_LEN(arg) <= 1) {
                     arg = rb_ary_new4(1,&arg);
-                  } else {
-                    arg = rb_ary_new2(0);
                   }
-                } else if (_RARRAY_LEN(arg) <= 1) {
-                  arg = rb_ary_new4(1,&arg);
                 }
-              }
-              "          
+                "
+          elsif RUBY_VERSION =~ /^1\.9/
+            str_arg_initialization << "
+                {
+                }
+                "
+          end
           
           arguments = args_tree[1][1..-1]
           
@@ -251,8 +258,15 @@ module FastRuby
         end
 
         rb_funcall_block_code_with_lambda = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
+            #{
+            # TODO: access directly to argc and argv for optimal execution
+            if RUBY_VERSION =~ /^1\.9/ 
+              "arg = rb_ary_new4(argc,argv);"
+            end
+            }
+            
             VALUE last_expression = Qnil;
 
             #{@frame_struct} frame;
@@ -309,8 +323,15 @@ module FastRuby
         }
 
         rb_funcall_block_code_proc_new = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
+            #{
+            # TODO: access directly to argc and argv for optimal execution
+            if RUBY_VERSION =~ /^1\.9/ 
+              "arg = rb_ary_new4(argc,argv);"
+            end
+            }
+            
             VALUE last_expression = Qnil;
 
             #{@frame_struct} frame;
@@ -363,8 +384,16 @@ module FastRuby
 
 
         rb_funcall_block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
+
+            #{
+            # TODO: access directly to argc and argv for optimal execution
+            if RUBY_VERSION =~ /^1\.9/ 
+              "arg = rb_ary_new4(argc,argv);"
+            end
+            }
+
             VALUE last_expression = Qnil;
 
             #{@frame_struct} frame;
@@ -401,7 +430,14 @@ module FastRuby
         }
 
         rb_funcall_block_code_callcc = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals) {
+          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
+            #{
+            # TODO: access directly to argc and argv for optimal execution
+            if RUBY_VERSION =~ /^1\.9/ 
+              "arg = rb_ary_new4(argc,argv);"
+            end
+            }
+          
             // block for call to #{call_tree[2]}
             VALUE last_expression = Qnil;
 
