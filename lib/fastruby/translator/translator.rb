@@ -167,6 +167,7 @@ module FastRuby
 
         extra_code << "static VALUE _lvar_assing(VALUE* destination,VALUE value) {
           *destination = value;
+          usleep(0);
           return value;
         }
 
