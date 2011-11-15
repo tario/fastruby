@@ -56,6 +56,22 @@ describe FastRuby, "fastruby" do
   it "should compile blocks with code inside refering multiple block arguments" do
     ::X9.new.foo({1 => 2, 3 => 4}).sort.should be == [3,7]
   end
+  
+  class ::X9_11
+    fastruby "
+      def foo
+        proc do |k,v|
+          k+v
+        end
+      end
+    "
+  end
+
+  it "should compile blocks with code inside refering multiple block arguments (proc)" do
+    pr = ::X9_11.new.foo
+    {1 => 2, 3 => 4}.map(&pr).sort.should be == [3,7]
+  end
+  
 
   class ::Y10
     def bar(arg1)
