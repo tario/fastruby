@@ -272,12 +272,12 @@ describe FastRuby, "fastruby" do
       fastruby "
         class ::CF18
           def foo(*x)
-            x.to_s
+            x
           end
         end
       "
 
-      ::CF18.new.foo(1,2,3,4,5).should be == "12345"
+      ::CF18.new.foo(1,2,3,4,5).should be == [1,2,3,4,5]
   end
   
   
