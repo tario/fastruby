@@ -323,12 +323,21 @@ module FastRuby
         }
 
         rb_funcall_block_code_proc_new = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
+          static VALUE #{name}(VALUE arg_, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
+            VALUE arg;
             #{
             # TODO: access directly to argc and argv for optimal execution
             if RUBY_VERSION =~ /^1\.9/ 
-              "arg = rb_ary_new4(argc,argv);"
+              "
+                if (TYPE(arg_) == T_ARRAY) {
+                  arg = arg_;
+                } else {
+                  arg = rb_ary_new4(argc,argv);
+                }
+              "
+            else
+              "VALUE arg = arg_;"
             end
             }
             
@@ -384,13 +393,22 @@ module FastRuby
 
 
         rb_funcall_block_code = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
+          static VALUE #{name}(VALUE arg_, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
 
+            VALUE arg;
             #{
             # TODO: access directly to argc and argv for optimal execution
             if RUBY_VERSION =~ /^1\.9/ 
-              "arg = rb_ary_new4(argc,argv);"
+              "
+                if (TYPE(arg_) == T_ARRAY) {
+                  arg = arg_;
+                } else {
+                  arg = rb_ary_new4(argc,argv);
+                }
+              "
+            else
+              "VALUE arg = arg_;"
             end
             }
 
