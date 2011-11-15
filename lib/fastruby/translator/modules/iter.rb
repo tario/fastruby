@@ -337,7 +337,7 @@ module FastRuby
                 }
               "
             else
-              "VALUE arg = arg_;"
+              "arg = arg_;"
             end
             }
             
@@ -408,7 +408,7 @@ module FastRuby
                 }
               "
             else
-              "VALUE arg = arg_;"
+              "arg = arg_;"
             end
             }
 
