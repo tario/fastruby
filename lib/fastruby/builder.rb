@@ -107,6 +107,11 @@ module FastRuby
 
         unless $inline_extra_flags
           $inline_extra_flags = true
+          
+          ['CFLAGS','CXXFLAGS','OPTFLAGS','cflags','cxxflags','optflags'].each do |name|
+            RbConfig::CONFIG[name].gsub!("-O3","-O1") if RbConfig::CONFIG[name]
+          end
+          
           if RUBY_VERSION =~ /^1\.8/
             RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_8 -Wno-clobbered"
           elsif RUBY_VERSION =~ /^1\.9/
