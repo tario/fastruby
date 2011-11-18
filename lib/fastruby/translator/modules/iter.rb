@@ -604,6 +604,10 @@ module FastRuby
               pframe->next_recv = #{recv_tree ? to_c(recv_tree) : "plocals->self"};
 #ifdef RUBY_1_8
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
+#endif              
+#ifdef RUBY_1_9
+              void* node = rb_method_entry(CLASS_OF(pframe->next_recv), #{intern_num mname});
+#endif              
 
               if (node == #{@callcc_node_gvar}) {
                 
@@ -625,15 +629,12 @@ module FastRuby
                   }
                 }
               }
-#endif              
             "
           
           postcode = "
-#ifdef RUBY_1_8
               if (node == #{@callcc_node_gvar}) {
                 thread_data->rb_stack_chunk = saved_rb_stack_chunk;  
               }
-#endif              
           "              
           
         
