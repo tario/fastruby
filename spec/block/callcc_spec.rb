@@ -1,4 +1,7 @@
 require "fastruby"
+if RUBY_VERSION =~ /^1\.9/
+require "continuation"
+end
 
 describe FastRuby, "fastruby" do
   class ::N1
