@@ -57,6 +57,7 @@ I will stabilize the API and document it for next releases. I promise
 
 == Known Limitations & Issues
 
+* fastruby now works with ruby1.9, but features specific to ruby1.9 (such fibers and new hash notation) will not work or will work with unexpected behaviour
 * callcc is not supported, it works but using it may result in unexpected behaviour
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call is pretty fast)
 * replacement of methods using identical code strings will work, but it will generate duplicated objects on the cache each time te snippet run
