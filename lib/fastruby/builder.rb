@@ -109,7 +109,7 @@ module FastRuby
           $inline_extra_flags = true
           
           ['CFLAGS','CXXFLAGS','OPTFLAGS','cflags','cxxflags','optflags'].each do |name|
-            RbConfig::CONFIG[name].gsub!("-O3","-O1") if RbConfig::CONFIG[name]
+            RbConfig::CONFIG[name].gsub!(/\-O\d/,"-O1") if RbConfig::CONFIG[name]
           end
           
           if RUBY_VERSION =~ /^1\.8/
