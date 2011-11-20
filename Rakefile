@@ -7,7 +7,7 @@ require "rspec/core/rake_task"
 
 spec = Gem::Specification.new do |s|
   s.name = 'fastruby'
-  s.version = '0.0.15'
+  s.version = '0.0.16'
   s.author = 'Dario Seminara'
   s.email = 'robertodarioseminara@gmail.com'
   s.platform = Gem::Platform::RUBY
