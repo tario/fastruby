@@ -1,3 +1,7 @@
+0.0.16	Limited (see known issues on README) support for ruby1.9-p180 (tested with rvm)
+
+		Support for ruby1.8-p334 (tested with rvm)
+
 0.0.15	Support for continuation objects and callcc
 
 		Fixed fastruby protocol to support unlimited number of arguments from ruby
