@@ -63,5 +63,30 @@ describe FastRuby, "fastruby redo statement" do
       wb3.foo
     }.should raise_error(LocalJumpError)
   end
+  
+  class ::WB4
+    fastruby <<EOS
+    def foo
+      yield(5)
+    end
+  
+    def bar
+      a = true
+      foo do |n|
+        if a
+          a = false
+          n = 555
+          redo
+        end
+        n
+      end
+    end
+EOS
+  end
+
+  it "should NOT restore variable arguments on block when calling redo" do
+    wb4 = ::WB4.new
+    wb4.bar.should be == 555
+  end
 
 end
