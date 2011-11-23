@@ -414,6 +414,8 @@ module FastRuby
             frame.targetted = 0;
             frame.thread_data = rb_current_thread_data();
 
+            #{str_arg_initialization}
+            
             int aux = setjmp(frame.jmp);
             if (aux != 0) {
 
@@ -427,8 +429,6 @@ module FastRuby
                 }
             }
 
-
-            #{str_arg_initialization}
             #{str_impl}
 
             return last_expression;
