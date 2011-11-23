@@ -983,14 +983,22 @@ module FastRuby
         elsif value.instance_of? Class
           container_str = value.to_s.split("::")[0..-2].join("::")
 
-          init_extra << "
-            #{name} = rb_define_class_under(
-                    #{container_str == "" ? "rb_cObject" : literal_value(eval(container_str))}
-                    ,\"#{value.to_s.split("::").last}\"
-                    ,#{value.superclass == Object ? "rb_cObject" : literal_value(value.superclass)});
+          str_class_name = value.to_s.split("::").last
 
-            rb_funcall(#{name},#{intern_num :gc_register_object},0);
-          "
+          if (str_class_name == "Object")
+            init_extra << "
+              #{name} = rb_cObject;
+            "
+          else
+            init_extra << "
+              #{name} = rb_define_class_under(
+                      #{container_str == "" ? "rb_cObject" : literal_value(eval(container_str))}
+                      ,\"#{str_class_name}\"
+                      ,#{value.superclass == Object ? "rb_cObject" : literal_value(value.superclass)});
+
+              rb_funcall(#{name},#{intern_num :gc_register_object},0);
+            "
+          end
         elsif value.instance_of? Array
           init_extra << "
             #{name} = rb_ary_new3(#{value.size}, #{value.map{|x| literal_value x}.join(",")} );
