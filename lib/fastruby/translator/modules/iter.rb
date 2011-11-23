@@ -363,6 +363,8 @@ module FastRuby
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
               ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
 
+            #{str_arg_initialization}
+
               int aux = setjmp(frame.jmp);
               if (aux != 0) {
                     if (aux == FASTRUBY_TAG_NEXT) {
@@ -386,7 +388,6 @@ module FastRuby
                     }
               }
 
-            #{str_arg_initialization}
             #{str_impl}
 
             ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
