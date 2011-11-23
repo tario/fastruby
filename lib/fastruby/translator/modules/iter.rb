@@ -531,6 +531,8 @@ module FastRuby
 
             plocals = frame.plocals;
 
+            #{fastruby_str_arg_initialization}
+
             int aux = setjmp(frame.jmp);
             if (aux != 0) {
                 if (pframe->targetted == 0) {
@@ -545,7 +547,6 @@ module FastRuby
 
             }
 
-            #{fastruby_str_arg_initialization}
             #{str_impl}
 
             return last_expression;
@@ -743,6 +744,13 @@ module FastRuby
           if (#{@last_address_name} == 0) {
             #{funcall_call_code}
           } else {
+            #{if recvtype and inference_complete
+              "if (*#{@last_address_name} == 0) {
+                rb_funcall(#{literal_value recvtype},#{intern_num :build}, 2, #{literal_value signature}, #{literal_value mname});
+              }
+              "
+            end
+            }
             if (*#{@last_address_name} == 0) {
               #{funcall_call_code}
             } else {
