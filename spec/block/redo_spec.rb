@@ -110,4 +110,24 @@ EOS
     wb5.bar.call(5).should be == 555
   end
   
+  class ::WB6
+    fastruby <<EOS
+    def bar
+      a = true
+      Proc.new do |n|
+        if a
+          a = false
+          n = 555
+          redo
+        end
+        n
+      end
+    end
+EOS
+  end
+
+  it "should NOT restore variable arguments on block when calling redo (Proc.new block)" do
+    wb6 = ::WB6.new
+    wb6.bar.call(5).should be == 555
+  end  
 end
