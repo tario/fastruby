@@ -95,7 +95,7 @@ class Object
           if $last_obj_proc
             FastRuby.cache.register_proc(obj, $last_obj_proc)
           end
-          FastRuby.cache.execute(obj, self)
+          FastRuby.cache.execute(obj, self.kind_of?(Class) ? self : Object)
         rescue Exception => e
           p e
         end
