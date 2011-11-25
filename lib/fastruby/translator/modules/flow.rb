@@ -23,11 +23,12 @@ module FastRuby
     
     register_translator_module self
     
-    def to_c_case(tree)
+    def to_c_case(tree, result_var = nil)
 
       tmpvarname = "tmp" + rand(1000000).to_s;
       @repass_var = tmpvarname
-
+      outputvar = result_var || ("tmp_" + rand(1000000).to_s);
+      
       code = tree[2..-2].map{|subtree|
 
         # this subtree is a when
@@ -35,23 +36,47 @@ module FastRuby
           c_calltree = s(:call, nil, :inline_c, s(:arglist, s(:str, tmpvarname), s(:false)))
           calltree = s(:call, subsubtree, :===, s(:arglist, c_calltree))
               "
-                if (RTEST(#{to_c_call(calltree)})) {
-                   return #{to_c(subtree[2])};
-                }
-
+               if (RTEST(#{to_c_call(calltree)})) {
+                  #{to_c(subtree[2],outputvar)};
+               }
               "
-        }.join("\n")
+        }.join(" else ")
 
-      }.join("\n")
-
-      inline_block "
-
-        VALUE #{tmpvarname} = #{to_c tree[1]};
-
-        #{code};
-
-        return #{to_c tree[-1]};
+      }.join(" else ") + "else {
+        #{
+        if tree[-1] 
+         to_c tree[-1],outputvar
+        end
+        };
+      }
       "
+      
+      ret_code = "
+        {
+          #{
+          unless result_var
+          VALUE #{outputvar} = Qnil;
+          end
+          }
+          
+          VALUE #{tmpvarname} = Qnil;
+          #{to_c tree[1], tmpvarname};
+          
+          // case
+          #{code}
+          #{
+          unless result_var
+            "return #{outputvar};"
+          end
+          }
+        }
+      "
+
+      if result_var
+        ret_code
+      else
+        inline_block ret_code
+      end
     end
 
     def to_c_if(tree, result_variable_ = nil)
@@ -62,7 +87,10 @@ module FastRuby
       result_variable = result_variable_ || "last_expression"
       
       code = "
-          if (RTEST(#{to_c condition_tree})) {
+        {
+          VALUE condition_result;
+          #{to_c condition_tree, "condition_result"};
+          if (RTEST(condition_result)) {
             #{to_c impl_tree, result_variable};
           }#{else_tree ?
             " else {
@@ -70,6 +98,7 @@ module FastRuby
             }
             " : ""
           }
+        }
       "
 
       if result_variable_
@@ -86,13 +115,38 @@ module FastRuby
       to_c alter_tree
     end
 
-    def to_c_while(tree)
-      inline_block("
-          while (#{to_c tree[1]}) {
-            #{to_c tree[2]};
+    def to_c_while(tree, result_var = nil)
+      
+      begin_while = "begin_while_"+rand(10000000).to_s
+      end_while = "end_while_"+rand(10000000).to_s
+      code = "
+        {
+          VALUE while_condition;
+          VALUE aux;
+          
+#{begin_while}:
+          #{to_c tree[1], "while_condition"};
+          if (!RTEST(while_condition)) goto #{end_while}; 
+          #{to_c tree[2], "aux"};
+          goto #{begin_while};
+#{end_while}:
+          
+          #{
+          if result_var
+            "#{result_var} = Qnil;"
+          else
+            "return Qnil;"
+          end
           }
-          return Qnil;
-      ")
+        }
+      "
+      
+      if result_var
+        code
+      else
+        inline_block code
+      end
+      
     end
   end
 end
