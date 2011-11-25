@@ -812,6 +812,19 @@ module FastRuby
           VALUE last_expression = Qnil;
 
           #{code}
+          return Qnil;
+
+          #{unless nolocals
+          "
+local_return:
+        plocals->return_value = last_expression;
+        plocals->targetted = 1;
+        longjmp(pframe->jmp, FASTRUBY_TAG_RETURN);
+        return last_expression;
+        "
+        end
+          }
+
           }
         "
       } + "((VALUE)pframe#{repass_var ? ", " + repass_var : "" })"
