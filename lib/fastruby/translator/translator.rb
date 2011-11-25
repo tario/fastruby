@@ -179,9 +179,20 @@ module FastRuby
       end
     end
 
-    def to_c(tree)
+    def to_c(tree, result_variable = nil)
       return "Qnil" unless tree
-      send("to_c_" + tree[0].to_s, tree);
+      
+      mname = "to_c_" + tree[0].to_s
+      
+      if method(mname).arity == 1
+        result_variable = nil
+      end 
+      
+      if result_variable
+        send(mname, tree, result_variable)
+      else
+        send(mname, tree)
+      end
     end
 
     def anonymous_function
