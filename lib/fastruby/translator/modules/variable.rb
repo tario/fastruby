@@ -27,8 +27,27 @@ module FastRuby
       "rb_cvar_get(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]})"
     end
 
-    def to_c_cvasgn(tree)
+    def to_c_cvasgn(tree, result_var = nil)
+      if result_var
+        "
+          {
+            VALUE recv = CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self;
+
+            #{to_c tree[2], result_var};
+            
+            #{if RUBY_VERSION =~ /^1\.9/
+              "rb_cvar_set(recv,#{intern_num tree[1]},#{result_var});"
+              elsif RUBY_VERSION =~ /^1\.8/
+              "rb_cvar_set(recv,#{intern_num tree[1]},#{result_var},Qfalse);"
+              else
+                raise RuntimeError, "unsupported ruby version #{RUBY_VERSION}"
+              end 
+            }
+          }
+       "
+      else
       "__rb_cvar_set(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]},#{to_c tree[2]},Qfalse)"
+      end
     end
 
     def to_c_gvar(tree)
@@ -39,47 +58,80 @@ module FastRuby
       end
     end
 
-    def to_c_gasgn(tree)
+    def to_c_gasgn(tree, result_var = nil)
+      if result_var
+          "
+          {
+          #{to_c tree[2], result_var}; 
+          rb_gvar_set((void*)#{global_entry(tree[1])},#{result_var});
+          }
+          "
+      else
       "_rb_gvar_set((void*)#{global_entry(tree[1])}, #{to_c tree[2]})"
+      end
     end
 
     def to_c_ivar(tree)
       "rb_ivar_get(#{locals_accessor}self,#{intern_num tree[1]})"
     end
 
-    def to_c_iasgn(tree)
-      "_rb_ivar_set(#{locals_accessor}self,#{intern_num tree[1]},#{to_c tree[2]})"
+    def to_c_iasgn(tree, result_var = nil)
+      if result_var
+          "
+          {
+          #{to_c tree[2], result_var}; 
+          rb_ivar_set(#{locals_accessor}self,#{intern_num tree[1]},#{result_var});
+          }
+          "
+      else
+        "_rb_ivar_set(#{locals_accessor}self,#{intern_num tree[1]},#{to_c tree[2]})"
+      end
     end
 
     def to_c_const(tree)
       "rb_const_get(CLASS_OF(plocals->self), #{intern_num(tree[1])})"
     end
     
-    def to_c_cdecl(tree)
+    def to_c_cdecl(tree, result_var_ = nil)
+      
+      result_var = result_var_ || "value"
+      
       if tree[1].instance_of? Symbol
-        inline_block "
-          // set constant #{tree[1].to_s}
-          VALUE val = #{to_c tree[2]};
-          rb_const_set(rb_cObject, #{intern_num tree[1]}, val);
-          return val;
+        code = "
+          {
+            // set constant #{tree[1].to_s}
+            #{to_c tree[2], result_var};
+            rb_const_set(rb_cObject, #{intern_num tree[1]}, #{result_var});
+          }
           "
       elsif tree[1].instance_of? FastRuby::FastRubySexp
 
         if tree[1].node_type == :colon2
-          inline_block "
-            // set constant #{tree[1].to_s}
-            VALUE val = #{to_c tree[2]};
-            VALUE klass = #{to_c tree[1][1]};
-            rb_const_set(klass, #{intern_num tree[1][2]}, val);
-            return val;
+          code = "
+            {
+              // set constant #{tree[1].to_s}
+              #{to_c tree[2], result_var};
+              VALUE klass = Qnil;
+              #{to_c tree[1][1], "klass"};
+              rb_const_set(klass, #{intern_num tree[1][2]}, #{result_var});
+            }
             "
         elsif tree[1].node_type == :colon3
-          inline_block "
+          code = "
+            {
             // set constant #{tree[1].to_s}
-            VALUE val = #{to_c tree[2]};
-            rb_const_set(rb_cObject, #{intern_num tree[1][1]}, val);
-            return val;
+            #{to_c tree[2], result_var};
+            rb_const_set(rb_cObject, #{intern_num tree[1][1]}, #{result_var});
+            }
             "
+        end
+        
+        if result_var_
+          code
+        else
+           inline_block "VALUE #{result_var} = Qnil;\n" + code + "
+            return #{result_var};
+           "
         end
       end
     end
@@ -88,15 +140,29 @@ module FastRuby
       "rb_const_get_from(rb_cObject, #{intern_num tree[1]})"
     end
     
-    def to_c_colon2(tree)
-      inline_block "
-        VALUE klass = #{to_c tree[1]};
+    def to_c_colon2(tree, result_var = nil)
+      code = "
+        {
+        VALUE klass = Qnil;
+        
+        #{to_c tree[1],"klass"};
+            #{
+            if result_var
+              "#{result_var} = Qnil;"
+            end
+          }
 
       if (rb_is_const_id(#{intern_num tree[2]})) {
         switch (TYPE(klass)) {
           case T_CLASS:
           case T_MODULE:
-            return rb_const_get_from(klass, #{intern_num tree[2]});
+            #{
+            if result_var
+              "#{result_var} = rb_const_get_from(klass, #{intern_num tree[2]});"
+            else
+              "return rb_const_get_from(klass, #{intern_num tree[2]});"
+            end
+            }
             break;
           default:
             #{_raise("rb_eTypeError","not a class/module")};
@@ -104,35 +170,78 @@ module FastRuby
         }
       }
       else {
-        return rb_funcall(klass, #{intern_num tree[2]}, 0, 0);
+            #{
+            if result_var
+              "#{result_var} = rb_funcall(klass, #{intern_num tree[2]}, 0, 0);"
+            else
+              "return rb_funcall(klass, #{intern_num tree[2]}, 0, 0);"
+            end
+            }
       }
-
-        return Qnil;
+        
+            #{
+            unless result_var
+              "return Qnil;"
+            end
+            }
+        }
       "
+      
+      if result_var
+        code
+      else
+        inline_block code
+      end
     end
 
-    def to_c_lasgn(tree)
-      if options[:validate_lvar_types]
-        klass = @infer_lvar_map[tree[1]]
-        if klass
+    def to_c_lasgn(tree, result_var = nil)
+      code = "
+          {
+            #{to_c tree[2], result_var};
+            #{locals_accessor}#{tree[1]} = #{result_var};
+           }
+           "
 
-          verify_type_function = proc { |name| "
-            static VALUE #{name}(VALUE arg, void* pframe ) {
-              if (CLASS_OF(arg)!=#{literal_value klass}) {
+      if result_var
+        if options[:validate_lvar_types]
+          klass = @infer_lvar_map[tree[1]]
+          if klass
+            "
+            {
+              #{to_c tree[2], result_var};
+              if (CLASS_OF(#{result_var})!=#{literal_value klass}) {
                 #{_raise(literal_value(FastRuby::TypeMismatchAssignmentException), "Illegal assignment at runtime (type mismatch)")};
               }
-              return arg;
+              #{locals_accessor}#{tree[1]} = #{result_var};
             }
-          "
-          }
-
-
-          "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(&verify_type_function)}(#{to_c tree[2]},pframe))"
+           "
+          else
+            code
+          end
+        else
+          code
+        end
+      else
+        if options[:validate_lvar_types]
+          klass = @infer_lvar_map[tree[1]]
+          if klass
+            verify_type_function = proc { |name| "
+              static VALUE #{name}(VALUE arg, void* pframe ) {
+                if (CLASS_OF(arg)!=#{literal_value klass}) {
+                  #{_raise(literal_value(FastRuby::TypeMismatchAssignmentException), "Illegal assignment at runtime (type mismatch)")};
+                }
+                return arg;
+              }
+            "
+            }
+            
+            "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(&verify_type_function)}(#{to_c tree[2]},pframe))"
+          else
+            "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
+          end
         else
           "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
         end
-      else
-        "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
       end
     end
 
