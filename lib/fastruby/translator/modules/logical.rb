@@ -22,16 +22,51 @@ module FastRuby
   module LogicalOperatorTranslator
     register_translator_module self
 
-    def to_c_and(tree)
-      "(RTEST(#{to_c tree[1]}) && RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
+    def to_c_and(tree, return_var = nil)
+      if return_var
+        "
+          {
+            VALUE op1 = Qnil;
+            VALUE op2 = Qnil;
+            #{to_c tree[1], "op1"};
+            #{to_c tree[2], "op2"};
+            #{return_var} = (RTEST(op1) && RTEST(op2)) ? Qtrue : Qfalse;
+          }
+        "
+      else
+        "(RTEST(#{to_c tree[1]}) && RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
+      end
+      
     end
 
-    def to_c_or(tree)
+    def to_c_or(tree, return_var = nil)
+      if return_var
+        "
+          {
+            VALUE op1 = Qnil;
+            VALUE op2 = Qnil;
+            #{to_c tree[1], "op1"};
+            #{to_c tree[2], "op2"};
+            #{return_var} = (RTEST(op1) || RTEST(op2)) ? Qtrue : Qfalse;
+          }
+        "
+      else
       "(RTEST(#{to_c tree[1]}) || RTEST(#{to_c tree[2]})) ? Qtrue : Qfalse"
+      end
     end
 
-    def to_c_not(tree)
-      "RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue"
+    def to_c_not(tree, return_var = nil)
+      if return_var
+        "
+          {
+            VALUE op1 = Qnil;
+            #{to_c tree[1], "op1"};
+            #{return_var} = (RTEST(op1)) ? Qfalse: Qtrue;
+          }
+        "
+      else
+        "RTEST(#{to_c tree[1]}) ? Qfalse : Qtrue"
+      end
     end
     
   end
