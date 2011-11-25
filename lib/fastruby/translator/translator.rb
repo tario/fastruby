@@ -673,10 +673,9 @@ module FastRuby
             plocals->block_function_param = LONG2FIX(Qnil);
           }
 
-          VALUE __ret = Qnil;
+          #{to_c impl_tree, "last_expression"};
           
-          #{to_c impl_tree, "__ret"};
-          
+local_return:
           stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
           if (stack_chunk_instantiated) {
@@ -688,7 +687,7 @@ module FastRuby
           
           frame.thread_data->last_plocals = old_parent_locals;
           
-          return __ret;
+          return last_expression;
         }"
 
         add_main

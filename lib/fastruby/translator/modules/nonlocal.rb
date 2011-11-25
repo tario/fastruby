@@ -22,12 +22,17 @@ module FastRuby
   module NonLocalTranslator
     register_translator_module self
 
-    def to_c_return(tree)
-      inline_block "
+    def to_c_return(tree, return_variable = nil)
+      code = "
         last_expression = #{to_c(tree[1])};
         goto local_return;
         return Qnil;
         "
+      if return_variable
+        code
+      else
+        inline_block code
+      end
     end
 
     def to_c_break(tree)
