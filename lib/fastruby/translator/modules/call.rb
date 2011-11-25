@@ -23,12 +23,14 @@ module FastRuby
     
     register_translator_module self
 
-    def to_c_call(tree, repass_var = nil)
+    def to_c_call(tree)
       directive_code = directive(tree)
+      repass_var = @repass_var
+      
       if directive_code
         return directive_code
       end
-
+      
       if tree[2] == :require
         tree[2] = :fastruby_require
       elsif tree[2] == :raise
@@ -36,7 +38,7 @@ module FastRuby
         args = tree[3]
         return _raise(args[1],args[2])
       end
-      
+
       recv = tree[1]
       mname = tree[2]
       args = tree[3]

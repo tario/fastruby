@@ -26,6 +26,7 @@ module FastRuby
     def to_c_case(tree)
 
       tmpvarname = "tmp" + rand(1000000).to_s;
+      @repass_var = tmpvarname
 
       code = tree[2..-2].map{|subtree|
 
@@ -34,7 +35,7 @@ module FastRuby
           c_calltree = s(:call, nil, :inline_c, s(:arglist, s(:str, tmpvarname), s(:false)))
           calltree = s(:call, subsubtree, :===, s(:arglist, c_calltree))
               "
-                if (RTEST(#{to_c_call(calltree, tmpvarname)})) {
+                if (RTEST(#{to_c_call(calltree)})) {
                    return #{to_c(subtree[2])};
                 }
 
@@ -53,23 +54,29 @@ module FastRuby
       "
     end
 
-    def to_c_if(tree)
+    def to_c_if(tree, result_variable_ = nil)
       condition_tree = tree[1]
       impl_tree = tree[2]
       else_tree = tree[3]
-
-      inline_block "
+      
+      result_variable = result_variable_ || "last_expression"
+      
+      code = "
           if (RTEST(#{to_c condition_tree})) {
-            last_expression = #{to_c impl_tree};
+            #{to_c impl_tree, result_variable};
           }#{else_tree ?
             " else {
-            last_expression = #{to_c else_tree};
+            #{to_c else_tree, result_variable};
             }
             " : ""
           }
-
-          return last_expression;
       "
+
+      if result_variable_
+        code
+      else
+        inline_block code + "; return last_expression;"
+      end
     end
 
     def to_c_for(tree)

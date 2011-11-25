@@ -86,28 +86,27 @@ module FastRuby
       protected_block(ret, false)
     end
 
-    def to_c_block(tree)
+    def to_c_block(tree, result_variable = nil)
       if tree.size == 1
         return inline_block("return Qnil;")
       end
-
+      
       str = ""
       str = tree[1..-2].map{ |subtree|
-        to_c(subtree)
+        to_c(subtree,"last_expression")
       }.join(";")
 
       if tree[-1]
-
-        if tree[-1][0] != :return
-          str = str + ";last_expression = #{to_c(tree[-1])};"
-        else
-          str = str + ";#{to_c(tree[-1])};"
-        end
+          str = str + ";#{to_c(tree[-1],"last_expression")};"
       end
 
-      str << "return last_expression;"
-
-      inline_block str
+      if result_variable
+        str << "#{result_variable} = last_expression;"
+        str
+      else
+        str << "return last_expression;"
+        inline_block str
+      end
     end
     
   end

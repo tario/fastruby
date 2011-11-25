@@ -184,12 +184,12 @@ module FastRuby
       
       mname = "to_c_" + tree[0].to_s
       
-      if method(mname).arity == 1
-        result_variable = nil
-      end 
-      
       if result_variable
-        send(mname, tree, result_variable)
+        if method(mname).arity == 1
+          "#{result_variable} = #{send(mname, tree)};\n"
+        else
+          send(mname, tree, result_variable)
+        end 
       else
         send(mname, tree)
       end
@@ -580,7 +580,7 @@ module FastRuby
             plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
           "
         end
-
+        
         ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
           #{validate_arguments_code}
 
@@ -673,7 +673,10 @@ module FastRuby
             plocals->block_function_param = LONG2FIX(Qnil);
           }
 
-          VALUE __ret = #{to_c impl_tree};
+          VALUE __ret = Qnil;
+          
+          #{to_c impl_tree, "__ret"};
+          
           stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
           if (stack_chunk_instantiated) {
@@ -764,7 +767,7 @@ module FastRuby
         lvar_type = eval(args[2][1].to_s)
 
         @infer_lvar_map[lvar_name] = lvar_type
-        return ""
+        return "Qnil"
       elsif mname == :block_given?
         return "FIX2LONG(plocals->block_function_address) == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
