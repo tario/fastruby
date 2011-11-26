@@ -22,47 +22,64 @@ module FastRuby
   module BlockTranslator
     register_translator_module self
     
-    def to_c_class(tree)
+    def to_c_class(tree, result_var = nil)
       str_class_name = get_class_name(tree[1])
       container_tree = get_container_tree(tree[1])
 
       if container_tree == s(:self)
         method_group("
+                    VALUE superklass = rb_cObject;
+                    #{
+                    if tree[2] 
+                      to_c tree[2], "superklass"
+                    end
+                    };
                     VALUE tmpklass = rb_define_class(
                       #{str_class_name.inspect},
-                      #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
+                      superklass
                   );
-        ", tree[3])
+        ", tree[3], result_var)
       else
         method_group("
-                    VALUE container_klass = #{to_c(container_tree)};
+                    VALUE container_klass = Qnil;
+                    VALUE superklass = rb_cObject;
+                    
+                    #{
+                    if tree[2] 
+                      to_c tree[2], "superklass"
+                    end
+                    };
+                    
+                    #{to_c(container_tree, "container_klass")};
                     VALUE tmpklass = rb_define_class_under(
                       container_klass,
                       #{str_class_name.inspect},
-                      #{tree[2] ? to_c(tree[2]) : "rb_cObject"}
+                      superklass
                   );
-        ", tree[3])
+        ", tree[3], result_var)
       end
     end
 
-    def to_c_module(tree)
+    def to_c_module(tree, result_var = nil)
       str_class_name = get_class_name(tree[1])
       container_tree = get_container_tree(tree[1])
 
       if container_tree == s(:self)
         method_group("
                       VALUE tmpklass = rb_define_module(#{str_class_name.inspect});
-        ", tree[2])
+        ", tree[2], result_var)
       else
         method_group("
-                      VALUE container_klass = #{to_c(container_tree)};
+                      VALUE container_klass = Qnil;
+                      
+                      #{to_c(container_tree, "container_klass")};
                       VALUE tmpklass = rb_define_module_under(container_klass,#{str_class_name.inspect});
-        ", tree[2])
+        ", tree[2], result_var)
       end
     end
     
 private
-    def method_group(init_code, tree)
+    def method_group(init_code, tree, result_var)
 
       alt_locals = Set.new
       alt_locals << :self
@@ -141,17 +158,22 @@ private
         }
       end
 
-      inline_block("
+      code = "
+        {
         #{init_code}
 
         rb_funcall(tmpklass, #{intern_num :__id__},0);
 
         #{fun}(tmpklass);
-        return Qnil;
-
-
-      ")
-
+        }
+      "
+      
+      if result_var
+        code + "\n#{result_var} = Qnil;\n"
+      else  
+        inline_block code + "\nreturn Qnil;\n"
+      end
+      
     end
 
     def get_class_name(argument)
