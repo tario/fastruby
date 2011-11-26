@@ -1,3 +1,7 @@
+0.0.17	Added support for single methods (with "no class")
+
+		Fixed bug with default argument initialization and redo
+
 0.0.16	Limited (see known issues on README) support for ruby1.9-p180 (tested with rvm)
 
 		Support for ruby1.8-p334 (tested with rvm)
