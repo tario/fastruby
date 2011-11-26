@@ -24,7 +24,7 @@ module FastRuby
 
     def to_c_return(tree, return_variable = nil)
       code = "
-        last_expression = #{to_c(tree[1])};
+        #{to_c(tree[1],"last_expression")};
         goto local_return;
         return Qnil;
         "
@@ -35,11 +35,19 @@ module FastRuby
       end
     end
 
-    def to_c_break(tree)
-        inline_block(
-         "
+    def to_c_break(tree, result_var = nil)
+      
+        value_tmp_var = "value_" + rand(10000000).to_s
+      
+        code = "
 
-         VALUE value = #{tree[1] ? to_c(tree[1]) : "Qnil"};
+          {
+         VALUE #{value_tmp_var} = Qnil; 
+         #{
+         if tree[1]
+           to_c(tree[1], value_tmp_var)
+         end
+         };
 
          typeof(pframe) target_frame_;
          target_frame_ = (void*)FIX2LONG(plocals->call_frame);
@@ -50,16 +58,24 @@ module FastRuby
 
          plocals->call_frame = LONG2FIX(0);
 
-         target_frame_->return_value = value;
+         target_frame_->return_value = #{value_tmp_var};
          target_frame_->targetted = 1;
          pframe->thread_data->exception = Qnil;
-         longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);"
-        )
+         longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);
+         
+         }
+         "
+         
+         if result_var
+           code
+         else
+           inline_block code
+         end
     end
 
-    def to_c_retry(tree)
-        inline_block(
-         "
+    def to_c_retry(tree, result_var = nil)
+        code = "
+          {
          typeof(pframe) target_frame_;
          target_frame_ = (void*)FIX2LONG(plocals->call_frame);
 
@@ -68,28 +84,53 @@ module FastRuby
          }
 
          target_frame_->targetted = 1;
-         longjmp(pframe->jmp,FASTRUBY_TAG_RETRY);"
-        )
+         longjmp(pframe->jmp,FASTRUBY_TAG_RETRY);
+         }
+         "
+       if result_var
+         code
+       else
+         inline_block code
+       end
     end
 
-    def to_c_redo(tree)
+    def to_c_redo(tree, result_var = nil)
       if @on_block
-         inline_block "
-          longjmp(pframe->jmp,FASTRUBY_TAG_REDO);
-          return Qnil;
+         code = "
+            goto fastruby_local_redo;
           "
+          
+          if result_var
+            code
+          else
+            inline_block code
+          end
       else
           _raise("rb_eLocalJumpError","illegal redo");
       end
     end
 
-    def to_c_next(tree)
+    def to_c_next(tree, result_var = nil)
+      tmp_varname = "_acc_" + rand(10000000).to_s
       if @on_block
-       inline_block "
-        pframe->thread_data->accumulator = #{tree[1] ? to_c(tree[1]) : "Qnil"};
-        longjmp(pframe->jmp,FASTRUBY_TAG_NEXT);
-        return Qnil;
+       code = "
+        {
+          VALUE #{tmp_varname} = Qnil;
+          
+          #{
+          if tree[1]
+            to_c(tree[1],tmp_varname)
+          end
+          }
+        pframe->thread_data->accumulator = #{tmp_varname};
+        goto fastruby_local_next;
+        }
         "
+        if result_var
+          code
+        else
+          inline_block code
+        end
       else
         _raise("rb_eLocalJumpError","illegal next");
       end

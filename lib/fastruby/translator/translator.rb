@@ -753,6 +753,13 @@ local_return:
         "
         end
           }
+fastruby_local_redo:
+          longjmp(pframe->jmp,FASTRUBY_TAG_REDO);
+          return Qnil;
+fastruby_local_next:
+          longjmp(pframe->jmp,FASTRUBY_TAG_NEXT);
+          return Qnil;
+
 
           }
         "
