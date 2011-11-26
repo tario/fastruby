@@ -144,9 +144,12 @@ module FastRuby
                 static VALUE #{name}(VALUE param) {
                   // call to #{call_tree[2]}
   
+                  VALUE last_expression = Qnil;
                   #{str_lvar_initialization}
                   
-                  VALUE array = #{to_c call_args_tree.last[1]};
+                  VALUE array = Qnil;
+                  
+                  #{to_c call_args_tree.last[1], "array"};
                   
                   if (TYPE(array) != T_ARRAY) {
                     array = rb_ary_new4(1,&array);
@@ -155,11 +158,15 @@ module FastRuby
                   int argc = #{call_args_tree.size-2};
                   VALUE argv[#{call_args_tree.size} + _RARRAY_LEN(array)];
                   
+                  VALUE aux_ = Qnil;;
                   #{
                     i = -1
                     call_args_tree[1..-2].map {|arg|
                       i = i + 1
-                      "argv[#{i}] = #{to_c arg}"
+                      "
+                      #{to_c arg, "aux_"};
+                      argv[#{i}] = aux_;
+                      "
                     }.join(";\n")
                   };
                   
@@ -176,13 +183,31 @@ module FastRuby
               "
               }
             else
-              str_called_code_args = call_args_tree[1..-1].map{ |subtree| to_c subtree }.join(",")
+              str_evaluate_args = "
+                  #{
+                    (0..call_args_tree.size-2).map{|i|
+                      "VALUE arg#{i} = Qnil;"
+                    }.join("\n")
+                  }
+                  
+                  #{
+                    (0..call_args_tree.size-2).map{|i|
+                      to_c(call_args_tree[i+1], "arg#{i}")+";"
+                    }.join("\n")
+                  }
+              "
               rb_funcall_caller_code = proc { |name| "
                 static VALUE #{name}(VALUE param) {
                   // call to #{call_tree[2]}
+                  VALUE last_expression = Qnil;
   
                   #{str_lvar_initialization}
-                  return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, #{str_called_code_args});
+                  
+                  #{str_evaluate_args};
+                  
+                  return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, 
+                    #{(0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")}
+                    );
                 }
               "
               }
@@ -567,12 +592,6 @@ fastruby_local_next:
         "
         }
 
-        str_recv = "plocals->self"
-
-        if recv_tree
-           str_recv = to_c recv_tree
-        end
-
         caller_code = nil
         convention_global_name = add_global_name("int",0)
 
@@ -613,9 +632,17 @@ fastruby_local_next:
         
           precode = "
               struct FASTRUBYTHREADDATA* thread_data = 0;
-              VALUE saved_rb_stack_chunk = Qnil; 
+              VALUE saved_rb_stack_chunk = Qnil;
+              
+              VALUE next_recv = plocals->self;
+              
+              #{
+                if recv_tree
+                  to_c recv_tree, "next_recv"
+                end
+              };
 
-              pframe->next_recv = #{recv_tree ? to_c(recv_tree) : "plocals->self"};
+              pframe->next_recv = next_recv;
 #ifdef RUBY_1_8
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
 #endif              
@@ -731,12 +758,22 @@ fastruby_local_next:
 
         fastruby_call_code = if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
-
             "
                 // call to #{call_tree[2]}
                 #{call_frame_struct_code}
 
-                VALUE ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame, #{str_called_code_args});
+                #{str_evaluate_args};
+                
+                VALUE recv = plocals->self;
+                
+                #{
+                if recv_tree
+                 to_c recv_tree, "recv" 
+                end
+                } 
+
+                VALUE ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame, 
+                  #{(0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")} );
                 plocals->call_frame = old_call_frame;
                 return ret;
             "
@@ -744,8 +781,16 @@ fastruby_local_next:
             "
                 #{call_frame_struct_code}
 
+                VALUE recv = plocals->self;
+                
+                #{
+                if recv_tree
+                 to_c recv_tree, "recv" 
+                end
+                }
+                 
                 // call to #{call_tree[2]}
-                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(#{str_recv}, (VALUE)&block, (VALUE)&call_frame);
+                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame);
                 plocals->call_frame = old_call_frame;
                 return ret;
             "
