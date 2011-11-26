@@ -357,241 +357,146 @@ module FastRuby
 
       args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
-      if (options[:main])
-        initialize_method_structs(original_args_tree)
-
-        strargs = if args_tree.size > 1
-          "VALUE self, VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
-        else
-          "VALUE self, VALUE block, VALUE _parent_frame"
-        end
-
-        ret = "VALUE #{@alt_method_name || method_name}(VALUE self) {
-
-          #{@locals_struct} *plocals;
-          #{@frame_struct} frame;
-          #{@frame_struct} *pframe;
-
-          frame.parent_frame = 0;
-          frame.return_value = Qnil;
-          frame.rescue = 0;
-          frame.targetted = 0;
-          frame.thread_data = rb_current_thread_data();
-
-
-          int stack_chunk_instantiated = 0;
-          VALUE rb_previous_stack_chunk = Qnil;
-          VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
-          struct STACKCHUNK* stack_chunk = 0;
-          
-          if (rb_stack_chunk != Qnil) {
-            Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
-          }
-
-          if (stack_chunk == 0 || (stack_chunk == 0 ? 0 : stack_chunk_frozen(stack_chunk)) ) {
-            rb_previous_stack_chunk = rb_stack_chunk;
-            rb_gc_register_address(&rb_stack_chunk);
-            stack_chunk_instantiated = 1;
-
-            rb_stack_chunk = rb_stack_chunk_create(Qnil);
-            frame.thread_data->rb_stack_chunk = rb_stack_chunk;
-
-            rb_ivar_set(rb_stack_chunk, #{intern_num :_parent_stack_chunk}, rb_previous_stack_chunk);
-
-            Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
-          }
-
-          int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
-
-          plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
-          
-          plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
-          void* old_parent_locals = frame.thread_data->last_plocals;
-          frame.thread_data->last_plocals = plocals;
-          
-          plocals->active = Qtrue;
-          plocals->targetted = Qfalse;
-          plocals->pframe = LONG2FIX(&frame);
-          frame.plocals = plocals;
-
-          pframe = (void*)&frame;
-
-          VALUE last_expression = Qnil;
-
-          int aux = setjmp(pframe->jmp);
-          if (aux != 0) {
-            stack_chunk_set_current_position(stack_chunk, previous_stack_position);
-
-            if (stack_chunk_instantiated) {
-              rb_gc_unregister_address(&rb_stack_chunk);
-              frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
-            }
-
-            plocals->active = Qfalse;
-            frame.thread_data->last_plocals = old_parent_locals;
-            return plocals->return_value;
-          }
-
-          plocals->self = self;
-
-          #{args_tree[1..-1].map { |arg|
-            arg = arg.to_s
-            arg.gsub!("*","")
-            "plocals->#{arg} = #{arg};\n"
-          }.join("") }
-
-          plocals->block_function_address = LONG2FIX(0);
-          plocals->block_function_param = LONG2FIX(Qnil);
-          plocals->call_frame = LONG2FIX(0);
-
-          VALUE ret = #{to_c impl_tree};
-          stack_chunk_set_current_position(stack_chunk, previous_stack_position);
-
-          if (stack_chunk_instantiated) {
-            rb_gc_unregister_address(&rb_stack_chunk);
-            frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
-          }
-
-          plocals->active = Qfalse;
-          
-          frame.thread_data->last_plocals = old_parent_locals;
-          return ret;
-
-        }"
-
-        add_main
-        extra_code << ret
-      else
-
         initialize_method_structs(original_args_tree)
         
-        strargs = "VALUE self, VALUE block, VALUE _parent_frame, int argc, VALUE* argv"
-        
-        splat_arg = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
-
-        maxargnum = args_tree[1..-1].count{ |x|
-            if x.instance_of? Symbol
-              not x.to_s.match(/\*/) and not x.to_s.match(/\&/)
-            else
-              false
-            end
-          }
-          
-        minargnum = maxargnum
-          
-        args_tree[1..-1].each do |subtree|
-          unless subtree.instance_of? Symbol
-            if subtree[0] == :block
-              minargnum = minargnum - (subtree.size-1)
-            end
+        if options[:main] then
+          strargs = if args_tree.size > 1
+            "VALUE self, VALUE block, VALUE _parent_frame, #{(0..signature.size-1).map{|x| "VALUE arg#{x}"}.join(",")}"
+          else
+            "VALUE self, VALUE block, VALUE _parent_frame"
           end
-        end
-        
-        if args_tree[1..-1].find{|x| x.to_s.match(/\*/)}
-          maxargnum = 2147483647
-        end
-        
-        read_arguments_code = ""
 
-
-        validate_arguments_code = if signature.size-1 < minargnum
-            "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{minargnum})\");
-            "
-        elsif signature.size-1 > maxargnum
-            "
-              rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{maxargnum})\");
-            "
         else
-
-            default_block_tree = args_tree[1..-1].find{|subtree|
-              unless subtree.instance_of? Symbol
-                if subtree[0] == :block
-                  next true
-                end
+          
+          strargs = "VALUE self, VALUE block, VALUE _parent_frame, int argc, VALUE* argv"
+          
+          splat_arg = args_tree[1..-1].find{|x| x.to_s.match(/\*/) }
+  
+          maxargnum = args_tree[1..-1].count{ |x|
+              if x.instance_of? Symbol
+                not x.to_s.match(/\*/) and not x.to_s.match(/\&/)
+              else
+                false
               end
-    
-              false
             }
             
-            i = -1
-
-            normalargsnum = args_tree[1..-1].count{|subtree|
-              if subtree.instance_of? Symbol
-                unless subtree.to_s.match(/\*/) or subtree.to_s.match(/\&/)
-                  next true
-                end
+          minargnum = maxargnum
+            
+          args_tree[1..-1].each do |subtree|
+            unless subtree.instance_of? Symbol
+              if subtree[0] == :block
+                minargnum = minargnum - (subtree.size-1)
               end
-                    
-              false
-            }
-
-            read_arguments_code = args_tree[1..-1].map { |arg_|
-                arg = arg_.to_s
-                i = i + 1
-    
-                if i < normalargsnum
-                  if i < signature.size-1
-                    "plocals->#{arg} = argv[#{i}];\n"
-                  else
-                      
-                    if default_block_tree
-                      initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
-                      if initialize_tree
-                        to_c(initialize_tree) + ";\n"
-                      else
-                        ""
-                      end
-                    else
-                        ";\n"
-                    end
-                  end
-                else
-                  ""
-                end
-              }.join("")
-              
-            if splat_arg
-                  if signature.size-1 < normalargsnum then
-                    read_arguments_code << "
-                      plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(0);
-                      "
-                  else
-                    read_arguments_code << "
-                      plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new4(
-                            #{(signature.size-1) - (normalargsnum)}, argv+#{normalargsnum} 
-                            );
-                    "
-                  end
-    
             end
+          end
           
+          if args_tree[1..-1].find{|x| x.to_s.match(/\*/)}
+            maxargnum = 2147483647
+          end
           
-            ""
-        end
+          read_arguments_code = ""
+  
+  
+          validate_arguments_code = if signature.size-1 < minargnum
+              "
+                rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{minargnum})\");
+              "
+          elsif signature.size-1 > maxargnum
+              "
+                rb_raise(rb_eArgError, \"wrong number of arguments (#{signature.size-1} for #{maxargnum})\");
+              "
+          else
+  
+              default_block_tree = args_tree[1..-1].find{|subtree|
+                unless subtree.instance_of? Symbol
+                  if subtree[0] == :block
+                    next true
+                  end
+                end
+      
+                false
+              }
+              
+              i = -1
+  
+              normalargsnum = args_tree[1..-1].count{|subtree|
+                if subtree.instance_of? Symbol
+                  unless subtree.to_s.match(/\*/) or subtree.to_s.match(/\&/)
+                    next true
+                  end
+                end
+                      
+                false
+              }
+  
+              read_arguments_code = args_tree[1..-1].map { |arg_|
+                  arg = arg_.to_s
+                  i = i + 1
+      
+                  if i < normalargsnum
+                    if i < signature.size-1
+                      "plocals->#{arg} = argv[#{i}];\n"
+                    else
+                        
+                      if default_block_tree
+                        initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
+                        if initialize_tree
+                          to_c(initialize_tree) + ";\n"
+                        else
+                          ""
+                        end
+                      else
+                          ";\n"
+                      end
+                    end
+                  else
+                    ""
+                  end
+                }.join("")
+                
+              if splat_arg
+                    if signature.size-1 < normalargsnum then
+                      read_arguments_code << "
+                        plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(0);
+                        "
+                    else
+                      read_arguments_code << "
+                        plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new4(
+                              #{(signature.size-1) - (normalargsnum)}, argv+#{normalargsnum} 
+                              );
+                      "
+                    end
+      
+              end
+            
+            
+              ""
+          end
+  
+          if block_argument
+  
+            proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
+  
+            require "fastruby/sexp_extension"
+  
+            read_arguments_code << "
+              plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
+            "
+          end
 
-        if block_argument
-
-          proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
-
-          require "fastruby/sexp_extension"
-
-          read_arguments_code << "
-            plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
-          "
         end
         
-        ret = "VALUE #{@alt_method_name || method_name}(#{strargs}) {
+        ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
 
           #{@frame_struct} frame;
           #{@frame_struct} *pframe;
           
-          frame.parent_frame = (void*)_parent_frame;
+          frame.parent_frame = #{options[:main] ? "0"  : "(void*)_parent_frame"};
           frame.return_value = Qnil;
           frame.rescue = 0;
           frame.targetted = 0;
-          frame.thread_data = ((typeof(pframe))_parent_frame)->thread_data;
+          frame.thread_data = #{options[:main] ? "0" : "((typeof(pframe))_parent_frame)->thread_data"};
           if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
           int stack_chunk_instantiated = 0;
@@ -648,11 +553,17 @@ module FastRuby
               rb_gc_unregister_address(&rb_stack_chunk);
               frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
-
-            if (plocals->targetted == Qfalse || aux != FASTRUBY_TAG_RETURN) {
-              frame.thread_data->last_plocals = old_parent_locals;
-              
-              longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
+            
+            #{
+            unless options[:main]
+              "
+              if (plocals->targetted == Qfalse || aux != FASTRUBY_TAG_RETURN) {
+                frame.thread_data->last_plocals = old_parent_locals;
+                
+                longjmp(((typeof(pframe))_parent_frame)->jmp,aux);
+              }
+              "
+            end
             }
 
             frame.thread_data->last_plocals = old_parent_locals;
@@ -663,14 +574,20 @@ module FastRuby
           plocals->self = self;
 
           #{read_arguments_code}
-
-          pblock = (void*)block;
-          if (pblock) {
-            plocals->block_function_address = LONG2FIX(pblock->block_function_address);
-            plocals->block_function_param = LONG2FIX(pblock->block_function_param);
-          } else {
-            plocals->block_function_address = LONG2FIX(0);
-            plocals->block_function_param = LONG2FIX(Qnil);
+          
+          #{
+          unless options[:main]
+            "
+            pblock = (void*)block;
+            if (pblock) {
+              plocals->block_function_address = LONG2FIX(pblock->block_function_address);
+              plocals->block_function_param = LONG2FIX(pblock->block_function_param);
+            } else {
+              plocals->block_function_address = LONG2FIX(0);
+              plocals->block_function_param = LONG2FIX(Qnil);
+            }
+            "
+          end
           }
 
           #{to_c impl_tree, "last_expression"};
@@ -692,7 +609,6 @@ local_return:
 
         add_main
         extra_code << ret
-      end
       
       "
         static VALUE dummy_#{method_name}_#{alt_method_name}_#{rand(1000000000000000000000000000000000)}(VALUE a) {
