@@ -1135,7 +1135,7 @@ local_return:
           fptr = *#{address_name};
           
           #{
-            if args_tree.size < 25 and RUBY_VERSION =~ /^1\.8/
+            if args_tree.size < 25
             "
             if (fptr == 0) {
               fptr = *#{cfunc_address_name};
@@ -1251,6 +1251,25 @@ local_return:
                   } else if (body->nd_argc == -2) {
                     *default_address = #{cfunc_wrapper_2};
                     #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                  }
+                }
+              }
+#endif
+#ifdef RUBY_1_9
+              rb_method_entry_t* me = rb_method_entry(recvtype,#{intern_num mname});
+              if (me != 0) {
+                rb_method_definition_t* def = me->def;
+                
+                if (def->type == VM_METHOD_TYPE_CFUNC) {
+                  if (def->body.cfunc.argc == #{args_tree.size-1}) {
+                    *default_address = #{cfunc_wrapper};
+                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
+                  } else if (def->body.cfunc.argc == -1) {
+                    *default_address = #{cfunc_wrapper_1};
+                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
+                  } else if (def->body.cfunc.argc == -2) {
+                    *default_address = #{cfunc_wrapper_2};
+                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
                   }
                 }
               }
