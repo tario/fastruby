@@ -22,7 +22,7 @@ module FastRuby
   module DefnTranslator
     register_translator_module self
 
-    def to_c_defn(tree)
+    def to_c_defn(tree, result_var = nil)
 
       method_name = tree[1]
       args_tree = tree[2].select{|x| x.to_s[0] != ?&}
@@ -40,7 +40,7 @@ module FastRuby
       alt_options.delete(:self)
       alt_options.delete(:main)
 
-      inline_block "
+      code = "
       
         usleep(0);
         rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);
@@ -58,9 +58,14 @@ module FastRuby
 
         "
 
+      if result_var
+        code + "\n#{result_var} = Qnil;"
+      else
+        inline_block code + "\nreturn Qnil;\n"
+      end
     end
 
-    def to_c_defs(tree)
+    def to_c_defs(tree, result_var = nil)
       method_name = tree[2]
       args_tree = tree[3].select{|x| x.to_s[0] != ?&}
       
@@ -78,9 +83,10 @@ module FastRuby
       alt_options.delete(:self)
       alt_options.delete(:main)
 
-      inline_block "
+      code = "
       
-        VALUE obj = #{to_c tree[1]};
+        VALUE obj = Qnil;
+        #{to_c tree[1], "obj"};
         rb_define_singleton_method(obj, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
         
         #{global_klass_variable} = CLASS_OF(obj);
@@ -95,12 +101,22 @@ module FastRuby
                 );
 
         "
+
+      if result_var
+        code + "\n#{result_var} = Qnil;"
+      else
+        inline_block code + "\nreturn Qnil;\n"
+      end
         
     end
 
-    def to_c_scope(tree)
+    def to_c_scope(tree, result_var = nil)
       if tree[1]
-        to_c(tree[1])
+        if result_var
+          to_c(tree[1], result_var)
+        else
+          to_c(tree[1])
+        end
       else
         "Qnil"
       end
