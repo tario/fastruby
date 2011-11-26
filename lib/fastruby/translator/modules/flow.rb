@@ -119,15 +119,16 @@ module FastRuby
       
       begin_while = "begin_while_"+rand(10000000).to_s
       end_while = "end_while_"+rand(10000000).to_s
+      aux_varname = "_aux_" + rand(10000000).to_s
       code = "
         {
           VALUE while_condition;
-          VALUE aux;
+          VALUE #{aux_varname};
           
 #{begin_while}:
           #{to_c tree[1], "while_condition"};
           if (!RTEST(while_condition)) goto #{end_while}; 
-          #{to_c tree[2], "aux"};
+          #{to_c tree[2], aux_varname};
           goto #{begin_while};
 #{end_while}:
           

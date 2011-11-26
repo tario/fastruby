@@ -645,7 +645,7 @@ module FastRuby
           funcall_call_code = "
           return #{
             frame_call(
-              protected_block(inline_block("
+              protected_block("
               
               void* caller_func;
               void* block_func;
@@ -680,7 +680,7 @@ module FastRuby
               }
               
 
-              VALUE ret = rb_iterate(
+              last_expression = rb_iterate(
                 caller_func,
                 (VALUE)pframe,
                 block_func,
@@ -706,9 +706,7 @@ module FastRuby
                   current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
                 }
               }
-
-              return ret;
-              "), true), precode, postcode
+              ", true), precode, postcode
             )
           };
           "        

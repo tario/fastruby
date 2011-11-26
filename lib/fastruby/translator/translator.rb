@@ -142,7 +142,7 @@ module FastRuby
          #{@frame_struct}* pframe;
          pframe = (typeof(pframe))_parent_frame;
 
-         return #{protected_block("rb_yield_splat(*(VALUE*)yield_args_p)",true,"yield_args_p",true)};
+         return #{protected_block("last_expression = rb_yield_splat(*(VALUE*)yield_args_p)",true,"yield_args_p",true)};
         }"
 
         extra_code << "static VALUE _rb_ivar_set(VALUE recv,ID idvar, VALUE value) {
@@ -896,7 +896,9 @@ local_return:
               "VALUE #{repass_var} = (VALUE)((void**)param)[1];"
             end
             }
-            return #{inner_code};
+              VALUE last_expression = Qnil;
+              #{inner_code};
+              return last_expression;
             }
           "
         }
@@ -972,7 +974,9 @@ local_return:
             result = #{rescue_code};
             #{wrapper_code}
           } else {
-            return #{inner_code};
+            VALUE last_expression = Qnil;
+            #{inner_code};
+            return last_expression;
           }
 
           return result;
@@ -1102,7 +1106,7 @@ local_return:
           VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
   
           return #{
-            protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+            protected_block "last_expression = rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
             };
         }
       "
@@ -1146,7 +1150,7 @@ local_return:
           
           if (fptr == 0) {
             return #{
-              protected_block "rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+              protected_block "last_expression = rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
               };
           } else {
             return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*)) (fptr) )(self,(VALUE)block,(VALUE)frame,#{args_tree.size-1},method_arguments+1);  

@@ -45,7 +45,7 @@ module FastRuby
       splat_arg = tree.find{|x| x == :yield ? false : x[0] == :splat}
       ret = nil      
       if splat_arg
-        ret = inline_block "
+        ret = "
           VALUE splat_array = #{to_c(splat_arg[1])};
           
           if (CLASS_OF(splat_array) == rb_cArray) {
@@ -61,7 +61,7 @@ module FastRuby
               block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
             }
             
-            return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, _RARRAY_LEN(splat_array) + #{tree.size-2});
+            last_expression = #{anonymous_function(&block_code)}((VALUE)pframe, block_args, _RARRAY_LEN(splat_array) + #{tree.size-2});
           } else {
             VALUE block_args[1+#{tree.size}];
             #{ 
@@ -71,15 +71,15 @@ module FastRuby
             };
             
             block_args[#{tree.size-2}] = splat_array;
-            return #{anonymous_function(&block_code)}((VALUE)pframe, block_args, #{tree.size-1});
+            last_expression = #{anonymous_function(&block_code)}((VALUE)pframe, block_args, #{tree.size-1});
           }
           
         "
       else
         ret = if tree.size > 1
-            anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}},#{tree.size-1})"
+            "last_expression = " + anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}},#{tree.size-1})"
           else
-            anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){}, #{tree.size-1})"
+            "last_expression = " + anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){}, #{tree.size-1})"
           end
       end
       

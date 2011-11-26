@@ -86,9 +86,8 @@ module FastRuby
       
       if args.size > 1
         if args.last[0] == :splat
-          
+          aux_varname = "_aux_" + rand(1000000).to_s
           code = protected_block(
-            inline_block(
             "
             
             VALUE array = Qnil;
@@ -101,13 +100,13 @@ module FastRuby
             
             int argc = #{args.size-2};
             VALUE argv[#{args.size} + _RARRAY_LEN(array)];
-            VALUE aux = Qnil;
+            VALUE #{aux_varname} = Qnil;
             #{
               i = -1
               args[1..-2].map {|arg|
                 i = i + 1
-                "#{to_c arg, "aux"};
-                argv[#{i}] = aux;
+                "#{to_c arg, aux_varname};
+                argv[#{i}] = #{aux_varname};
                 "
               }.join(";\n")
             };
@@ -124,9 +123,8 @@ module FastRuby
               argc++; 
             }
             
-            return rb_funcall2(recv, #{intern_num tree[2]}, argc, argv);
-            "
-            ), true, repass_var)
+            last_expression = rb_funcall2(recv, #{intern_num tree[2]}, argc, argv);
+            ", true, repass_var)
             
           if result_var
            return "#{result_var} = #{code};\n"
@@ -207,7 +205,7 @@ module FastRuby
 
       else # else recvtype
         if argnum == 0
-          code = protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", true, repass_var)
+          code = protected_block("last_expression = rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", true, repass_var)
           if result_var
           "
             #{result_var} = #{code};
@@ -217,7 +215,7 @@ module FastRuby
           end
         else
           strargs = args[1..-1].map{|arg| to_c arg}.join(",")
-          code = protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", true, repass_var)
+          code = protected_block("last_expression = rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", true, repass_var)
           if result_var
           "
             #{result_var} = #{code};
