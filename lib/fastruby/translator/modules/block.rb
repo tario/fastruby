@@ -46,14 +46,19 @@ module FastRuby
       ret = nil      
       if splat_arg
         ret = "
-          VALUE splat_array = #{to_c(splat_arg[1])};
+          VALUE splat_array = Qnil;
+          VALUE block_aux = Qnil;
+           #{to_c(splat_arg[1], "splat_array")};
           
           if (CLASS_OF(splat_array) == rb_cArray) {
             VALUE block_args[_RARRAY_LEN(splat_array) + #{tree.size}];
             int i;
             #{ 
               (0..tree.size-3).map{|i|
-                "block_args[#{i}] = #{to_c(tree[i+1])}"
+                "
+                #{to_c(tree[i+1], "block_aux")};
+                block_args[#{i}] = block_aux;
+                "
               }.join(";\n")
             };
             
@@ -66,7 +71,10 @@ module FastRuby
             VALUE block_args[1+#{tree.size}];
             #{ 
               (0..tree.size-3).map{|i|
-                "block_args[#{i}] = #{to_c(tree[i+1])}"
+                "
+                #{to_c(tree[i+1], "block_aux")};
+                block_args[#{i}] = block_aux;
+                "
               }.join(";\n")
             };
             
