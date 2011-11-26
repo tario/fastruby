@@ -115,14 +115,14 @@ module FastRuby
       if @on_block
        code = "
         {
-          VALUE #{tmp_varname} = Qnil;
+          last_expression = Qnil;
           
           #{
           if tree[1]
-            to_c(tree[1],tmp_varname)
+            to_c(tree[1],"last_expression")
           end
           }
-        pframe->thread_data->accumulator = #{tmp_varname};
+        pframe->thread_data->accumulator = last_expression;
         goto fastruby_local_next;
         }
         "

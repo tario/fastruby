@@ -75,31 +75,9 @@ module FastRuby
       str_arg_initialization = ""
 
       str_impl = ""
-
-        on_block do
-          # if impl_tree is a block, implement the last node with a return
-          if anonymous_impl
-            if anonymous_impl[0] == :block
-              str_impl = anonymous_impl[1..-2].map{ |subtree|
-                to_c(subtree)
-              }.join(";")
-
-              if anonymous_impl[-1][0] != :return and anonymous_impl[-1][0] != :break and anonymous_impl[-1][0] != :next
-                str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl[-1])});"
-              else
-                str_impl = str_impl + ";#{to_c(anonymous_impl[-1])};"
-              end
-            else
-              if anonymous_impl[0] != :return and anonymous_impl[0] != :break and anonymous_impl[0] != :next
-                str_impl = str_impl + ";last_expression = (#{to_c(anonymous_impl)});"
-              else
-                str_impl = str_impl + ";#{to_c(anonymous_impl)};"
-              end
-            end
-          else
-            str_impl = "last_expression = Qnil;"
-          end
-        end
+      on_block do
+        str_impl = to_c(anonymous_impl, "last_expression")
+      end     
 
         if not args_tree
         elsif args_tree.first == :lasgn
@@ -333,8 +311,11 @@ module FastRuby
                 }
               }
 
-            #{str_impl}
+fastruby_local_redo:
+            #{str_impl};
 
+fastruby_local_next:
+local_return:
              ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
             return last_expression;
           }
@@ -375,6 +356,7 @@ module FastRuby
                        rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
                        return Qnil;
                     } else {
+_local_return:
                       if (plocals->targetted == 1) {
                         if (plocals->active == Qfalse) {
                           rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
@@ -388,10 +370,18 @@ module FastRuby
                     }
               }
 
-            #{str_impl}
+fastruby_local_redo:
+            #{str_impl};
 
             ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
 
+            return last_expression;
+local_return:
+            aux = FASTRUBY_TAG_RETURN;
+            plocals->return_value = last_expression;
+            plocals->targetted = 1;
+            goto _local_return;
+fastruby_local_next:
             return last_expression;
           }
         "
@@ -431,10 +421,17 @@ module FastRuby
                 }
             }
 
-            #{str_impl}
+fastruby_local_redo:
+            #{str_impl};
 
             return last_expression;
-          }
+local_return:            
+            plocals->return_value = last_expression;
+            plocals->targetted = 1;
+            frb_jump_tag(FASTRUBY_TAG_RETURN);
+fastruby_local_next:
+            return last_expression;          
+            }
         "
         }
 
@@ -481,9 +478,16 @@ module FastRuby
               rb_ivar_set(arg,#{intern_num :__stack_chunk},thread_data->rb_stack_chunk);
             }
 
-            #{str_impl}
+fastruby_local_redo:
+            #{str_impl};
 
             return last_expression;
+local_return:            
+            plocals->return_value = last_expression;
+            plocals->targetted = 1;
+            frb_jump_tag(FASTRUBY_TAG_RETURN);
+fastruby_local_next:
+            return last_expression;          
           }
         "
         }
@@ -550,10 +554,16 @@ module FastRuby
 
             }
 
-            #{str_impl}
+fastruby_local_redo:
+            #{str_impl};
 
             return last_expression;
-          }
+local_return:
+            plocals->return_value = last_expression;
+            plocals->targetted = 1;
+            longjmp(pframe->jmp, FASTRUBY_TAG_RETURN);
+fastruby_local_next:
+            return last_expression;          }
         "
         }
 
