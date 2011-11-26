@@ -1,4 +1,6 @@
-0.0.17	Added support for single methods (with "no class")
+0.0.17	Implemented direct call to CFUNC methods on ruby1.9
+
+		Added support for single methods (with "no class")
 
 		Fixed bug with default argument initialization and redo
 
