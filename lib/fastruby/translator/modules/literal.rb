@@ -34,35 +34,81 @@ module FastRuby
       literal_value tree[1]
     end
 
-    def to_c_hash(tree)
+    def to_c_hash(tree, result_var = nil)
+      
+      hash_tmp_var = "_hash_"+rand(1000000).to_s
+      key_tmp_var = "_key_"+rand(1000000).to_s
+      value_tmp_var = "_value_"+rand(1000000).to_s
 
       hash_aset_code = ""
       (0..(tree.size-3)/2).each do |i|
         strkey = to_c tree[1 + i * 2]
         strvalue = to_c tree[2 + i * 2]
-        hash_aset_code << "rb_hash_aset(hash, #{strkey}, #{strvalue});"
+        hash_aset_code << "
+          {
+            VALUE #{key_tmp_var} = Qnil;
+            VALUE #{value_tmp_var} = Qnil;
+            
+            #{to_c tree[1 + i * 2], key_tmp_var};
+            #{to_c tree[2 + i * 2], value_tmp_var};
+            
+            rb_hash_aset(#{hash_tmp_var}, #{key_tmp_var}, #{value_tmp_var});
+          }
+        "
       end
-
-      anonymous_function{ |name| "
-        static VALUE #{name}(VALUE value_params) {
-          #{@frame_struct} *pframe;
-          #{@locals_struct} *plocals;
-          pframe = (void*)value_params;
-          plocals = (void*)pframe->plocals;
-
-          VALUE hash = rb_hash_new();
-          #{hash_aset_code}
-          return hash;
-        }
-      " } + "((VALUE)pframe)"
+      
+        code = "
+          {
+          VALUE #{hash_tmp_var} = rb_hash_new();
+          #{hash_aset_code};
+          #{
+          if result_var
+            "#{result_var} = #{hash_tmp_var}"
+          else
+            "return #{hash_tmp_var}"
+          end
+          };
+          }
+        "
+        
+      if result_var
+        code
+      else
+        inline_block code
+      end
     end
 
-    def to_c_array(tree)
+    def to_c_array(tree, result_var = nil)
       if tree.size > 1
-        strargs = tree[1..-1].map{|subtree| to_c subtree}.join(",")
-        "rb_ary_new3(#{tree.size-1}, #{strargs})"
+        if result_var
+          prefix = "_array_element_" + rand(10000000).to_s + "_"
+          "
+          {
+            #{ 
+              (0..tree.size-2).map{|x|
+                "VALUE #{prefix}#{x};"
+              }.join("\n");
+            }
+            
+            #{
+              (0..tree.size-2).map{|x|
+                to_c(tree[x+1], prefix+x.to_s)
+              }.join("\n");
+            }
+            
+            #{result_var} = rb_ary_new3(#{tree.size-1}, #{(0..tree.size-2).map{|x| prefix+x.to_s}.join(",")} );
+          }
+          "
+        else
+          strargs = tree[1..-1].map{|subtree| to_c subtree}.join(",")
+          "rb_ary_new3(#{tree.size-1}, #{strargs})"
+        end
       else
+        if result_var
+        "#{result_var} = rb_ary_new3(0);"
+        else
         "rb_ary_new3(0)"
+        end
       end
     end
 
@@ -78,8 +124,39 @@ module FastRuby
       "Qtrue"
     end
 
-    def to_c_dot2(tree)
-      "rb_range_new(#{to_c tree[1]}, #{to_c tree[2]},0)"
+    def to_c_dot2(tree, result_var = nil)
+      
+      begin_var = "_begin"+rand(10000000).to_s
+      end_var = "_end"+rand(10000000).to_s
+      
+      if result_var
+        "
+        {
+          VALUE #{begin_var} = Qnil;
+          VALUE #{end_var} = Qnil;
+          
+          #{to_c tree[1], begin_var};
+          #{to_c tree[2], end_var};
+          
+          #{result_var} = rb_range_new(#{begin_var}, #{end_var},0);
+        }
+        "
+      else
+        if result_var
+        "
+          {
+          VALUE #{begin_var} = Qnil;
+          VALUE #{end_var} = Qnil;
+          #{to_c tree[1], begin_var};
+          #{to_c tree[2], end_var};
+          
+          #{result_var} = rb_range_new(#{begin_var}, #{end_var},0)
+          }
+        "
+        else
+        "rb_range_new(#{to_c tree[1]}, #{to_c tree[2]},0)"
+        end
+      end
     end
     
   end
