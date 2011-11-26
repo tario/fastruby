@@ -23,12 +23,16 @@ module FastRuby
     
     register_translator_module self
 
-    def to_c_call(tree)
+    def to_c_call(tree, result_var = nil)
       directive_code = directive(tree)
       repass_var = @repass_var
       
       if directive_code
-        return directive_code
+        if result_var
+          return "#{result_var} = #{directive_code};\n"
+        else
+          return directive_code
+        end
       end
       
       if tree[2] == :require
@@ -42,6 +46,7 @@ module FastRuby
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
+      args_tree = tree[3]
       
       # search block_pass on arguments
       block_pass_arg = args.find{|arg| if arg == :arglist
@@ -63,8 +68,12 @@ module FastRuby
         block_tree = s(:call, block_pass_arg[1], :call, s(:arglist, s(:splat, s(:lvar, :__xblock_arguments))))
         
         replace_iter_tree = s(:iter, call_tree, block_arguments_tree, block_tree).to_fastruby_sexp
-        
-        return to_c(replace_iter_tree)
+      
+        if result_var  
+          return to_c(replace_iter_tree,result_var)
+        else
+          return to_c(replace_iter_tree)
+        end
       end
 
       mname = :require_fastruby if mname == :require
@@ -77,11 +86,14 @@ module FastRuby
       
       if args.size > 1
         if args.last[0] == :splat
-          return protected_block(
+          
+          code = protected_block(
             inline_block(
             "
             
-            VALUE array = #{to_c args.last[1]};
+            VALUE array = Qnil;
+            
+            #{to_c args.last[1], "array"};
             
             if (TYPE(array) != T_ARRAY) {
               array = rb_ary_new4(1,&array);
@@ -89,14 +101,20 @@ module FastRuby
             
             int argc = #{args.size-2};
             VALUE argv[#{args.size} + _RARRAY_LEN(array)];
-            
+            VALUE aux = Qnil;
             #{
               i = -1
               args[1..-2].map {|arg|
                 i = i + 1
-                "argv[#{i}] = #{to_c arg}"
+                "#{to_c arg, "aux"};
+                argv[#{i}] = aux;
+                "
               }.join(";\n")
             };
+            
+            VALUE recv = Qnil;
+            
+            #{to_c recv, "recv"};
             
             int array_len = _RARRAY_LEN(array);
             
@@ -106,13 +124,17 @@ module FastRuby
               argc++; 
             }
             
-            return rb_funcall2(#{to_c recv}, #{intern_num tree[2]}, argc, argv);
+            return rb_funcall2(recv, #{intern_num tree[2]}, argc, argv);
             "
             ), true, repass_var)
+            
+          if result_var
+           return "#{result_var} = #{code};\n"
+          else
+           return code
+          end
         end
       end
-
-      strargs = args[1..-1].map{|arg| to_c arg}.join(",")
 
       if recvtype
 
@@ -140,17 +162,69 @@ module FastRuby
 
           if argnum == 0
             value_cast = "VALUE,VALUE,VALUE"
-            "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
+            if result_var
+                "
+                {
+                VALUE recv = Qnil;
+                #{to_c recv, "recv"};
+                #{result_var} = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, Qfalse, (VALUE)pframe);
+                }
+                "
+            else
+              strargs = args[1..-1].map{|arg| to_c arg}.join(",")
+              "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
+            end
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",") + ",VALUE,VALUE"
-            "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
+            suffix = "_" + rand(1000000).to_s+"_"
+            if result_var
+                strargs = (0..args_tree.size-2).map{|i| "#{suffix}arg#{i}"}.join(",")
+                "
+                {
+                VALUE recv = Qnil;
+                
+                #{
+                (0..args_tree.size-2).map{ |x|
+                  "VALUE #{suffix}arg#{x};"
+                }.join("\n")
+                }
+
+                #{
+                (0..args_tree.size-2).map{ |x|
+                  to_c(args_tree[x+1], "#{suffix}arg#{x}") + ";"
+                }.join("\n")
+                }
+                
+                #{to_c recv, "recv"};
+                #{result_var} =((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, Qfalse, (VALUE)pframe, #{strargs});
+                }
+                "
+            else
+              strargs = args[1..-1].map{|arg| to_c arg}.join(",")
+              "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
+            end
           end
 
       else # else recvtype
         if argnum == 0
-          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", true, repass_var)
+          code = protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, 0)", true, repass_var)
+          if result_var
+          "
+            #{result_var} = #{code};
+          "
+          else
+            code
+          end
         else
-          protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", true, repass_var)
+          strargs = args[1..-1].map{|arg| to_c arg}.join(",")
+          code = protected_block("rb_funcall(#{to_c recv}, #{intern_num tree[2]}, #{argnum}, #{strargs} )", true, repass_var)
+          if result_var
+          "
+            #{result_var} = #{code};
+          "
+          else
+            code
+          end
         end
       end # if recvtype
     end
