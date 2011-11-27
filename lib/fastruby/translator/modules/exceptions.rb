@@ -86,7 +86,7 @@ module FastRuby
         end
 
         frame_call(
-          frame(to_c(tree[1])+";","
+          "ret = " + frame(to_c(tree[1])+";","
             #{rescue_code}
           ", else_tree ? to_c(else_tree) : nil, 1)
 

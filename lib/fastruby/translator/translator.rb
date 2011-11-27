@@ -206,7 +206,7 @@ module FastRuby
     def frame_call(inner_code, precode = "", postcode = "")
       inline_block "
 
-
+        VALUE ret = Qnil;
         // create a call_frame
         #{@frame_struct} call_frame;
         typeof(call_frame)* old_pframe = (void*)pframe;
@@ -246,7 +246,7 @@ module FastRuby
                 }
                 
 
-        VALUE ret = #{inner_code};
+        #{inner_code};
         
         #{postcode}
         

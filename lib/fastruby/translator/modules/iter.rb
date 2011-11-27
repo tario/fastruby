@@ -598,41 +598,6 @@ fastruby_local_next:
 
         caller_code = nil
         convention_global_name = add_global_name("int",0)
-
-        call_frame_struct_code = "
-                #{@block_struct} block;
-
-                block.block_function_address = (void*)#{anonymous_function(&block_code)};
-                block.block_function_param = (void*)plocals;
-
-                // create a call_frame
-                #{@frame_struct} call_frame;
-
-                call_frame.parent_frame = (void*)pframe;
-                call_frame.plocals = plocals;
-                call_frame.return_value = Qnil;
-                call_frame.targetted = 0;
-                call_frame.thread_data = rb_current_thread_data();
-
-                VALUE old_call_frame = plocals->call_frame;
-                plocals->call_frame = LONG2FIX(&call_frame);
-
-                int aux = setjmp(call_frame.jmp);
-                if (aux != 0) {
-                  #{@frame_struct}* pframe_ = (void*)pframe;
-
-                  if (aux == FASTRUBY_TAG_RETRY ) {
-                    // do nothing and let the call execute again
-                  } else {
-                    if (call_frame.targetted == 0) {
-                      longjmp(pframe_->jmp,aux);
-                    }
-
-                    plocals->call_frame = old_call_frame;
-                    return call_frame.return_value;
-                  }
-                }
-        "
         
           precode = "
               struct FASTRUBYTHREADDATA* thread_data = 0;
@@ -686,7 +651,7 @@ fastruby_local_next:
           funcall_call_code = "
           #{
             frame_call(
-              protected_block("
+              "ret = " + protected_block("
               
               void* caller_func;
               void* block_func;
@@ -766,8 +731,6 @@ fastruby_local_next:
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
             "
                 // call to #{call_tree[2]}
-                #{call_frame_struct_code}
-
                 #{str_evaluate_args};
                 
                 VALUE recv = plocals->self;
@@ -778,15 +741,11 @@ fastruby_local_next:
                 end
                 } 
 
-                VALUE ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame, 
+                ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame, 
                   #{(0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")} );
-                plocals->call_frame = old_call_frame;
-                return ret;
             "
         else
             "
-                #{call_frame_struct_code}
-
                 VALUE recv = plocals->self;
                 
                 #{
@@ -796,9 +755,7 @@ fastruby_local_next:
                 }
                  
                 // call to #{call_tree[2]}
-                VALUE ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame);
-                plocals->call_frame = old_call_frame;
-                return ret;
+                ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame);
             "
         end
         
@@ -821,10 +778,16 @@ fastruby_local_next:
           }
         "
         
+        fastruby_precode = "                 #{@block_struct} block;
+
+                block.block_function_address = (void*)#{anonymous_function(&block_code)};
+                block.block_function_param = (void*)plocals;
+                "
+        
         if result_var
-          "#{result_var} = #{inline_block(code)}"
+          "#{result_var} = #{frame_call(code,fastruby_precode,"")}"
         else
-          inline_block(code)
+          frame_call(code,fastruby_precode,"")
         end
         
       end
