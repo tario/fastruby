@@ -23,7 +23,7 @@ module FastRuby
     
     register_translator_module IterTranslator
 
-    def to_c_iter(tree)
+    def to_c_iter(tree, result_var = nil)
 
       call_tree = tree[1]
       args_tree = tree[2]
@@ -31,7 +31,11 @@ module FastRuby
 
       directive_code = directive(call_tree)
       if directive_code
-        return directive_code
+        if result_var
+          return "#{result_var} = #{directive_code};\n"
+        else
+          return directive_code
+        end
       end
 
       other_call_tree = call_tree.dup
@@ -680,7 +684,7 @@ fastruby_local_next:
           
         
           funcall_call_code = "
-          return #{
+          #{
             frame_call(
               protected_block("
               
@@ -750,9 +754,11 @@ fastruby_local_next:
 
       recvtype = nil if call_args_tree.size > 1 ? call_args_tree.last[0] == :splat : false
       unless recvtype
-        inline_block "
-          #{funcall_call_code}
-        "
+        if result_var
+          "#{result_var} = #{funcall_call_code};"
+        else
+          funcall_call_code
+        end
       else
         encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)
 
@@ -796,9 +802,9 @@ fastruby_local_next:
             "
         end
         
-        inline_block "
+        code = "
           if (#{@last_address_name} == 0) {
-            #{funcall_call_code}
+            return #{funcall_call_code};
           } else {
             #{if recvtype and inference_complete
               "if (*#{@last_address_name} == 0) {
@@ -808,12 +814,19 @@ fastruby_local_next:
             end
             }
             if (*#{@last_address_name} == 0) {
-              #{funcall_call_code}
+              return #{funcall_call_code};
             } else {
               #{fastruby_call_code}
             }
           }
         "
+        
+        if result_var
+          "#{result_var} = #{inline_block(code)}"
+        else
+          inline_block(code)
+        end
+        
       end
     end
   end
