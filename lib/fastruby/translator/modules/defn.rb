@@ -42,20 +42,37 @@ module FastRuby
 
       code = "
       
-        usleep(0);
-        rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);
+      
+        if (rb_obj_is_kind_of(plocals->self, rb_cClass) || rb_obj_is_kind_of(plocals->self, rb_cModule)) {
+          rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);
+          
+          #{global_klass_variable} = plocals->self;
+          // set tree
+          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
+                  #{global_klass_variable},
+                  rb_str_new2(#{method_name.to_s.inspect}),
+                  #{literal_value tree},
+                  #{literal_value snippet_hash},
+                  #{literal_value alt_options}
+  
+                  );
+          
+        } else {
+          VALUE obj = plocals->self;
+          rb_define_singleton_method(obj, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
+          
+          #{global_klass_variable} = CLASS_OF(obj);
+          // set tree
+          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
+                  #{global_klass_variable},
+                  rb_str_new2(#{method_name.to_s.inspect}),
+                  #{literal_value tree},
+                  #{literal_value snippet_hash},
+                  #{literal_value alt_options}
+  
+                  );
+        }
         
-        #{global_klass_variable} = plocals->self;
-        // set tree
-        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
-                #{global_klass_variable},
-                rb_str_new2(#{method_name.to_s.inspect}),
-                #{literal_value tree},
-                #{literal_value snippet_hash},
-                #{literal_value alt_options}
-
-                );
-
         "
 
       if result_var
