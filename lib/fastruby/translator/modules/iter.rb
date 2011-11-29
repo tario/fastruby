@@ -138,11 +138,66 @@ module FastRuby
         end
         rb_funcall_caller_code = nil
 
-        if call_args_tree.size > 1
-
           str_recv = "pframe->next_recv"
-
           str_recv = "plocals->self" unless recv_tree
+
+          strargs = if call_args_tree.size > 1
+                      "," + (0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")
+                  else
+                    ""
+                  end
+          
+          str_evaluate_args = ""
+
+
+              rb_funcall_caller_code = proc { |name| "
+                static VALUE #{name}(VALUE param) {
+                  // call to #{call_tree[2]}
+                  VALUE last_expression = Qnil;
+  
+                  #{str_lvar_initialization}
+                  
+                  #{str_evaluate_args};
+                  
+                  return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1} #{strargs}
+                    );
+                }
+              "
+              }
+
+            rb_funcall_caller_code_with_lambda = proc { |name| "
+              static VALUE #{name}(VALUE param) {
+                // call to #{call_tree[2]}
+                #{str_lvar_initialization}
+              VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+
+              // freeze all stacks
+              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+
+              if (thread_data != 0) {
+                VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
+
+                // add reference to stack chunk to lambda object
+                rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+
+                // freeze the complete chain of stack chunks
+                while (rb_stack_chunk != Qnil) {
+                  struct STACKCHUNK* stack_chunk;
+                  Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+
+                  stack_chunk_freeze(stack_chunk);
+
+                  rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                }
+              }
+
+              return ret;
+              }
+            "
+            }
+
+
+          if call_args_tree.size > 1
             if call_args_tree.last[0] == :splat
               rb_funcall_caller_code = proc { |name| "
                 static VALUE #{name}(VALUE param) {
@@ -185,7 +240,9 @@ module FastRuby
                   return rb_funcall2(#{str_recv}, #{intern_num call_tree[2]}, argc, argv);
                 }
               "
-              }
+              }   
+              
+              rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
             else
               str_evaluate_args = "
                   #{
@@ -200,70 +257,9 @@ module FastRuby
                     }.join("\n")
                   }
               "
-              rb_funcall_caller_code = proc { |name| "
-                static VALUE #{name}(VALUE param) {
-                  // call to #{call_tree[2]}
-                  VALUE last_expression = Qnil;
-  
-                  #{str_lvar_initialization}
-                  
-                  #{str_evaluate_args};
-                  
-                  return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1}, 
-                    #{(0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")}
-                    );
-                }
-              "
-              }
             end
-            
-            rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
-        else
-          str_recv = "pframe->next_recv"
-          str_recv = "plocals->self" unless recv_tree
+          end
 
-            rb_funcall_caller_code = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-                #{str_lvar_initialization}
-                return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
-              }
-            "
-            }
-
-            rb_funcall_caller_code_with_lambda = proc { |name| "
-              static VALUE #{name}(VALUE param) {
-                // call to #{call_tree[2]}
-                #{str_lvar_initialization}
-              VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
-
-              // freeze all stacks
-              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
-
-              if (thread_data != 0) {
-                VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
-
-                // add reference to stack chunk to lambda object
-                rb_ivar_set(ret,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
-
-                // freeze the complete chain of stack chunks
-                while (rb_stack_chunk != Qnil) {
-                  struct STACKCHUNK* stack_chunk;
-                  Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
-
-                  stack_chunk_freeze(stack_chunk);
-
-                  rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
-                }
-              }
-
-              return ret;
-              }
-            "
-            }
-
-        end
-        
         argument_array_read = "
             VALUE arg;
             #{
