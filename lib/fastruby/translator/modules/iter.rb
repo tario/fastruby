@@ -727,11 +727,21 @@ fastruby_local_next:
       else
         encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)
 
-        fastruby_call_code = if call_args_tree.size > 1
+        if call_args_tree.size > 1
           value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
-            "
+          strargs = "," + (0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")
+        else
+          value_cast = "VALUE,VALUE,VALUE"
+          strargs = ""
+        end
+
+        fastruby_call_code = "
                 // call to #{call_tree[2]}
-                #{str_evaluate_args};
+                #{
+                if call_args_tree.size > 1
+                  str_evaluate_args
+                end
+                };
                 
                 VALUE recv = plocals->self;
                 
@@ -741,23 +751,8 @@ fastruby_local_next:
                 end
                 } 
 
-                ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame, 
-                  #{(0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")} );
+                ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame #{strargs});
             "
-        else
-            "
-                VALUE recv = plocals->self;
-                
-                #{
-                if recv_tree
-                 to_c recv_tree, "recv" 
-                end
-                }
-                 
-                // call to #{call_tree[2]}
-                ret = ((VALUE(*)(VALUE,VALUE,VALUE))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame);
-            "
-        end
         
         code = "
           if (#{@last_address_name} == 0) {
