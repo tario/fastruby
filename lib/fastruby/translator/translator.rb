@@ -486,6 +486,9 @@ module FastRuby
 
         end
         
+        
+        scope_mode = :dac
+        
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
 
@@ -500,6 +503,10 @@ module FastRuby
           if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
           int stack_chunk_instantiated = 0;
+          
+#{
+if scope_mode == :dac
+  " 
           VALUE rb_previous_stack_chunk = Qnil;
           VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
           struct STACKCHUNK* stack_chunk = 0;
@@ -521,13 +528,20 @@ module FastRuby
             Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
 
-
-          #{@locals_struct} *plocals;
+          #{@locals_struct}* plocals;
 
           int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
-
           plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           
+  "
+else
+  "
+          #{@locals_struct} locals;
+          typeof(locals) *plocals = &locals;
+  "
+end
+}
+
           plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
           void* old_parent_locals = frame.thread_data->last_plocals;
           frame.thread_data->last_plocals = plocals;
@@ -547,13 +561,18 @@ module FastRuby
           if (aux != 0) {
             plocals->active = Qfalse;
 
+#{
+if scope_mode == :dac
+  " 
             stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
             if (stack_chunk_instantiated) {
               rb_gc_unregister_address(&rb_stack_chunk);
               frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
             }
-            
+"
+end
+}            
             #{
             unless options[:main]
               "
@@ -593,13 +612,18 @@ module FastRuby
           #{to_c impl_tree, "last_expression"};
           
 local_return:
+#{
+if scope_mode == :dac
+"
           stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
           if (stack_chunk_instantiated) {
             rb_gc_unregister_address(&rb_stack_chunk);
             frame.thread_data->rb_stack_chunk = rb_previous_stack_chunk;
           }
-
+"
+end
+}
           plocals->active = Qfalse;
           
           frame.thread_data->last_plocals = old_parent_locals;
