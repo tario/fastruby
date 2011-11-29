@@ -1,4 +1,6 @@
-0.0.17	Implemented direct call to CFUNC methods on ruby1.9
+0.0.17	performance: refactored C translation to avoid unecessary non-local jumps such return
+
+		performance: Implemented direct call to CFUNC methods on ruby1.9
 
 		Added support for single methods (with "no class")
 
