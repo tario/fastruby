@@ -271,115 +271,6 @@ module FastRuby
             }
         "
         
-
-        rb_funcall_block_code_with_lambda = proc { |name,call_type| "
-          static VALUE #{name}(VALUE arg_, VALUE _plocals, int argc, VALUE* argv) {
-            // block for call to #{call_tree[2]}
-            #{argument_array_read}
-            
-            VALUE last_expression = Qnil;
-
-            #{@frame_struct} frame;
-            #{@frame_struct} *pframe = (void*)&frame;
-            #{@locals_struct} *plocals = (void*)_plocals;
-
-            frame.plocals = plocals;
-            frame.parent_frame = 0;
-            frame.return_value = Qnil;
-            frame.rescue = 0;
-            frame.targetted = 0;
-            frame.thread_data = rb_current_thread_data();
-
-              // create a fake parent frame representing the lambda method frame and a fake locals scope
-              VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
-              ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
-
-            #{str_arg_initialization}
-
-              int aux = setjmp(frame.jmp);
-              if (aux != 0) {
-                if (aux == FASTRUBY_TAG_NEXT) {
-                   return pframe->thread_data->accumulator;
-                } else if (aux == FASTRUBY_TAG_REDO) {
-                  // do nothing and let execute the block again
-                } else if (aux == FASTRUBY_TAG_RAISE) {
-                   rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
-                   return Qnil;
-#{
-if call_type != :proc_new
-"
-
-                } else if (aux == FASTRUBY_TAG_BREAK) {
-                  return frame.return_value;
-"
-end
-}
-                } else {
-
-
-#{
-if call_type == :proc_new
-"
-_local_return:
-                      if (plocals->targetted == 1) {
-                        if (plocals->active == Qfalse) {
-                          rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
-                        } else {
-                          ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                          frb_jump_tag(aux);
-                        }
-                      } else {
-                        rb_raise(rb_eLocalJumpError, \"unexpected return\");
-                      }
-"
-else
-"
-                  if (aux == FASTRUBY_TAG_RETURN) {
-                    if (plocals->targetted == 1) {
-                      ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                      return ((typeof(plocals))(pframe->plocals))->return_value;
-                    } else {
-                      rb_raise(rb_eLocalJumpError, \"unexpected return\");
-                    }
-                  } else {
-                    rb_raise(rb_eLocalJumpError, \"unexpected return\");
-                  }
-"
-end
-}
-                  ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-                  return frame.return_value;
-
-                }
-              }
-
-fastruby_local_redo:
-            #{str_impl};
-
-#{
-if call_type == :proc_new
-"
-            return last_expression;
-local_return:
-            aux = FASTRUBY_TAG_RETURN;
-            plocals->return_value = last_expression;
-            plocals->targetted = 1;
-            goto _local_return;
-"
-else
-"
-local_return:
-"
-end
-}
-
-fastruby_local_next:
-             ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
-            return last_expression;
-          }
-        "
-        }
- 
         rb_funcall_block_code = proc { |name,call_type| "
           static VALUE #{name}(VALUE arg_, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
@@ -399,17 +290,82 @@ fastruby_local_next:
             frame.thread_data = rb_current_thread_data();
 
             #{str_arg_initialization}
-            
+
+            #{
+            if call_type == :lambda or call_type == :proc_new
+            "
+              VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
+              ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
+            "
+            end
+            }
+
             int aux = setjmp(frame.jmp);
             if (aux != 0) {
 
                 if (aux == FASTRUBY_TAG_NEXT) {
-                  return pframe->thread_data->accumulator;
+                  last_expression = pframe->thread_data->accumulator;
+                  goto fastruby_local_next;
                 } else if (aux == FASTRUBY_TAG_REDO) {
                   // do nothing and let execute the block again
+#{
+if call_type == :lambda
+"
+
+                } else if (aux == FASTRUBY_TAG_BREAK) {
+                  last_expression = frame.return_value;
+                  goto fastruby_local_next;
+"
+end
+}
+#{
+if call_type == :lambda or call_type == :proc_new
+"
+                } else if (aux == FASTRUBY_TAG_RAISE) {
+                   rb_funcall(((typeof(plocals))(pframe->plocals))->self, #{intern_num :raise}, 1, frame.thread_data->exception);
+                   return Qnil;
+"
+end
+}
                 } else {
+#{
+case call_type
+when :proc_new
+"
+_local_return:
+                      if (plocals->targetted == 1) {
+                        if (plocals->active == Qfalse) {
+                          rb_raise(rb_eLocalJumpError,\"return from proc-closure\");
+                        } else {
+                          ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
+                          frb_jump_tag(aux);
+                        }
+                      } else {
+                        rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                      }
+"
+when :lambda
+"
+                  if (aux == FASTRUBY_TAG_RETURN) {
+                    if (plocals->targetted == 1) {
+                      last_expression = ((typeof(plocals))(pframe->plocals))->return_value;
+                      goto fastruby_local_next;
+
+                    } else {
+                      rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                    }
+                  } else {
+                    rb_raise(rb_eLocalJumpError, \"unexpected return\");
+                  }
+"
+else
+  "
                   frb_jump_tag(aux);
                   return frame.return_value;
+  "
+end
+}
+
                 }
             }
 
@@ -423,16 +379,45 @@ fastruby_local_next:
           "
           end
           }
-          
+
 fastruby_local_redo:
             #{str_impl};
 
+#{
+case call_type
+when :proc_new
+"
+            return last_expression;
+local_return:
+            aux = FASTRUBY_TAG_RETURN;
+            plocals->return_value = last_expression;
+            plocals->targetted = 1;
+            goto _local_return;
+"
+when :lambda
+"
+local_return:
+"
+else
+" 
             return last_expression;
 local_return:            
             plocals->return_value = last_expression;
             plocals->targetted = 1;
             frb_jump_tag(FASTRUBY_TAG_RETURN);
+"
+end
+}
+
+
 fastruby_local_next:
+#{
+if call_type == :proc_new or call_type == :lambda
+"
+  ((typeof(plocals))(pframe->plocals))->call_frame = old_call_frame;
+"
+end
+}
             return last_expression;          
             }
         "
@@ -589,10 +574,10 @@ fastruby_local_next:
                 )  {
 
                 caller_func = #{anonymous_function(:lambda,&rb_funcall_caller_code)};
-                block_func = #{anonymous_function(:lambda,&rb_funcall_block_code_with_lambda)};
+                block_func = #{anonymous_function(:lambda,&rb_funcall_block_code)};
               } else if (node == #{@procnew_node_gvar} && pframe->next_recv == rb_cProc) {
                 caller_func = #{anonymous_function(:lambda,&rb_funcall_caller_code)};
-                block_func = #{anonymous_function(:proc_new,&rb_funcall_block_code_with_lambda)};
+                block_func = #{anonymous_function(:proc_new,&rb_funcall_block_code)};
               } else if (node == #{@callcc_node_gvar}) {
                 caller_func = #{anonymous_function(:normal,&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(:callcc,&rb_funcall_block_code)};
