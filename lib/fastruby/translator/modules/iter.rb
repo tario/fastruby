@@ -136,8 +136,6 @@ module FastRuby
             end
           end
         end
-        rb_funcall_caller_code = nil
-
           str_recv = "pframe->next_recv"
           str_recv = "plocals->self" unless recv_tree
 
@@ -149,27 +147,18 @@ module FastRuby
           
           str_evaluate_args = ""
 
-
-              rb_funcall_caller_code = proc { |name| "
-                static VALUE #{name}(VALUE param) {
-                  // call to #{call_tree[2]}
-                  VALUE last_expression = Qnil;
-  
-                  #{str_lvar_initialization}
-                  
-                  #{str_evaluate_args};
-                  
-                  return rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1} #{strargs}
-                    );
-                }
-              "
-              }
-
-            rb_funcall_caller_code_with_lambda = proc { |name| "
+            rb_funcall_caller_code = proc { |name, call_type| "
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
+                 VALUE last_expression = Qnil;
+  
                 #{str_lvar_initialization}
-              VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, 0);
+                #{str_evaluate_args};
+                
+              VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1} #{strargs});
+                #{
+                if call_type == :lambda
+              "
 
               // freeze all stacks
               struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
@@ -190,7 +179,9 @@ module FastRuby
                   rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
                 }
               }
-
+              "
+              end
+            }
               return ret;
               }
             "
@@ -199,7 +190,7 @@ module FastRuby
 
           if call_args_tree.size > 1
             if call_args_tree.last[0] == :splat
-              rb_funcall_caller_code = proc { |name| "
+              rb_funcall_caller_code = proc { |name,call_type| "
                 static VALUE #{name}(VALUE param) {
                   // call to #{call_tree[2]}
   
@@ -241,8 +232,6 @@ module FastRuby
                 }
               "
               }   
-              
-              rb_funcall_caller_code_with_lambda = rb_funcall_caller_code
             else
               str_evaluate_args = "
                   #{
@@ -668,16 +657,16 @@ fastruby_local_next:
                 node == #{@lambda_node_gvar}
                 )  {
 
-                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
+                caller_func = #{anonymous_function(:lambda,&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_with_lambda)};
               } else if (node == #{@procnew_node_gvar} && pframe->next_recv == rb_cProc) {
-                caller_func = #{anonymous_function(&rb_funcall_caller_code_with_lambda)};
+                caller_func = #{anonymous_function(:lambda,&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_proc_new)};
               } else if (node == #{@callcc_node_gvar}) {
-                caller_func = #{anonymous_function(&rb_funcall_caller_code)};
+                caller_func = #{anonymous_function(:normal,&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code_callcc)};
               } else {
-                caller_func = #{anonymous_function(&rb_funcall_caller_code)};
+                caller_func = #{anonymous_function(:normal,&rb_funcall_caller_code)};
                 block_func = #{anonymous_function(&rb_funcall_block_code)};
               }
               

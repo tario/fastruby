@@ -195,10 +195,10 @@ module FastRuby
       end
     end
 
-    def anonymous_function
+    def anonymous_function(*x)
 
       name = "anonymous" + rand(10000000).to_s
-      extra_code << yield(name)
+      extra_code << yield(name,*x)
 
       name
     end
