@@ -402,7 +402,7 @@ fastruby_local_next:
         }
 
 
-        rb_funcall_block_code = proc { |name| "
+        rb_funcall_block_code = proc { |name,call_type| "
           static VALUE #{name}(VALUE arg_, VALUE _plocals, int argc, VALUE* argv) {
             // block for call to #{call_tree[2]}
             #{argument_array_read}
@@ -435,63 +435,17 @@ fastruby_local_next:
                 }
             }
 
-fastruby_local_redo:
-            #{str_impl};
-
-            return last_expression;
-local_return:            
-            plocals->return_value = last_expression;
-            plocals->targetted = 1;
-            frb_jump_tag(FASTRUBY_TAG_RETURN);
-fastruby_local_next:
-            return last_expression;          
-            }
-        "
-        }
-
-        rb_funcall_block_code_callcc = proc { |name| "
-          static VALUE #{name}(VALUE arg, VALUE _plocals, int argc, VALUE* argv) {
-            #{
-            # TODO: access directly to argc and argv for optimal execution
-            if RUBY_VERSION =~ /^1\.9/ 
-              "arg = rb_ary_new4(argc,argv);"
-            end
-            }
-          
-            // block for call to #{call_tree[2]}
-            VALUE last_expression = Qnil;
-
-            #{@frame_struct} frame;
-            #{@frame_struct} *pframe = (void*)&frame;
-            #{@locals_struct} *plocals = (void*)_plocals;
-
-            frame.plocals = plocals;
-            frame.parent_frame = 0;
-            frame.return_value = Qnil;
-            frame.rescue = 0;
-            frame.targetted = 0;
-            frame.thread_data = rb_current_thread_data();
-
-            #{str_arg_initialization}
-
-            int aux = setjmp(frame.jmp);
-            if (aux != 0) {
-
-                if (aux == FASTRUBY_TAG_NEXT) {
-                  return pframe->thread_data->accumulator;
-                } else if (aux == FASTRUBY_TAG_REDO) {
-                  // do nothing and let execute the block again
-                } else {
-                  frb_jump_tag(aux);
-                  return frame.return_value;
-                }
-            }
-            
+          #{
+          if call_type == :callcc
+          "
             if (rb_obj_is_kind_of(arg, rb_const_get(rb_cObject, #{intern_num :Continuation}))) {
               struct FASTRUBYTHREADDATA* thread_data = frame.thread_data;
               rb_ivar_set(arg,#{intern_num :__stack_chunk},thread_data->rb_stack_chunk);
             }
-
+          "
+          end
+          }
+          
 fastruby_local_redo:
             #{str_impl};
 
@@ -502,10 +456,9 @@ local_return:
             frb_jump_tag(FASTRUBY_TAG_RETURN);
 fastruby_local_next:
             return last_expression;          
-          }
+            }
         "
         }
-
 
         fastruby_str_arg_initialization = ""
 
@@ -664,10 +617,10 @@ fastruby_local_next:
                 block_func = #{anonymous_function(&rb_funcall_block_code_proc_new)};
               } else if (node == #{@callcc_node_gvar}) {
                 caller_func = #{anonymous_function(:normal,&rb_funcall_caller_code)};
-                block_func = #{anonymous_function(&rb_funcall_block_code_callcc)};
+                block_func = #{anonymous_function(:callcc,&rb_funcall_block_code)};
               } else {
                 caller_func = #{anonymous_function(:normal,&rb_funcall_caller_code)};
-                block_func = #{anonymous_function(&rb_funcall_block_code)};
+                block_func = #{anonymous_function(:normal,&rb_funcall_block_code)};
               }
               
 
