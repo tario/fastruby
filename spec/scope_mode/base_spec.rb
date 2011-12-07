@@ -150,4 +150,16 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
         "
     ).should be == :dag
   end
+  
+  it "local call from inside block should return :dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "    def bar
+            foo do
+              print
+            end
+          end
+        "
+    ).should be == :dag
+  end
+  
 end
