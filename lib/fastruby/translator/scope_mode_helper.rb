@@ -33,11 +33,34 @@ module FastRuby
       first_call_node = impl_tree.find_tree{|st| st.node_type == :call} 
       first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
       
+      if first_iter_node
+        return :dag
+      end
+      
       if not first_call_node and not first_iter_node
         return :linear
       end
       
-      :dag
+      impl_tree.walk_tree do |subtree|
+        if subtree.node_type == :block
+          (1..subtree.size-2).each do |i|
+            call_node = subtree[i].find_tree do |st2|
+              st2.node_type == :call
+            end
+            
+            lvar_node = subtree[i+1].find_tree do |st2|
+              st2.node_type == :lvar
+            end
+            
+            if call_node and lvar_node
+              # read after write, use dag
+              return :dag
+            end
+          end
+        end
+      end
+      
+      :linear
     end
   end
 end
