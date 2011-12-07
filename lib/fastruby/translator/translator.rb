@@ -543,7 +543,12 @@ end
 
           plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
           void* old_parent_locals = frame.thread_data->last_plocals;
-          frame.thread_data->last_plocals = plocals;
+          
+          #{
+          if scope_mode == :dag 
+            "frame.thread_data->last_plocals = plocals;\n"
+          end
+          }
           
           frame.plocals = plocals;
           plocals->active = Qtrue;
