@@ -104,7 +104,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :dag
   end
-  
+
   it "two iter call, one empty and the second with yield should return dag" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a)
@@ -115,6 +115,28 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
           yield
         end
       end"
+    ).should be == :dag
+  end
+  
+  it "lambda with yield must return :dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "          def foo
+            lambda {
+              yield
+            }
+          end
+        "
+    ).should be == :dag
+  end  
+
+  it "method with return from inside block return :dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "    def bar
+            foo do
+              return 9
+            end
+          end
+        "
     ).should be == :dag
   end  
 end
