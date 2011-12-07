@@ -21,5 +21,24 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class FastRubySexp < Array
     alias node_type first
+    
+    def walk_tree(&block)
+      each do |subtree|
+        if subtree.instance_of? FastRubySexp
+          subtree.walk_tree(&block)
+        end
+      end
+      block.call(self)
+    end
+    
+    def find_tree
+      walk_tree do |subtree|
+        if yield(subtree)
+          return subtree
+        end
+      end
+      
+      return nil
+    end
   end
 end

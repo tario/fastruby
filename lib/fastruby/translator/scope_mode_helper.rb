@@ -18,12 +18,22 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
+require "fastruby/sexp_extension"
+
 module FastRuby
   class ScopeModeHelper
-    def self.get_scope_mode(tree)
+    def self.get_scope_mode(tree_)
+      tree = FastRuby::FastRubySexp.from_sexp(tree_)
       
       impl_tree = tree[3]
       if impl_tree == s(:scope, s(:block, s(:nil)))
+        return :linear
+      end
+      
+      first_call_node = impl_tree.find_tree{|st| st.node_type == :call} 
+      first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
+      
+      if not first_call_node and not first_iter_node
         return :linear
       end
       
