@@ -97,8 +97,16 @@ private
         return false unless tree.kind_of? FastRuby::FastRubySexp
 
         tree.walk_tree do |subtree|
-          if subtree.node_type == :lvar
+          if subtree.node_type == :lvar or 
+            subtree.node_type == :self or
+            subtree.node_type == :yield
             return true
+          end
+          
+          if subtree.node_type == :call
+            if subtree[1] == nil
+              return true
+            end
           end
         end
       end
