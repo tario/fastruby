@@ -65,4 +65,14 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :linear
   end
+  
+  it "iter call with block accessing locals should return dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a)
+        bar do
+          a
+        end
+      end"
+    ).should be == :dag
+  end
 end
