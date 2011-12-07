@@ -32,31 +32,29 @@ module FastRuby
       
       first_call_node = impl_tree.find_tree{|st| st.node_type == :call} 
       first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
-      
-      if first_iter_node
-        first_iter_node.walk_tree do |subtree|
-          if subtree.node_type == :lvar or subtree.node_type == :yield or subtree.node_type == :lasgn
-            return :dag
-          end
-        end
-       
-        iter_impl = first_iter_node[3]
-        
-        if iter_impl
-          return_node = iter_impl.find_tree{|st2| st2.node_type == :return}
-        
-          if return_node
-            return :dag
-          end
-        end
-        
-        if first_iter_node[2]
-          return :dag
-        end
-      end
-      
+
       if not first_call_node and not first_iter_node
         return :linear
+      end
+      
+      tree.walk_tree do |subtree|
+        if subtree.node_type == :iter
+          iter_impl = subtree[3]
+
+          subtree.walk_tree do |subtree|
+            if subtree.node_type == :lvar or subtree.node_type == :yield or subtree.node_type == :lasgn
+              return :dag
+            end
+          end
+
+          if iter_impl
+            return_node = iter_impl.find_tree{|st2| st2.node_type == :return}
+
+            if return_node
+              return :dag
+            end
+          end
+        end
       end
       
       find_call_block = proc do |st2|
