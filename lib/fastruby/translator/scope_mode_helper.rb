@@ -99,7 +99,8 @@ private
         tree.walk_tree do |subtree|
           if subtree.node_type == :lvar or 
             subtree.node_type == :self or
-            subtree.node_type == :yield
+            subtree.node_type == :yield or
+            subtree.node_type == :return
             return true
           end
           
@@ -120,7 +121,8 @@ private
         tree.walk_tree do |subtree|
           if subtree.node_type == :lvar or 
             subtree.node_type == :self or 
-            subtree.node_type == :yield or 
+            subtree.node_type == :yield or
+            subtree.node_type == :return or 
             subtree.node_type == :lasgn
             return true
           end
