@@ -109,7 +109,7 @@ private
         return false unless tree.kind_of? FastRuby::FastRubySexp
 
         tree.walk_tree do |subtree|
-          if subtree.node_type == :lvar or subtree.node_type == :yield or subtree.node_type == :lasgn
+          if subtree.node_type == :lvar or subtree.node_type == :self or subtree.node_type == :yield or subtree.node_type == :lasgn
             return true
           end
         end
