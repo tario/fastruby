@@ -138,5 +138,16 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
           end
         "
     ).should be == :dag
-  end  
+  end
+  
+  it "method with self from inside block return :dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "    def bar
+            foo do
+              self
+            end
+          end
+        "
+    ).should be == :dag
+  end
 end
