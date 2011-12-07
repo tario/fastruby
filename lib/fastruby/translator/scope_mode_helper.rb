@@ -39,6 +39,16 @@ module FastRuby
             return :dag
           end
         end
+       
+        iter_impl = first_iter_node[3]
+        
+        if iter_impl
+          return_node = iter_impl.find_tree{|st2| st2.node_type == :return}
+        
+          if return_node
+            return :dag
+          end
+        end
         
         if first_iter_node[2]
           return :dag
