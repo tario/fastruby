@@ -34,7 +34,11 @@ module FastRuby
       first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
       
       if first_iter_node
-        return :dag
+        first_iter_node.walk_tree do |subtree|
+          if subtree.node_type == :lvar
+            return :dag
+          end
+        end
       end
       
       if not first_call_node and not first_iter_node
