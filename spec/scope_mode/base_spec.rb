@@ -75,4 +75,33 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :dag
   end
+  
+  it "iter call with block doing yield should return dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a)
+        bar do
+          yield
+        end
+      end"
+    ).should be == :dag
+  end  
+  
+  it "iter call with block with arguments should return dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a)
+        bar do |x|
+        end
+      end"
+    ).should be == :dag
+  end  
+
+  it "iter call with block writing local variable should return dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a)
+        bar do
+          a = 87
+        end
+      end"
+    ).should be == :dag
+  end
 end
