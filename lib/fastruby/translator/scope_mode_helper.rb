@@ -67,9 +67,15 @@ module FastRuby
       
       impl_tree.walk_tree do |subtree|
         if subtree.node_type == :block
-          (1..subtree.size-2).each do |i|
-            return :dag if has_call?(subtree[i]) and has_lvar?(subtree[i+1])
+          first_call_index = subtree.size
+          last_read_index = 0
+          (1..subtree.size).each do |i|
+            first_call_index = i if has_call?(subtree[i]) and i < first_call_index 
+            last_read_index = i if has_lvar?(subtree[i]) and i > last_read_index 
+            
           end
+          
+          return :dag if last_read_index > first_call_index
         elsif subtree.node_type == :while
           return :dag if has_call?(subtree[1],subtree[2]) and has_lvar?(subtree[1],subtree[2])
         end
