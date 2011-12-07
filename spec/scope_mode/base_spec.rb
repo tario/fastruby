@@ -37,6 +37,33 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
+  it "method with only ONE call and self read after call should return :dag scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c) 
+        a+b
+        self
+      end"
+    ).should be == :dag
+  end
+
+  it "method with only ONE call and yield after call should return :dag scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c) 
+        a+b
+        yield
+      end"
+    ).should be == :dag
+  end
+
+  it "method with only ONE call and local call after call should return :dag scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c) 
+        a+b
+        foo
+      end"
+    ).should be == :dag
+  end
+
   it "method call AFTER read should return :linear scope" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a,b) 
@@ -56,4 +83,5 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :dag
   end
+ 
 end
