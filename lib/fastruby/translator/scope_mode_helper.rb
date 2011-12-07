@@ -21,7 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class ScopeModeHelper
     def self.get_scope_mode(tree)
-      :dac
+      :dag
     end
   end
 end

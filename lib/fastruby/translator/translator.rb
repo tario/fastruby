@@ -504,7 +504,7 @@ module FastRuby
           int stack_chunk_instantiated = 0;
           
 #{
-if scope_mode == :dac
+if scope_mode == :dag
   " 
           VALUE rb_previous_stack_chunk = Qnil;
           VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
@@ -561,7 +561,7 @@ end
             plocals->active = Qfalse;
 
 #{
-if scope_mode == :dac
+if scope_mode == :dag
   " 
             stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
@@ -612,7 +612,7 @@ end
           
 local_return:
 #{
-if scope_mode == :dac
+if scope_mode == :dag
 "
           stack_chunk_set_current_position(stack_chunk, previous_stack_position);
 
