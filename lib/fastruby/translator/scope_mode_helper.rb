@@ -70,14 +70,7 @@ module FastRuby
             return :dag if has_call?(subtree[i]) and has_lvar?(subtree[i+1])
           end
         elsif subtree.node_type == :while
-          call_node_1 = subtree[1].find_tree(&find_call_block)
-          call_node_2 = subtree[2].find_tree(&find_call_block)
-          lvar_node_1 = subtree[1].find_tree(&find_lvar_block)
-          lvar_node_2 = subtree[2].find_tree(&find_lvar_block)
-          
-          if (call_node_1 or call_node_2) and (lvar_node_1 or lvar_node_2)
-            return :dag
-          end
+          return :dag if has_call?(subtree[1],subtree[2]) and has_lvar?(subtree[1],subtree[2])
         end
       end
       
@@ -85,31 +78,42 @@ module FastRuby
     end
     
 private
-    def has_call?(tree)
-      tree.walk_tree do |subtree|
-        if subtree.node_type == :call
-          return true
+    def has_call?(*trees)
+      trees.each do |tree|
+        return false unless tree.kind_of? FastRuby::FastRubySexp
+        
+        tree.walk_tree do |subtree|
+          if subtree.node_type == :call
+            return true
+          end
         end
       end
       
       false
     end
-    def has_lvar?(tree)
-      tree.walk_tree do |subtree|
-        if subtree.node_type == :lvar
-          return true
+    def has_lvar?(*trees)
+      trees.each do |tree|
+        return false unless tree.kind_of? FastRuby::FastRubySexp
+
+        tree.walk_tree do |subtree|
+          if subtree.node_type == :lvar
+            return true
+          end
         end
       end
       
       false
     end
-    def has_local_variable_access?(tree) 
-      tree.walk_tree do |subtree|
-        if subtree.node_type == :lvar or subtree.node_type == :yield or subtree.node_type == :lasgn
-          return true
+    def has_local_variable_access?(*trees) 
+      trees.each do |tree|
+        return false unless tree.kind_of? FastRuby::FastRubySexp
+
+        tree.walk_tree do |subtree|
+          if subtree.node_type == :lvar or subtree.node_type == :yield or subtree.node_type == :lasgn
+            return true
+          end
         end
       end
-      
       false
     end 
   end
