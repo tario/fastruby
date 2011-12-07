@@ -25,7 +25,7 @@ require "fastruby/method_extension"
 require "fastruby/set_tree"
 require "fastruby/exceptions"
 require "fastruby/translator/translator_modules"
-
+require "fastruby/translator/scope_mode_helper"
 
 module FastRuby
   class Context
@@ -485,9 +485,8 @@ module FastRuby
           end
 
         end
-        
-        
-        scope_mode = :dac
+       
+        scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(tree)
         
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
