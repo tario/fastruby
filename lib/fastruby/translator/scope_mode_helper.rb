@@ -21,6 +21,12 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class ScopeModeHelper
     def self.get_scope_mode(tree)
+      
+      impl_tree = tree[3]
+      if impl_tree == s(:scope, s(:block, s(:nil)))
+        return :linear
+      end
+      
       :dag
     end
   end
