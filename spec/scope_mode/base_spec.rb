@@ -57,4 +57,12 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
+  it "iter call with empty block should return linear" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo
+        bar do
+        end
+      end"
+    ).should be == :linear
+  end
 end
