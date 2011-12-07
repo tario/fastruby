@@ -35,9 +35,13 @@ module FastRuby
       
       if first_iter_node
         first_iter_node.walk_tree do |subtree|
-          if subtree.node_type == :lvar
+          if subtree.node_type == :lvar or subtree.node_type == :yield or subtree.node_type == :lasgn
             return :dag
           end
+        end
+        
+        if first_iter_node[2]
+          return :dag
         end
       end
       
