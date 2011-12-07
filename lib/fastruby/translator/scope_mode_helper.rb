@@ -41,21 +41,32 @@ module FastRuby
         return :linear
       end
       
+      find_call_block = proc do |st2|
+         st2.node_type == :call
+      end
+      find_lvar_block = proc do |st2|
+         st2.node_type == :lvar
+      end
+      
       impl_tree.walk_tree do |subtree|
         if subtree.node_type == :block
           (1..subtree.size-2).each do |i|
-            call_node = subtree[i].find_tree do |st2|
-              st2.node_type == :call
-            end
-            
-            lvar_node = subtree[i+1].find_tree do |st2|
-              st2.node_type == :lvar
-            end
+            call_node = subtree[i].find_tree(&find_call_block)
+            lvar_node = subtree[i+1].find_tree(&find_lvar_block)
             
             if call_node and lvar_node
               # read after write, use dag
               return :dag
             end
+          end
+        elsif subtree.node_type == :while
+          call_node_1 = subtree[1].find_tree(&find_call_block)
+          call_node_2 = subtree[2].find_tree(&find_call_block)
+          lvar_node_1 = subtree[1].find_tree(&find_lvar_block)
+          lvar_node_2 = subtree[2].find_tree(&find_lvar_block)
+          
+          if (call_node_1 or call_node_2) and (lvar_node_1 or lvar_node_2)
+            return :dag
           end
         end
       end
