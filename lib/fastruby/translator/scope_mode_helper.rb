@@ -23,8 +23,6 @@ require "fastruby/sexp_extension"
 module FastRuby
   class ScopeModeHelper
     def self.get_scope_mode(tree_)
-      #return :dag if tree_[1] == :foo2 or tree_[1] == :foo3
-      
       tree = FastRuby::FastRubySexp.from_sexp(tree_)
       
       impl_tree = tree[3]
