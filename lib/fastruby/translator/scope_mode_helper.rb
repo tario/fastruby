@@ -45,7 +45,8 @@ module FastRuby
         if subtree.node_type == :iter
           iter_impl = subtree[3]
           
-          return :dag if has_local_variable_access? subtree
+          return :dag if has_local_variable_access?(subtree[3])
+          return :dag if subtree[2]
 
           if iter_impl
             return_node = iter_impl.find_tree{|st2| st2.node_type == :return}
@@ -109,8 +110,17 @@ private
         return false unless tree.kind_of? FastRuby::FastRubySexp
 
         tree.walk_tree do |subtree|
-          if subtree.node_type == :lvar or subtree.node_type == :self or subtree.node_type == :yield or subtree.node_type == :lasgn
+          if subtree.node_type == :lvar or 
+            subtree.node_type == :self or 
+            subtree.node_type == :yield or 
+            subtree.node_type == :lasgn
             return true
+          end
+          
+          if subtree.node_type == :call
+            if subtree[1] == nil
+              return true
+            end
           end
         end
       end
