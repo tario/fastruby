@@ -104,4 +104,17 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :dag
   end
+  
+  it "two iter call, one empty and the second with yield should return dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a)
+        bar do
+        end
+        
+        bar do
+          yield
+        end
+      end"
+    ).should be == :dag
+  end  
 end
