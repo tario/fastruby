@@ -76,8 +76,6 @@ module FastRuby
           end
           
           return :dag if last_read_index > first_call_index
-        elsif subtree.node_type == :while
-          return :dag if has_call?(subtree[1],subtree[2]) and has_lvar?(subtree[1],subtree[2])
         elsif subtree.node_type == :if
           # condition_tree -> true_tree
           # condition_tree -> false_tree
