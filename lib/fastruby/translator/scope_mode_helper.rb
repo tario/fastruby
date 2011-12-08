@@ -89,6 +89,13 @@ module FastRuby
             return :dag if has_lvar?(true_tree)
             return :dag if has_lvar?(false_tree)
           end
+        elsif subtree.node_type == :scope
+        elsif subtree.node_type == :iter
+        else
+          subtrees = subtree.select{|st2| st2.instance_of? FastRuby::FastRubySexp}
+          if has_lvar?(*subtrees) and has_call?(*subtrees)
+            return :dag 
+          end
         end
       end
       
