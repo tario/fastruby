@@ -37,10 +37,6 @@ module FastRuby
       first_call_node = impl_tree.find_tree{|st| st.node_type == :call} 
       first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
 
-      if not first_call_node and not first_iter_node
-        return :linear
-      end
-      
       tree.walk_tree do |subtree|
         if subtree.node_type == :iter
           iter_impl = subtree[3]
@@ -89,6 +85,8 @@ module FastRuby
           end
         elsif subtree.node_type == :scope
         elsif subtree.node_type == :iter
+        elsif subtree.node_type == :for
+          return :dag
         else
           subtrees = subtree.select{|st2| st2.instance_of? FastRuby::FastRubySexp}
           if has_lvar?(*subtrees) and has_call?(*subtrees)
