@@ -25,4 +25,26 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
+  it "possible read on case after call should return :dag scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c)
+        case (a > 0)
+          when 0
+            c
+        end
+      end"
+    ).should be == :dag
+  end
+
+  it "possible read on case (on enum) after call should return :dag scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c)
+        case (a > 0)
+          when c
+            0
+        end
+      end"
+    ).should be == :dag
+  end
+
 end
