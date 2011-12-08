@@ -47,4 +47,15 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
+  it "for with local read and call should return :dag scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c)
+        for a in b
+          foo
+          c
+        end
+      end"
+    ).should be == :dag
+  end
+
 end
