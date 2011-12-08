@@ -6,28 +6,6 @@ require "fastruby/translator/scope_mode_helper"
 $parser = RubyParser.new
 
 describe FastRuby::ScopeModeHelper, "scope mode helper" do
-  it "empty method should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(); end"
-    ).should be == :linear
-  end
-
-  it "method without calls should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(a,b,c) 
-        a
-      end"
-    ).should be == :linear
-  end
-
-  it "method with only ONE call should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(a,b) 
-        a+b
-      end"
-    ).should be == :linear
-  end
-
   it "method with only ONE call and read after call should return :dag scope mode" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a,b,c) 
@@ -73,15 +51,6 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
-  it "method call AFTER read should return :linear scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(a,b) 
-        a=b
-        a+b
-      end"
-    ).should be == :linear
-  end
-
   it "read AFTER call should return :dag scope" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a,b) 
@@ -102,5 +71,4 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :dag
   end
- 
 end
