@@ -30,10 +30,6 @@ module FastRuby
       tree = FastRuby::FastRubySexp.from_sexp(tree_)
       
       impl_tree = tree[3]
-      if impl_tree == s(:scope, s(:block, s(:nil)))
-        return :linear
-      end
-      
       first_call_node = impl_tree.find_tree{|st| st.node_type == :call} 
       first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
 
