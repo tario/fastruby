@@ -30,9 +30,6 @@ module FastRuby
       tree = FastRuby::FastRubySexp.from_sexp(tree_)
       
       impl_tree = tree[3]
-      first_call_node = impl_tree.find_tree{|st| st.node_type == :call} 
-      first_iter_node = impl_tree.find_tree{|st| st.node_type == :iter}
-
       tree.walk_tree do |subtree|
         if subtree.node_type == :iter
           iter_impl = subtree[3]
@@ -48,13 +45,6 @@ module FastRuby
             end
           end
         end
-      end
-      
-      find_call_block = proc do |st2|
-         st2.node_type == :call
-      end
-      find_lvar_block = proc do |st2|
-         st2.node_type == :lvar
       end
       
       impl_tree.walk_tree do |subtree|
