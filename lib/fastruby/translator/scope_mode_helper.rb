@@ -119,8 +119,7 @@ private
         tree.walk_tree do |subtree|
           if subtree.node_type == :lvar or 
             subtree.node_type == :self or
-            subtree.node_type == :yield or
-            subtree.node_type == :return
+            subtree.node_type == :yield
             return true
           end
           
