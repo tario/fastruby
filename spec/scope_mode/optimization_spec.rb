@@ -54,5 +54,13 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :linear
   end
   
+  it "return of simple call should return :linear" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b)
+      return a+b
+      end"
+    ).should be == :linear
+  end
+
   
 end
