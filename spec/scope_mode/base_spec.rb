@@ -42,15 +42,6 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
-  it "method with only ONE call and local return after call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(a,b,c) 
-        a+b
-        return 0
-      end"
-    ).should be == :dag
-  end
-
   it "read AFTER call should return :dag scope" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a,b) 
