@@ -69,8 +69,6 @@ module FastRuby
             return :dag if has_lvar?(true_tree)
             return :dag if has_lvar?(false_tree)
           end
-        elsif subtree.node_type == :scope
-        elsif subtree.node_type == :iter
         elsif subtree.node_type == :for
           return :dag
         else
