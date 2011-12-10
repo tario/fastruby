@@ -84,4 +84,28 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :linear
   end  
 
+  it "method with read on begin body should return :linear scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c)
+        begin
+          nil.bar(b)
+        rescue
+        end
+      end"
+    ).should be == :linear
+  end
+
+  it "method with read on begin body and call on rescue body   should return :linear scope mode" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c)
+        begin
+          b
+        rescue
+          a.foo
+        end
+      end"
+    ).should be == :linear
+  end
+
+
 end
