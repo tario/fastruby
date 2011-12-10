@@ -75,7 +75,7 @@ module FastRuby
           return :dag
         else
           subtrees = subtree.select{|st2| st2.instance_of? FastRuby::FastRubySexp}
-	  if subtrees.size > 1
+      	  if subtrees.size > 1
             if has_lvar?(*subtrees) and has_call?(*subtrees)
               return :dag
             end
