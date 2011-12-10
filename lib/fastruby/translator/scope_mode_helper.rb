@@ -69,8 +69,25 @@ module FastRuby
             return :dag if has_lvar?(true_tree)
             return :dag if has_lvar?(false_tree)
           end
+        elsif subtree.node_type == :rescue
+          begin_body = subtree[1]
+          
+          if has_call?(begin_body)
+            subtree[2..3].each do |st2|
+              return :dag if has_lvar?(st2) 
+            end
+          end
+          
+          if has_lvar?(begin_body)
+            subtree[2..3].each do |st2|
+              if st2.find_tree{|st3| st3.node_type == :retry}
+                return :dag if has_call?(st2) or has_call?(begin_body)
+              end
+            end
+          end
         elsif subtree.node_type == :for
           return :dag
+        elsif subtree.node_type == :resbody
         else
           subtrees = subtree.select{|st2| st2.instance_of? FastRuby::FastRubySexp}
       	  if subtrees.size > 1
