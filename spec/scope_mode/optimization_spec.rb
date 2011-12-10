@@ -62,5 +62,26 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :linear
   end
 
-  
+  it "call on if body and read on condition should return :linear (no read after call risk)" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b)
+        if a
+          b.foo
+        end
+      end"
+    ).should be == :linear
+  end  
+
+  it "call on if body and read on else body should return :linear (no read after call risk)" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b)
+        if true
+          b
+        else
+          b.foo
+        end
+      end"
+    ).should be == :linear
+  end  
+
 end
