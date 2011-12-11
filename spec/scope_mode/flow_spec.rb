@@ -58,4 +58,14 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
+  it "case with a when should act as call and local read after case when should return :dag" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b,c)
+        case b
+          when c
+        end
+        a
+    end"
+    ).should be == :dag
+  end
 end
