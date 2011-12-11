@@ -87,6 +87,23 @@ module FastRuby
           end
         elsif subtree.node_type == :for
           return :dag
+        elsif subtree.node_type == :case
+          eval_expr_tree = subtree[1]
+
+          eval_expr_tree_has_call =  has_call? eval_expr_tree
+
+          subtree[2..-2].each do |st2|
+            return :dag if has_lvar?(st2[1]) if eval_expr_tree_has_call
+            if eval_expr_tree_has_call or has_call?(st2)
+                return :dag if has_lvar?(st2[2])
+            end
+          end
+
+          if subtree[-1]
+            if eval_expr_tree_has_call
+              return :dag if has_lvar?(subtree[-1])
+            end
+          end
         elsif subtree.node_type == :resbody
         else
           subtrees = subtree.select{|st2| st2.instance_of? FastRuby::FastRubySexp}
