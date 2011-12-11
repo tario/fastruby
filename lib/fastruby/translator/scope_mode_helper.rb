@@ -107,7 +107,7 @@ private
         return false unless tree.kind_of? FastRuby::FastRubySexp
         
         tree.walk_tree do |subtree|
-          if subtree.node_type == :call
+          if subtree.node_type == :call or subtree.node_type == :when
             return true
           end
         end
