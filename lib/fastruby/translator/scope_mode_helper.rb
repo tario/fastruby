@@ -29,7 +29,13 @@ module FastRuby
     def get_scope_mode(tree_)
       tree = FastRuby::FastRubySexp.from_sexp(tree_)
       
+      args_tree = tree[2]
       impl_tree = tree[3]
+      
+      args_tree[1..-1].each do |subtree|
+        return :dag if subtree.to_s =~ /^\&/
+      end
+      
       tree.walk_tree do |subtree|
         if subtree.node_type == :iter
           iter_impl = subtree[3]
@@ -44,6 +50,8 @@ module FastRuby
               return :dag
             end
           end
+        elsif subtree.node_type == :block_pass
+          return :dag
         end
       end
       
