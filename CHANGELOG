@@ -1,4 +1,8 @@
-0.0.17	performance: refactored C translation to avoid unecessary non-local jumps such return
+0.0.17	peforrmance: implemented linear stack scopes when possible
+
+		performance: refactored C translation to avoid unecessary non-local jumps such return
+
+		performance: refactored C translation to avoid unecessary anonymous C functions
 
 		performance: Implemented direct call to CFUNC methods on ruby1.9
 
