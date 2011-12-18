@@ -29,9 +29,14 @@ module FastRuby
     def get_scope_mode(tree_)
       tree = FastRuby::FastRubySexp.from_sexp(tree_)
       
-      args_tree = tree[2]
-      impl_tree = tree[3]
-      
+      if tree.node_type == :defn
+        args_tree = tree[2]
+        impl_tree = tree[3]
+      elsif tree.node_type == :defs
+        args_tree = tree[3]
+        impl_tree = tree[4]
+      end
+
       args_tree[1..-1].each do |subtree|
         return :dag if subtree.to_s =~ /^\&/
       end
