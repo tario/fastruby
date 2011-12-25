@@ -48,6 +48,8 @@ module FastRuby
 
         blk.call(@frbsexp[1],@frbsexp[2])
         blk.call(@frbsexp[1],@frbsexp[3])
+        blk.call(@frbsexp[2],@frbsexp)
+        blk.call(@frbsexp[3],@frbsexp)
       end
 
       def edges_scope(&blk)
