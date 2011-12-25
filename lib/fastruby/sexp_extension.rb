@@ -45,10 +45,12 @@ module FastRuby
       end
 
       def edges_block(&blk)
-        @frbsexp[1].edges.each(&blk)
+        @frbsexp[1..-1].each do |subtree|
+          subtree.edges.each(&blk)
+        end
 
         (2..@frbsexp.size-1).each do |i|
-          blk.call(@frbsexp[i-1], @frbsexp[i])
+          blk.call(@frbsexp[i-1], @frbsexp[i].first_tree)
         end
         blk.call(@frbsexp.last, @frbsexp)
       end
@@ -104,6 +106,27 @@ module FastRuby
     def edges
       @edges
     end
+
+    def first_tree
+      send("first_tree_#{node_type}")
+    end
+
+    def first_tree_call
+      recv = self[1]
+      if recv
+        recv.first_tree
+      else
+        args_tree = self[3]
+        if args_tree.size > 1
+          args_tree[1].first_tree
+        else
+          self
+        end
+      end
+    end
+
+    def first_tree_lvar; self; end
+    def first_tree_lit; self; end
   end
 end
 
