@@ -43,4 +43,15 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([sexp[3][1][1],sexp[3][1]]) # block after lit
     end
   end
+
+  it "should have three edges for method invoking method a and then literal 1" do
+    get_defn_edges("def foo; a; 1; end") do |sexp, edges|
+      scope_tree = sexp[3]
+      block_tree = scope_tree[1]
+
+      edges.should include([block_tree[1],block_tree[2]]) # literal 1 after ca
+      edges.should include([block_tree[2],block_tree]) # block after last item of block
+      edges.should include([block_tree,scope_tree]) # scope after block
+    end
+  end
 end
