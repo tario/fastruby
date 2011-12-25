@@ -73,6 +73,10 @@ module FastRuby
         blk.call(@frbsexp[1], @frbsexp[2].first_tree)
         blk.call(@frbsexp[2], @frbsexp[1].first_tree)
         blk.call(@frbsexp[1], @frbsexp)
+
+        @frbsexp[2].find_break do |subtree|
+          blk.call(subtree, @frbsexp)
+        end
       end
 
       def edges_block(&blk)
@@ -113,7 +117,7 @@ module FastRuby
         end
       end
 
-      do_nothing_for(:nil,:lit)
+      do_nothing_for(:nil,:lit,:break)
     end
 
     def initialize
@@ -159,6 +163,26 @@ module FastRuby
     def first_tree_block; self[1]; end
     def first_tree_lvar; self; end
     def first_tree_lit; self; end
+    def first_tree_break; self; end
+
+    def find_break(&blk)
+      subarray = if node_type == :while
+        []
+      elsif node_type == :iter
+        self[1..-2]
+      elsif node_type == :break
+        blk.call(self)
+        return; nil
+      else
+        self[1..-1]
+      end
+
+      subarray.each do |subtree|
+        if subtree.respond_to? :find_break
+          subtree.find_break(&blk)
+        end 
+      end
+    end
   end
 end
 
