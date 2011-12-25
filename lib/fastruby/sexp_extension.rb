@@ -47,13 +47,13 @@ module FastRuby
         end
 
         if @frbsexp[2]
-          blk.call(@frbsexp[1],@frbsexp[2])
+          blk.call(@frbsexp[1],@frbsexp[2].first_tree)
           blk.call(@frbsexp[2],@frbsexp)
         end
 
         if @frbsexp[3]
           blk.call(@frbsexp[3],@frbsexp)
-          blk.call(@frbsexp[1],@frbsexp[3])
+          blk.call(@frbsexp[1],@frbsexp[3].first_tree)
         end
 
         unless @frbsexp[2] and @frbsexp[3]
