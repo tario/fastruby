@@ -65,7 +65,20 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([args_tree[1],args_tree[2]]) # argument 2 after argument 1
       edges.should include([sexp[1],args_tree[1]]) # argument 1 after recv
       edges.should include([args_tree[2],sexp]) # call node after argument
-
     end  
   end
+
+  it "should connect edges on block" do
+    get_defn_edges("def foo(x); x.bar; x.foo(y,z); end") do |sexp,edges|
+      scope_tree = sexp[3]
+      block_tree = scope_tree[1]
+      
+      first_call = block_tree[1]
+      second_call = block_tree[2]
+
+      edges.should include([first_call,second_call[1]]) # recv of second call after first call
+    end
+  end
+
+
 end
