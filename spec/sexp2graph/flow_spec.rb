@@ -54,4 +54,11 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([sexp[1],sexp]) # if after condition
     end
   end
+
+  it "should connect with the first node" do
+    get_edges("if a; b.foo(x); end") do |sexp, edges|
+      call_tree = sexp[2]
+      edges.should include([sexp[1],call_tree[1]]) # call recv after condition
+    end
+  end
 end
