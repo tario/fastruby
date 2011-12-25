@@ -49,8 +49,14 @@ module FastRuby
         blk.call(@frbsexp[1], @frbsexp)
       end
 
-      def edges_nil
+      def self.do_nothing_for(*nodename)
+        nodename.each do |nn|
+          define_method("edges_#{nn}") do
+          end
+        end
       end
+
+      do_nothing_for(:nil,:lit)
     end
 
     def initialize
