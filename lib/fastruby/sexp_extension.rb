@@ -19,6 +19,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "fastruby/fastruby_sexp"
+require "ruby_parser"
 
 class Object
   def to_fastruby_sexp
@@ -34,6 +35,14 @@ module FastRuby
         ary << x.to_fastruby_sexp
       end
       ary
+    end
+
+    def self.parse(code)
+      from_sexp(RubyParser.new.parse(code))
+    end
+
+    def edges
+      
     end
   end
 end
