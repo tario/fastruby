@@ -144,7 +144,7 @@ module FastRuby
 
     def first_tree
       return self if [:lvar,:lit,:break].include? node_type
-      return self[1].first_tree if [:if,:block].include? node_type
+      return self[1].first_tree if [:if,:block,:while].include? node_type
 
       send("first_tree_#{node_type}")
     end
