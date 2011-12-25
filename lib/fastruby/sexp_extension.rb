@@ -53,7 +53,24 @@ module FastRuby
         blk.call(@frbsexp.last, @frbsexp)
       end
 
-      def edges_call
+      def edges_call(&blk)
+        args_tree = @frbsexp[3]
+
+        (2..args_tree.size-1).each do |i|
+          blk.call(args_tree[i-1], args_tree[i])
+        end
+
+        recv_tree = @frbsexp[1]
+        
+        if recv_tree
+          if args_tree.size > 1
+            blk.call(recv_tree, args_tree[1])
+          end
+        end
+
+        if args_tree.size > 1
+          blk.call(args_tree.last, @frbsexp)
+        end
       end
 
       def self.do_nothing_for(*nodename)
