@@ -28,9 +28,11 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
   it "should have two edges for if" do
     get_edges("if a; b; else; c; end") do |sexp, edges|
-      edges.size.should be == 2
+      edges.size.should be == 4
       edges.should include([sexp[1],sexp[2]]) # true block after condition
       edges.should include([sexp[1],sexp[3]]) # false block after condition
+      edges.should include([sexp[2],sexp]) # if after true block
+      edges.should include([sexp[3],sexp]) # if after false block
     end
   end
 
