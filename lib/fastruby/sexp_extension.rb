@@ -39,6 +39,15 @@ module FastRuby
         send("edges_#{node_type}", &blk)
       end
   
+      def edges_if(&blk)
+        @frbsexp[1..-1].each do |subtree|
+          subtree.edges.each(&blk)
+        end
+
+        blk.call(@frbsexp[1],@frbsexp[2])
+        blk.call(@frbsexp[1],@frbsexp[3])
+      end
+
       def edges_scope(&blk)
         @frbsexp[1].edges.each(&blk)
         blk.call(@frbsexp[1], @frbsexp)
