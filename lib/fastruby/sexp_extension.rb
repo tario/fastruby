@@ -143,6 +143,9 @@ module FastRuby
     end
 
     def first_tree
+      return self if [:lvar,:lit,:break].include? node_type
+      return self[1].first_tree if [:if,:block].include? node_type
+
       send("first_tree_#{node_type}")
     end
 
@@ -159,13 +162,6 @@ module FastRuby
         end
       end
     end
-
-    def first_tree_block; self[1]; end
-    def first_tree_lvar; self; end
-    def first_tree_lit; self; end
-    def first_tree_break; self; end
-
-    def first_tree_if; self[1].first_tree; end
 
     def find_break(&blk)
       subarray = if node_type == :while
