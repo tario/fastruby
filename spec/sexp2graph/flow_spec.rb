@@ -74,4 +74,18 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([condition_tree,sexp])
     end
   end
+
+  it "should connect break inside while nodes with while" do
+    get_edges("while(a); foo; break; bar; end") do |sexp, edges|
+      condition_tree = sexp[1]
+      execution_tree = sexp[2]
+
+      edges.size.should be == 7
+
+      edges.should include([condition_tree,execution_tree[1]])
+      edges.should include([execution_tree,condition_tree])
+      edges.should include([condition_tree,sexp])
+      edges.should include([execution_tree[2],sexp])
+    end
+  end
 end
