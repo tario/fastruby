@@ -165,6 +165,8 @@ module FastRuby
     def first_tree_lit; self; end
     def first_tree_break; self; end
 
+    def first_tree_if; self[1].first_tree; end
+
     def find_break(&blk)
       subarray = if node_type == :while
         []
