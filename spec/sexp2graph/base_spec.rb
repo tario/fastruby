@@ -37,4 +37,10 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     end
   end
 
+  it "should have two edges for method returning literal 1" do
+    get_defn_edges("def foo; 0; end") do |sexp, edges|
+      edges.should include([sexp[3][1],sexp[3]]) # scope after block
+      edges.should include([sexp[3][1][1],sexp[3][1]]) # block after lit
+    end
+  end
 end
