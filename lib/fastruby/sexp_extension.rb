@@ -46,7 +46,14 @@ module FastRuby
 
       def edges_block(&blk)
         @frbsexp[1].edges.each(&blk)
-        blk.call(@frbsexp[1], @frbsexp)
+
+        (2..@frbsexp.size-1).each do |i|
+          blk.call(@frbsexp[i-1], @frbsexp[i])
+        end
+        blk.call(@frbsexp.last, @frbsexp)
+      end
+
+      def edges_call
       end
 
       def self.do_nothing_for(*nodename)
