@@ -61,4 +61,17 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([sexp[1],call_tree[1]]) # call recv after condition
     end
   end
+
+  it "should create circular connection from while nodes" do
+    get_edges("while(a); foo; bar; end") do |sexp, edges|
+      condition_tree = sexp[1]
+      execution_tree = sexp[2]
+
+      edges.size.should be == 5
+
+      edges.should include([condition_tree,execution_tree[1]])
+      edges.should include([execution_tree,condition_tree])
+      edges.should include([condition_tree,sexp])
+    end
+  end
 end
