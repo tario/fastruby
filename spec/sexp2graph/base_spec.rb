@@ -32,6 +32,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
   it "should have two edges for empty method" do
     get_defn_edges("def foo; end") do |sexp, edges|
+      edges.size.should be == 2
       edges.should include([sexp[3][1],sexp[3]]) # scope after block
       edges.should include([sexp[3][1][1],sexp[3][1]]) # block after nil
     end
@@ -39,6 +40,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
   it "should have two edges for method returning literal 1" do
     get_defn_edges("def foo; 0; end") do |sexp, edges|
+      edges.size.should be == 2
       edges.should include([sexp[3][1],sexp[3]]) # scope after block
       edges.should include([sexp[3][1][1],sexp[3][1]]) # block after lit
     end
@@ -49,6 +51,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       scope_tree = sexp[3]
       block_tree = scope_tree[1]
 
+      edges.size.should be == 3
       edges.should include([block_tree[1],block_tree[2]]) # literal 1 after ca
       edges.should include([block_tree[2],block_tree]) # block after last item of block
       edges.should include([block_tree,scope_tree]) # scope after block
@@ -58,7 +61,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   it "should have three edges for method invoking method with two arguments" do
     get_edges("x.foo(y,z)") do |sexp,edges|
       args_tree = sexp[3]
-
+      edges.size.should be == 3
       edges.should include([args_tree[1],args_tree[2]]) # argument 2 after argument 1
       edges.should include([sexp[1],args_tree[1]]) # argument 1 after recv
       edges.should include([args_tree[2],sexp]) # argument 2 after argument 1
