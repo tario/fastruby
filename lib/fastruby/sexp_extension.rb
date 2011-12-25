@@ -46,14 +46,19 @@ module FastRuby
           end
         end
 
-        blk.call(@frbsexp[1],@frbsexp[2])
-        blk.call(@frbsexp[2],@frbsexp)
+        if @frbsexp[2]
+          blk.call(@frbsexp[1],@frbsexp[2])
+          blk.call(@frbsexp[2],@frbsexp)
+        end
+
         if @frbsexp[3]
           blk.call(@frbsexp[3],@frbsexp)
           blk.call(@frbsexp[1],@frbsexp[3])
-        else
-          blk.call(@frbsexp[1],@frbsexp)
         end
+
+        unless @frbsexp[2] and @frbsexp[3]
+          blk.call(@frbsexp[1],@frbsexp)
+        end     
       end
 
       def edges_scope(&blk)
