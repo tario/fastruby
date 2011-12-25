@@ -54,4 +54,15 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([block_tree,scope_tree]) # scope after block
     end
   end
+
+  it "should have three edges for method invoking method with two arguments" do
+    get_edges("x.foo(y,z)") do |sexp,edges|
+      args_tree = sexp[3]
+
+      edges.should include([args_tree[1],args_tree[2]]) # argument 2 after argument 1
+      edges.should include([sexp[1],args_tree[1]]) # argument 1 after recv
+      edges.should include([args_tree[2],sexp]) # argument 2 after argument 1
+
+    end  
+  end
 end
