@@ -94,4 +94,10 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([execution_tree[2],sexp])
     end
   end
+
+  it "should connect previous call on block with condition of next while" do
+    get_edges("foo; while(a); b; end") do |sexp, edges|
+      edges.should include([sexp[1],sexp[2][1]]) # if condition after call
+    end
+  end
 end
