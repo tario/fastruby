@@ -41,7 +41,9 @@ module FastRuby
   
       def edges_if(&blk)
         @frbsexp[1..-1].each do |subtree|
+          if subtree
           subtree.edges.each(&blk)
+          end
         end
 
         blk.call(@frbsexp[1],@frbsexp[2])
