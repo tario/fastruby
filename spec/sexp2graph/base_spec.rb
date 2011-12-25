@@ -64,7 +64,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.size.should be == 3
       edges.should include([args_tree[1],args_tree[2]]) # argument 2 after argument 1
       edges.should include([sexp[1],args_tree[1]]) # argument 1 after recv
-      edges.should include([args_tree[2],sexp]) # argument 2 after argument 1
+      edges.should include([args_tree[2],sexp]) # call node after argument
 
     end  
   end
