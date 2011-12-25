@@ -44,4 +44,14 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([sexp[1],sexp]) # if after condition
     end
   end
+
+  it "should have only one edge for unless" do
+    get_edges("unless a; b; end") do |sexp, edges|
+      edges.size.should be == 3
+
+      edges.should include([sexp[1],sexp[3]]) # false block after condition
+      edges.should include([sexp[3],sexp]) # if after false block
+      edges.should include([sexp[1],sexp]) # if after condition
+    end
+  end
 end
