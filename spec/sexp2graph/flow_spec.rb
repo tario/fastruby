@@ -62,6 +62,12 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     end
   end
 
+  it "should connect previous call on block with condition of next if" do
+    get_edges("foo; if a; b; end") do |sexp, edges|
+      edges.should include([sexp[1],sexp[2][1]]) # if condition after call
+    end
+  end
+
   it "should create circular connection from while nodes" do
     get_edges("while(a); foo; bar; end") do |sexp, edges|
       condition_tree = sexp[1]
