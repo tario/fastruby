@@ -29,6 +29,36 @@ end
 
 module FastRuby
   class FastRubySexp
+    class Edges
+      def initialize(frbsexp)
+        @frbsexp = frbsexp
+      end
+
+      def each(&blk)
+        node_type = @frbsexp.node_type
+        send("edges_#{node_type}", &blk)
+      end
+  
+      def edges_scope(&blk)
+        @frbsexp[1].edges.each(&blk)
+        blk.call(@frbsexp[1], @frbsexp)
+      end
+
+      def edges_block(&blk)
+        @frbsexp[1].edges.each(&blk)
+        blk.call(@frbsexp[1], @frbsexp)
+      end
+
+      def edges_nil
+      end
+    end
+
+    def initialize
+      super
+
+      @edges = Edges.new(self)
+    end
+
     def self.from_sexp(value)
       ary = FastRuby::FastRubySexp.new
       value.each do |x|
@@ -42,7 +72,7 @@ module FastRuby
     end
 
     def edges
-      
+      @edges
     end
   end
 end
