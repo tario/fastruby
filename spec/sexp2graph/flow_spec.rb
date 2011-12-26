@@ -100,4 +100,37 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([sexp[1],sexp[2][1]]) # if condition after call
     end
   end
+
+  it "should connect previous call on block with condition of next while" do
+    get_edges("
+      case a
+      when b
+        c
+      when d
+        e
+      else
+        f
+      end
+      ") do |sexp, edges|
+
+      variable_node = sexp[1]
+      when_node_1 = sexp[2]
+      when_node_1_condition = when_node_1[1][1]
+      when_node_1_body = when_node_1[2]
+      when_node_2 = sexp[3]
+      when_node_2_condition = when_node_2[1][1]
+      when_node_2_body = when_node_2[2]
+      else_body = sexp.last
+
+      edges.should include([variable_node,when_node_1_condition])
+      edges.should include([when_node_1_condition,when_node_1_body])
+      edges.should include([when_node_1_condition,when_node_2_condition])
+      edges.should include([when_node_1_body,sexp])
+      edges.should include([when_node_2_condition,when_node_2_body])
+      edges.should include([when_node_2_condition,else_body])
+      edges.should include([when_node_2_body,sexp])
+      edges.should include([else_body,sexp])
+      
+    end
+  end
 end
