@@ -36,7 +36,42 @@ module FastRuby
 
       def each(&blk)
         node_type = @frbsexp.node_type
-        send("edges_#{node_type}", &blk)
+
+        if respond_to? "edges_#{node_type}"
+          send("edges_#{node_type}", &blk)
+        else
+          @frbsexp.each do|st|
+            next unless FastRubySexp === st
+            st.edges.each(&blk)
+          end
+        end
+      end
+
+      def edges_case(&blk)
+        @frbsexp.each do|st|
+          next unless FastRubySexp === st
+          st.edges.each(&blk)
+        end
+
+        variable_tree = @frbsexp[1]
+
+        blk.call(variable_tree,@frbsexp[2][1][1].first_tree)
+        
+        @frbsexp[2..-2].each do |st|
+          blk.call(st[1][1],st[2].first_tree)
+          blk.call(st[2],@frbsexp)
+        end
+
+        (3..@frbsexp.size-2).each do |i|
+          blk.call(@frbsexp[i-1][1][1], @frbsexp[i][1][1].first_tree)
+        end
+
+        if @frbsexp[-1]
+          blk.call(@frbsexp[-2][1][1], @frbsexp[-1].first_tree)
+          blk.call(@frbsexp[-1], @frbsexp)
+        else
+          blk.call(@frbsexp[-2][1][1], @frbsexp)
+        end
       end
   
       def edges_if(&blk)
