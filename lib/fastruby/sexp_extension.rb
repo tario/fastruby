@@ -37,22 +37,17 @@ module FastRuby
       def each(&blk)
         node_type = @frbsexp.node_type
 
-        if respond_to? "edges_#{node_type}"
-          send("edges_#{node_type}", &blk)
-        else
-          @frbsexp.each do|st|
-            next unless FastRubySexp === st
-            st.edges.each(&blk)
-          end
-        end
-      end
-
-      def edges_case(&blk)
         @frbsexp.each do|st|
           next unless FastRubySexp === st
           st.edges.each(&blk)
         end
 
+        if respond_to? "edges_#{node_type}"
+          send("edges_#{node_type}", &blk)
+        end
+      end
+
+      def edges_case(&blk)
         variable_tree = @frbsexp[1]
 
         blk.call(variable_tree,@frbsexp[2][1][1].first_tree)
@@ -75,12 +70,6 @@ module FastRuby
       end
   
       def edges_if(&blk)
-        @frbsexp[1..-1].each do |subtree|
-          if subtree
-          subtree.edges.each(&blk)
-          end
-        end
-
         if @frbsexp[2]
           blk.call(@frbsexp[1],@frbsexp[2].first_tree)
           blk.call(@frbsexp[2],@frbsexp)
@@ -97,14 +86,10 @@ module FastRuby
       end
 
       def edges_scope(&blk)
-        @frbsexp[1].edges.each(&blk)
         blk.call(@frbsexp[1], @frbsexp)
       end
 
       def edges_while(&blk)
-        @frbsexp[1].edges.each(&blk)
-        @frbsexp[2].edges.each(&blk)
-
         blk.call(@frbsexp[1], @frbsexp[2].first_tree)
         blk.call(@frbsexp[2], @frbsexp[1].first_tree)
         blk.call(@frbsexp[1], @frbsexp)
@@ -115,10 +100,6 @@ module FastRuby
       end
 
       def edges_block(&blk)
-        @frbsexp[1..-1].each do |subtree|
-          subtree.edges.each(&blk)
-        end
-
         (2..@frbsexp.size-1).each do |i|
           blk.call(@frbsexp[i-1], @frbsexp[i].first_tree)
         end
