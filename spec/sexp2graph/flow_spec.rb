@@ -62,19 +62,8 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     end
   end
 
-  it "should connect break inside while nodes with while" do
-    get_edges("while(a); foo; break; bar; end") do |sexp, edges|
-      condition_tree = sexp[1]
-      execution_tree = sexp[2]
-
-      edges.size.should be == 7
-
-      edges.tr_edges :a => [:foo,sexp],
-                     sexp.find_tree(:break) => sexp,
-                     execution_tree => :a do |a,b|
-        edges.should include([a,b])
-      end
-    end
+  assert_graph("should connect break inside while nodes with while", "while(a); foo; break; bar; end", 7) do |sexp,edges|
+    {:a => [:foo,sexp], sexp.find_tree(:break) => sexp, sexp.find_tree(:block) => :a}
   end
 
   it "should connect previous call on block with condition of next while" do
