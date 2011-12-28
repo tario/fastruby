@@ -66,10 +66,10 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     {:a => [:foo,sexp], sexp.find_tree(:break) => sexp, sexp.find_tree(:block) => :a}
   end
 
-  it "should connect previous call on block with condition of next while" do
-    get_edges("foo; while(a); b; end") do |sexp, edges|
-      edges.should include([sexp[1],sexp[2][1]]) # if condition after call
-    end
+  assert_graph("should connect previous call on block with condition of next while",
+      "foo; while(a); b; end") do |sexp,edges|
+      {:foo => :a }
+    
   end
 
   it "should connect previous call on block with condition of next while" do

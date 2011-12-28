@@ -51,13 +51,15 @@ module EdgesHelper
   end
 
   module KlassLevelHelper
-    def assert_graph(assert_name, code, node_count)
+    def assert_graph(assert_name, code, node_count = nil)
       it assert_name do
         get_edges(code) do |sexp, edges|
           condition_tree = sexp[1]
           execution_tree = sexp[2]
 
-          edges.count.should be == node_count
+          if node_count
+            edges.count.should be == node_count
+          end
 
           edges.tr_edges yield(sexp,edges) do |a,b|
             edges.should include([a,b])
