@@ -2,29 +2,10 @@ require "fastruby"
 require "fastruby/sexp_extension"
 require "sexp"
 require "ruby_parser"
+require "edges_helper"
 
 describe FastRuby::FastRubySexp, "FastRubySexp" do
-  def get_defn_edges(code)
-    sexp = FastRuby::FastRubySexp.parse(code)
-
-    edges = Array.new
-    sexp[3].edges.each do |tree_orig, tree_dest|
-      edges << [tree_orig, tree_dest]
-    end
-
-    yield(sexp, edges)
-  end  
-
-  def get_edges(code)
-    sexp = FastRuby::FastRubySexp.parse(code)
-
-    edges = Array.new
-    sexp.edges.each do |tree_orig, tree_dest|
-      edges << [tree_orig, tree_dest]
-    end
-
-    yield(sexp, edges)
-  end
+  include EdgesHelper
 
   it "should have two edges for if" do
     get_edges("if a; b; else; c; end") do |sexp, edges|
@@ -131,6 +112,26 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       edges.should include([when_node_2_body,sexp])
       edges.should include([else_body,sexp])
       
+    end
+  end
+
+  it "should connect nodes of multiple options of when" do
+    get_edges("
+      case a
+      when b,c
+        d
+      else
+        e
+      end
+      ") do |sexp, edges|
+
+      edges.tr_edges :a => :b, 
+                              :b => :c, :b => :d,
+                              :c => :d, :c => :e,
+                              :d => sexp,
+                              :e => sexp do |a,b|
+        self.should include([a,b])
+      end
     end
   end
 end
