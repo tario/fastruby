@@ -31,10 +31,12 @@ module FastRuby
       block.call(self)
     end
     
-    def find_tree
+    def find_tree(ndtype = nil)
       walk_tree do |subtree|
-        if yield(subtree)
-          return subtree
+        if (not block_given?) || yield(subtree)
+          if (not ndtype) || ndtype == subtree.node_type
+            return subtree
+          end
         end
       end
       

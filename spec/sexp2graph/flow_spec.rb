@@ -69,10 +69,11 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
       edges.size.should be == 7
 
-      edges.should include([condition_tree,execution_tree[1]])
-      edges.should include([execution_tree,condition_tree])
-      edges.should include([condition_tree,sexp])
-      edges.should include([execution_tree[2],sexp])
+      edges.tr_edges :a => [:foo,sexp],
+                     sexp.find_tree(:break) => sexp,
+                     execution_tree => :a do |a,b|
+        edges.should include([a,b])
+      end
     end
   end
 
