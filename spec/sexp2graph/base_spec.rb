@@ -11,55 +11,26 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     FastRuby::FastRubySexp.parse("def foo; end").should respond_to(:edges)
   end
 
-  it "should have two edges for empty method" do
-    get_defn_edges("def foo; end") do |sexp, edges|
-      edges.size.should be == 2
-      edges.should include([sexp[3][1],sexp[3]]) # scope after block
-      edges.should include([sexp[3][1][1],sexp[3][1]]) # block after nil
-    end
+  assert_graph_defn("should have two edges for empty method","def foo; end",2) do |sexp, edges|
+    {sexp.find_tree(:block) => sexp.find_tree(:scope), sexp.find_tree(:nil) => sexp.find_tree(:block)}
   end
 
-  it "should have two edges for method returning literal 1" do
-    get_defn_edges("def foo; 0; end") do |sexp, edges|
-      edges.size.should be == 2
-      edges.should include([sexp[3][1],sexp[3]]) # scope after block
-      edges.should include([sexp[3][1][1],sexp[3][1]]) # block after lit
-    end
+  assert_graph_defn("should have two edges for method returning literal 1","def foo; 0; end",2) do |sexp, edges|
+   {sexp.find_tree(:block) => sexp.find_tree(:scope), sexp.find_tree(:lit) => sexp.find_tree(:block)}
   end
 
-  it "should have three edges for method invoking method a and then literal 1" do
-    get_defn_edges("def foo; a; 1; end") do |sexp, edges|
-      scope_tree = sexp[3]
-      block_tree = scope_tree[1]
-
-      edges.size.should be == 3
-      edges.should include([block_tree[1],block_tree[2]]) # literal 1 after ca
-      edges.should include([block_tree[2],block_tree]) # block after last item of block
-      edges.should include([block_tree,scope_tree]) # scope after block
-    end
+  assert_graph_defn("should have three edges for method invoking method a and then literal 1","def foo; a; 1; end",3) do |sexp, edges|
+    {:a => sexp.find_tree(:lit), 
+        sexp.find_tree(:lit) => sexp.find_tree(:block), 
+        sexp.find_tree(:block) => sexp.find_tree(:scope) }
   end
 
-  it "should have three edges for method invoking method with two arguments" do
-    get_edges("x.foo(y,z)") do |sexp,edges|
-      args_tree = sexp[3]
-      edges.size.should be == 3
-      edges.should include([args_tree[1],args_tree[2]]) # argument 2 after argument 1
-      edges.should include([sexp[1],args_tree[1]]) # argument 1 after recv
-      edges.should include([args_tree[2],sexp]) # call node after argument
-    end  
+  assert_graph("should have three edges for method invoking method with two arguments","x.foo(y,z)",3) do |sexp,edges|
+    {:y => :z, :x => :y, :z => sexp}  
   end
 
-  it "should connect edges on block" do
-    get_defn_edges("def foo(x); x.bar; x.foo(y,z); end") do |sexp,edges|
-      scope_tree = sexp[3]
-      block_tree = scope_tree[1]
-      
-      first_call = block_tree[1]
-      second_call = block_tree[2]
-
-      edges.should include([first_call,second_call[1]]) # recv of second call after first call
-    end
+  assert_graph_defn("should connect edges on block","def foo(x); x.bar; x1.foo(y,z); end") do |sexp,edges|
+    block_tree = sexp.find_tree(:block)
+    { block_tree[1] => :x1}
   end
-
-
 end
