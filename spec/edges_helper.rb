@@ -3,17 +3,15 @@ module EdgesHelper
   class Edges < Array
     def initialize(sexp); @sexp = sexp; end
 
-    def to_sexp(obj)
+    def to_sexp(obj, &blk)
       if obj.instance_of? Symbol
-        yield @sexp.find_tree{|st| st.node_type == :call and st[2] == obj}
+        blk.call @sexp.find_tree{|st| st.node_type == :call and st[2] == obj}
       elsif obj.instance_of? Array
         obj.each do |element|
-          to_sexp(element) do |x|
-            yield x
-          end
+          to_sexp(element,&blk)
         end
       else
-        yield obj
+        blk.call obj
       end
     end
 
