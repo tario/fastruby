@@ -153,11 +153,11 @@ private
           method_name[1] = 0;
 
           sprintf(method_name+1, \"#{method_name}\");
-          sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(self))));
+          sprintf(method_name+strlen(method_name), \"%lu\", (unsigned long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
           
                       int i;
                       for (i=0; i<argc_; i++) {
-                        sprintf(method_name+strlen(method_name), \"%lu\", FIX2LONG(rb_obj_id(CLASS_OF(argv[i]))));
+                        sprintf(method_name+strlen(method_name), \"%lu\", (unsigned long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
                       }
 
           void** address = 0;
@@ -169,9 +169,9 @@ private
           rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value method_name});
           
           if (rb_method_hash != Qnil) {
-            VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+            VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
             if (tmp != Qnil) {
-                address = (void**)FIX2LONG(tmp);
+                address = (void**)NUM2PTR(tmp);
                 fptr = *address;
             }
           }
@@ -192,9 +192,9 @@ private
             rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value method_name});
             
             if (rb_method_hash != Qnil) {
-              VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+              VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
               if (tmp != Qnil) {
-                  address = (void**)FIX2LONG(tmp);
+                  address = (void**)NUM2PTR(tmp);
                   fptr = *address;
               }
             }

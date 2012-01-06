@@ -83,6 +83,9 @@ module FastRuby
         #define FASTRUBY_TAG_RETRY 0x85
         #define TAG_RAISE 0x6
 
+# define PTR2NUM(x)   (ULONG2NUM((unsigned long)(x)))
+# define NUM2PTR(x)   ((void*)(NUM2ULONG(x)))
+
         #ifndef __INLINE_FASTRUBY_BASE
         #include \"#{FastRuby.fastruby_load_path}/../ext/fastruby_base/fastruby_base.inl\"
         #define __INLINE_FASTRUBY_BASE
@@ -221,7 +224,7 @@ module FastRuby
         if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
 
         VALUE old_call_frame = plocals->call_frame;
-        plocals->call_frame = LONG2FIX(&call_frame);
+        plocals->call_frame = PTR2NUM(&call_frame);
 
         #{precode}
 
@@ -318,9 +321,9 @@ module FastRuby
           rb_method_hash = rb_funcall(#{literal_value klass}, #{intern_num :method_hash},1,#{literal_value method_name});
 
           if (rb_method_hash != Qnil) {
-            VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+            VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
             if (tmp != Qnil) {
-                address = (void*)FIX2LONG(tmp);
+                address = (void*)NUM2PTR(tmp);
             }
           }
           
@@ -334,8 +337,8 @@ module FastRuby
               #{intern_num :register_method_value}, 
               3,
               #{literal_value method_name},
-              LONG2FIX(id),
-              LONG2FIX(address)
+              PTR2NUM(id),
+              PTR2NUM(address)
               );
         }
       "
@@ -541,7 +544,7 @@ else
 end
 }
 
-          plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
+          plocals->parent_locals = PTR2NUM(frame.thread_data->last_plocals);
           void* old_parent_locals = frame.thread_data->last_plocals;
           
           #{
@@ -553,8 +556,8 @@ end
           frame.plocals = plocals;
           plocals->active = Qtrue;
           plocals->targetted = Qfalse;
-          plocals->pframe = LONG2FIX(&frame);
-          plocals->call_frame = LONG2FIX(0);
+          plocals->pframe = PTR2NUM(&frame);
+          plocals->call_frame = PTR2NUM(0);
 
           pframe = (void*)&frame;
 
@@ -603,11 +606,11 @@ end
             "
             pblock = (void*)block;
             if (pblock) {
-              plocals->block_function_address = LONG2FIX(pblock->block_function_address);
-              plocals->block_function_param = LONG2FIX(pblock->block_function_param);
+              plocals->block_function_address = PTR2NUM(pblock->block_function_address);
+              plocals->block_function_param = PTR2NUM(pblock->block_function_param);
             } else {
-              plocals->block_function_address = LONG2FIX(0);
-              plocals->block_function_param = LONG2FIX(Qnil);
+              plocals->block_function_address = PTR2NUM(0);
+              plocals->block_function_param = PTR2NUM(Qnil);
             }
             "
           end
@@ -712,7 +715,7 @@ end
         @infer_lvar_map[lvar_name] = lvar_type
         return "Qnil"
       elsif mname == :block_given?
-        return "FIX2LONG(plocals->block_function_address) == 0 ? Qfalse : Qtrue"
+        return "NUM2PTR(plocals->block_function_address) == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
 
         code = args[1][1]
@@ -1091,7 +1094,7 @@ fastruby_local_next:
             if (fptr == 0) {
               fptr = *#{cfunc_address_name};
               if (fptr != 0) {
-                VALUE params[2] = {self,LONG2FIX(#{args_tree.size-1})};
+                VALUE params[2] = {self,PTR2NUM(#{args_tree.size-1})};
                 return ( (VALUE(*)(#{value_cast})) (fptr) )((VALUE)params,(VALUE)block,(VALUE)frame#{inprocstrargs});  
               }
             }
@@ -1128,7 +1131,7 @@ fastruby_local_next:
         static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
             VALUE self = params[0];
             VALUE method_arguments[26] = {#{toprocstrargs}};
-            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(FIX2LONG(params[1]),method_arguments,self);
+            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(NUM2ULONG(params[1]),method_arguments,self);
         }
         "
       }
@@ -1136,7 +1139,7 @@ fastruby_local_next:
       cfunc_wrapper_2 = anonymous_function{ |funcname| "
         static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
             VALUE self = params[0];
-            VALUE args = rb_ary_new3(FIX2LONG(params[1]),#{toprocstrargs});
+            VALUE args = rb_ary_new3(NUM2ULONG(params[1]),#{toprocstrargs});
             return ( (VALUE(*)(VALUE,VALUE)) (#{cfunc_real_address_name}) )(self,args);
         }
         "
@@ -1160,7 +1163,7 @@ fastruby_local_next:
 
 
             VALUE fastruby_method = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);
-            #{tree_pointer_name} = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(fastruby_method));
+            #{tree_pointer_name} = (VALUE*)NUM2PTR(fastruby_method_tree_pointer(fastruby_method));
             
             ID id;
             ID default_id = rb_intern(\"default\");
@@ -1171,14 +1174,14 @@ fastruby_local_next:
             rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},1,mname);
 
             if (rb_method_hash != Qnil) {
-              VALUE tmp = rb_hash_aref(rb_method_hash, LONG2FIX(id));
+              VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
               if (tmp != Qnil) {
-                  address = (void*)FIX2LONG(tmp);
+                  address = (void*)NUM2PTR(tmp);
               }
               
-              tmp = rb_hash_aref(rb_method_hash, LONG2FIX(default_id));
+              tmp = rb_hash_aref(rb_method_hash, PTR2NUM(default_id));
               if (tmp != Qnil) {
-                 default_address = (void*)FIX2LONG(tmp);
+                 default_address = (void*)NUM2PTR(tmp);
               }
             }
             
@@ -1232,8 +1235,8 @@ fastruby_local_next:
                     #{intern_num :register_method_value}, 
                     3,
                     #{literal_value mname},
-                    LONG2FIX(default_id),
-                    LONG2FIX(default_address)
+                    PTR2NUM(default_id),
+                    PTR2NUM(default_address)
                     );
               }
             }
@@ -1247,8 +1250,8 @@ fastruby_local_next:
                     #{intern_num :register_method_value}, 
                     3,
                     #{literal_value mname},
-                    LONG2FIX(id),
-                    LONG2FIX(address)
+                    PTR2NUM(id),
+                    PTR2NUM(address)
                     );
               }
   

@@ -295,7 +295,7 @@ module FastRuby
             if call_type == :lambda or call_type == :proc_new
             "
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
-              ((typeof(plocals))(pframe->plocals))->call_frame = LONG2FIX(pframe);
+              ((typeof(plocals))(pframe->plocals))->call_frame = PTR2NUM(pframe);
             "
             end
             }
@@ -599,7 +599,7 @@ fastruby_local_next:
                 current_plocals = pframe->thread_data->last_plocals;
                 while (current_plocals) {
                   current_plocals->active = Qfalse;
-                  current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
+                  current_plocals = (typeof(current_plocals))NUM2PTR(current_plocals->parent_locals); 
                 }
                 
                 // restore last_plocals
@@ -610,7 +610,7 @@ fastruby_local_next:
                 
                 while (current_plocals) {
                   current_plocals->active = Qtrue;
-                  current_plocals = (typeof(current_plocals))FIX2LONG(current_plocals->parent_locals); 
+                  current_plocals = (typeof(current_plocals))NUM2PTR(current_plocals->parent_locals); 
                 }
               }
               ", true), precode, postcode

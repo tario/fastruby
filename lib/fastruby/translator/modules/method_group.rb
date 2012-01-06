@@ -129,7 +129,7 @@ private
 
             plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
 
-            plocals->parent_locals = LONG2FIX(frame.thread_data->last_plocals);
+            plocals->parent_locals = PTR2NUM(frame.thread_data->last_plocals);
             void* old_parent_locals = frame.thread_data->last_plocals;
             frame.thread_data->last_plocals = plocals;
 
@@ -137,7 +137,7 @@ private
             plocals->active = Qtrue;
             plocals->self = self;
             plocals->targetted = Qfalse;
-            plocals->call_frame = LONG2FIX(0);
+            plocals->call_frame = PTR2NUM(0);
 
             #{to_c tree};
 

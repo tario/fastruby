@@ -50,13 +50,13 @@ module FastRuby
          };
 
          typeof(pframe) target_frame_;
-         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
+         target_frame_ = (void*)NUM2PTR(plocals->call_frame);
 
          if (target_frame_ == 0) {
             #{_raise("rb_eLocalJumpError","illegal break")};
          }
 
-         plocals->call_frame = LONG2FIX(0);
+         plocals->call_frame = PTR2NUM(0);
 
          target_frame_->return_value = #{value_tmp_var};
          target_frame_->targetted = 1;
@@ -77,7 +77,7 @@ module FastRuby
         code = "
           {
          typeof(pframe) target_frame_;
-         target_frame_ = (void*)FIX2LONG(plocals->call_frame);
+         target_frame_ = (void*)NUM2PTR(plocals->call_frame);
 
          if (target_frame_ == 0) {
             #{_raise("rb_eLocalJumpError","illegal retry")};
