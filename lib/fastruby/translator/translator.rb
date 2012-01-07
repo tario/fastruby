@@ -1313,8 +1313,11 @@ fastruby_local_next:
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
           VALUE last_expression = Qnil;
-          #{@frame_struct} frame, *pframe, *parent_frame;
-          #{@locals_struct} *plocals;
+          #{@frame_struct} frame;
+
+          typeof(frame)* volatile pframe;
+          typeof(frame)* volatile parent_frame;
+          #{@locals_struct}* volatile plocals;
 
           parent_frame = (void*)param;
 
