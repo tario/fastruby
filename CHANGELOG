@@ -1,4 +1,8 @@
-0.0.17	peforrmance: implemented linear stack scopes when possible
+0.0.17  Fixed bug of non-volatile variables on scopes calling setjmp
+
+    Fixed bug of native pointers encoding on 32 bits systems
+
+    peforrmance: implemented linear stack scopes when possible
 
 		performance: refactored C translation to avoid unecessary non-local jumps such return
 
