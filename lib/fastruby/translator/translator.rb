@@ -63,8 +63,8 @@ module FastRuby
       }"
 
       @block_struct = "struct {
-        void* block_function_address;
-        void* block_function_param;
+        VALUE block_function_address;
+        VALUE block_function_param;
       }"
 
         extra_code << "
@@ -606,8 +606,8 @@ end
             "
             pblock = (void*)block;
             if (pblock) {
-              plocals->block_function_address = PTR2NUM(pblock->block_function_address);
-              plocals->block_function_param = PTR2NUM(pblock->block_function_param);
+              plocals->block_function_address = pblock->block_function_address;
+              plocals->block_function_param = pblock->block_function_param;
             } else {
               plocals->block_function_address = PTR2NUM(0);
               plocals->block_function_param = PTR2NUM(Qnil);

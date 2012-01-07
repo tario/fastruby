@@ -676,8 +676,8 @@ fastruby_local_next:
         
         fastruby_precode = "                 #{@block_struct} block;
 
-                block.block_function_address = (void*)#{anonymous_function(&block_code)};
-                block.block_function_param = (void*)plocals;
+                block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_code)});
+                block.block_function_param = PTR2NUM((void*)plocals);
                 "
         
         if result_var
