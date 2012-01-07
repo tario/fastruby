@@ -276,11 +276,11 @@ module FastRuby
             // block for call to #{call_tree[2]}
             #{argument_array_read}
 
-            VALUE last_expression = Qnil;
+            volatile VALUE last_expression = Qnil;
 
             #{@frame_struct} frame;
-            #{@frame_struct} *pframe = (void*)&frame;
-            #{@locals_struct} *plocals = (void*)_plocals;
+            #{@frame_struct} * volatile pframe = (void*)&frame;
+            #{@locals_struct} * volatile plocals = (void*)_plocals;
 
             frame.plocals = plocals;
             frame.parent_frame = 0;
@@ -452,11 +452,11 @@ end
         block_code = proc { |name| "
           static VALUE #{name}(int argc, VALUE* argv, VALUE _locals, VALUE _parent_frame) {
             // block for call to #{call_tree[2]}
-            VALUE last_expression = Qnil;
+            volatile VALUE last_expression = Qnil;
             #{@frame_struct} frame;
-            #{@frame_struct} *pframe = (void*)&frame;
-            #{@frame_struct} *parent_frame = (void*)_parent_frame;
-            #{@locals_struct} *plocals;
+            #{@frame_struct} * volatile pframe = (void*)&frame;
+            #{@frame_struct} * volatile parent_frame = (void*)_parent_frame;
+            #{@locals_struct} * volatile plocals;
 
             frame.plocals = (void*)_locals;
             frame.parent_frame = parent_frame;

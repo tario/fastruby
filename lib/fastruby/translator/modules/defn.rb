@@ -223,7 +223,7 @@ private
               frame.thread_data = rb_current_thread_data();
               frame.targetted = 0;
 
-              VALUE block = Qfalse;
+              volatile VALUE block = Qfalse;
 
               if (rb_block_given_p()) {
                 struct {

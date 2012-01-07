@@ -209,10 +209,10 @@ module FastRuby
     def frame_call(inner_code, precode = "", postcode = "")
       inline_block "
 
-        VALUE ret = Qnil;
+        volatile VALUE ret = Qnil;
         // create a call_frame
         #{@frame_struct} call_frame;
-        typeof(call_frame)* old_pframe = (void*)pframe;
+        typeof(call_frame)* volatile old_pframe = (void*)pframe;
 
         pframe = (typeof(pframe))&call_frame;
 
@@ -223,7 +223,7 @@ module FastRuby
         call_frame.thread_data = old_pframe->thread_data;
         if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
 
-        VALUE old_call_frame = plocals->call_frame;
+        volatile VALUE old_call_frame = plocals->call_frame;
         plocals->call_frame = PTR2NUM(&call_frame);
 
         #{precode}
@@ -495,7 +495,7 @@ module FastRuby
           #{validate_arguments_code}
 
           #{@frame_struct} frame;
-          #{@frame_struct} *pframe;
+          #{@frame_struct} * volatile pframe;
           
           frame.parent_frame = #{options[:main] ? "0"  : "(void*)_parent_frame"};
           frame.return_value = Qnil;
@@ -509,9 +509,9 @@ module FastRuby
 #{
 if scope_mode == :dag
   " 
-          VALUE rb_previous_stack_chunk = Qnil;
+          volatile VALUE rb_previous_stack_chunk = Qnil;
           VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
-          struct STACKCHUNK* stack_chunk = 0;
+          struct STACKCHUNK* volatile stack_chunk = 0;
 
           if (rb_stack_chunk != Qnil) {
             Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
@@ -530,22 +530,22 @@ if scope_mode == :dag
             Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
           }
 
-          #{@locals_struct}* plocals;
+          #{@locals_struct}* volatile plocals;
 
-          int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
+          volatile int previous_stack_position = stack_chunk_get_current_position(stack_chunk);
           plocals = (typeof(plocals))stack_chunk_alloc(stack_chunk ,sizeof(typeof(*plocals))/sizeof(void*));
           
   "
 else
   "
           #{@locals_struct} locals;
-          typeof(locals) *plocals = &locals;
+          typeof(locals) * volatile plocals = &locals;
   "
 end
 }
 
           plocals->parent_locals = PTR2NUM(frame.thread_data->last_plocals);
-          void* old_parent_locals = frame.thread_data->last_plocals;
+          void* volatile old_parent_locals = frame.thread_data->last_plocals;
           
           #{
           if scope_mode == :dag 
@@ -561,8 +561,8 @@ end
 
           pframe = (void*)&frame;
 
-          #{@block_struct} *pblock;
-          VALUE last_expression = Qnil;
+          #{@block_struct} * volatile pblock;
+          volatile VALUE last_expression = Qnil;
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
@@ -766,10 +766,10 @@ end
     def inline_block(code, repass_var = nil, nolocals = false)
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
-          #{@frame_struct} *pframe = (void*)param;
+          #{@frame_struct} * volatile pframe = (void*)param;
 
-          #{nolocals ? "" : "#{@locals_struct} *plocals = (void*)pframe->plocals;"}
-          VALUE last_expression = Qnil;
+          #{nolocals ? "" : "#{@locals_struct} * volatile plocals = (void*)pframe->plocals;"}
+          volatile VALUE last_expression = Qnil;
 
           #{code}
           return Qnil;
@@ -810,7 +810,7 @@ fastruby_local_next:
 
             #{@frame_struct} frame;
 
-            typeof(frame)* pframe;
+            typeof(frame)* volatile pframe;
             
             #{if repass_var
             "typeof(frame)* parent_frame = ((typeof(pframe))((void**)param)[0]);"
@@ -850,7 +850,7 @@ fastruby_local_next:
               "VALUE #{repass_var} = (VALUE)((void**)param)[1];"
             end
             }
-              VALUE last_expression = Qnil;
+              volatile VALUE last_expression = Qnil;
               #{inner_code};
               return last_expression;
             }
@@ -1312,7 +1312,7 @@ fastruby_local_next:
 
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param) {
-          VALUE last_expression = Qnil;
+          volatile VALUE last_expression = Qnil;
           #{@frame_struct} frame;
 
           typeof(frame)* volatile pframe;
@@ -1351,7 +1351,7 @@ fastruby_local_next:
           #{code};
 
           // restore previous frame
-          typeof(pframe) original_frame = pframe;
+          volatile typeof(pframe) original_frame = pframe;
           pframe = parent_frame;
           #{not_jmp_code};
 
