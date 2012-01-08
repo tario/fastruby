@@ -196,7 +196,7 @@ block_wrapping_proc = proc { |name| "
 
                 if (block_address_value != Qnil) {
                   block.block_function_address = block_address_value;
-                  block.block_function_param = PTR2NUM(rb_ivar_get(proc, #{intern_num "__block_param"}));
+                  block.block_function_param = rb_ivar_get(proc, #{intern_num "__block_param"});
                   pblock = &block;
                 } else {
                   // create a block from a proc

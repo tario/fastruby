@@ -484,6 +484,14 @@ module FastRuby
   
             read_arguments_code << "
               plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
+
+              if (pblock) {
+              rb_ivar_set(plocals->#{block_argument.to_s.gsub("&","")},
+                        #{intern_num "__block_address"}, pblock->block_function_address); 
+              rb_ivar_set(plocals->#{block_argument.to_s.gsub("&","")},
+                        #{intern_num "__block_param"}, pblock->block_function_param);            
+              }            
+
             "
           end
 
@@ -599,8 +607,6 @@ end
 
           plocals->self = self;
 
-          #{read_arguments_code}
-          
           #{
           unless options[:main]
             "
@@ -615,6 +621,8 @@ end
             "
           end
           }
+
+          #{read_arguments_code}
 
           #{to_c impl_tree, "last_expression"};
           
