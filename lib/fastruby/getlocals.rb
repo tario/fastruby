@@ -50,6 +50,7 @@ module FastRuby
 
       if tree[0] == :block_pass
         @locals << :__xblock_arguments
+        @locals << :__x_proc
       end
 
       tree.select{|subtree| subtree.instance_of? FastRuby::FastRubySexp}.each do |subtree|

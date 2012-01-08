@@ -88,9 +88,12 @@ module FastRuby
                   }
             
             block_arguments_tree = s(:masgn, s(:array, s(:splat, s(:lasgn, :__xblock_arguments))))
-            block_tree = s(:call, block_pass_arg[1], :call, s(:arglist, s(:splat, s(:lvar, :__xblock_arguments))))
+            block_tree = s(:call, s(:lvar, :__x_proc), :call, s(:arglist, s(:splat, s(:lvar, :__xblock_arguments))))
             
-            replace_iter_tree = s(:iter, call_tree, block_arguments_tree, block_tree).to_fastruby_sexp
+            replace_iter_tree = s(:block,
+                s(:lasgn, :__x_proc, s(:call, block_pass_arg[1], :to_proc, s(:arglist))),
+                s(:iter, call_tree, block_arguments_tree, block_tree)
+                ).to_fastruby_sexp
           
             if result_var  
               return to_c(replace_iter_tree,result_var)
@@ -180,6 +183,9 @@ block_wrapping_proc = proc { |name| "
   }
 "
 }
+
+block_proc_tree = s(:call, block_pass_arg[1], :to_proc, s(:arglist)) if block_pass_arg
+
               if block_pass_arg or result_var
                 code = "
                 {
@@ -191,7 +197,8 @@ block_wrapping_proc = proc { |name| "
                 #{if block_pass_arg
                 "
                 VALUE proc = Qnil;
-                #{to_c(block_pass_arg[1], "proc") }
+                #{to_c(block_proc_tree, "proc") }
+
                 VALUE block_address_value = rb_ivar_get(proc, #{intern_num "__block_address"});
 
                 if (block_address_value != Qnil) {
@@ -203,7 +210,7 @@ block_wrapping_proc = proc { |name| "
                   // create a block from a proc
                   block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_wrapping_proc)});
                   block.block_function_param = PTR2NUM(proc);
-                  block.proc = Qnil;
+                  block.proc = proc;
                   pblock = &block;
                 }
 
@@ -258,17 +265,19 @@ block_wrapping_proc = proc { |name| "
                 #{if block_pass_arg
                 "
                 VALUE proc = Qnil;
-                #{to_c(block_pass_arg[1], "proc") }
+                #{to_c(block_proc_tree, "proc") }
                 VALUE block_address_value = rb_ivar_get(proc, #{intern_num "__block_address"});
 
                 if (block_address_value != Qnil) {
                   block.block_function_address = block_address_value;
                   block.block_function_param = PTR2NUM(rb_ivar_get(proc, #{intern_num "__block_param"}));
+                  block.proc = proc;
                   pblock = &block;
                 } else {
                   // create a block from a proc
                   block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_wrapping_proc)});
                   block.block_function_param = PTR2NUM(proc);
+                  block.proc = proc;
                   pblock = &block;
                 }
 
