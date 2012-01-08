@@ -65,6 +65,7 @@ module FastRuby
       @block_struct = "struct {
         VALUE block_function_address;
         VALUE block_function_param;
+        VALUE proc;
       }"
 
         extra_code << "
@@ -483,8 +484,14 @@ module FastRuby
             require "fastruby/sexp_extension"
   
             read_arguments_code << "
-              plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
+              if (pblock ? pblock->proc != Qnil : 0) {
+                plocals->#{block_argument.to_s.gsub("&","")} = pblock->proc;
+              } else {
+                plocals->#{block_argument.to_s.gsub("&","")} = #{to_c FastRuby::FastRubySexp.from_sexp(proc_reyield_block_tree)};
+              }
+            "
 
+            read_arguments_code << "
               if (pblock) {
               rb_ivar_set(plocals->#{block_argument.to_s.gsub("&","")},
                         #{intern_num "__block_address"}, pblock->block_function_address); 

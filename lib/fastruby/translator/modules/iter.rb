@@ -678,6 +678,7 @@ fastruby_local_next:
 
                 block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_code)});
                 block.block_function_param = PTR2NUM((void*)plocals);
+                block.proc = Qnil;                
                 "
         
         if result_var
