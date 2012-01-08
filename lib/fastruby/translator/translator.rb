@@ -224,7 +224,7 @@ module FastRuby
         call_frame.thread_data = old_pframe->thread_data;
         if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
 
-        volatile VALUE old_call_frame = plocals->call_frame;
+        volatile void* old_call_frame = plocals->call_frame;
         plocals->call_frame = &call_frame;
 
         #{precode}
@@ -261,6 +261,7 @@ module FastRuby
 
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
+        int size;        
         void* call_frame;
         void* parent_locals;
         void* pframe;
@@ -673,6 +674,7 @@ end
 
        @locals = locals
         @locals_struct = "struct {
+        int size;
         void* call_frame;
         void* parent_locals;
         void* pframe;

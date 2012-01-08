@@ -170,6 +170,11 @@ static inline int stack_chunk_get_current_position(struct STACKCHUNK* sc) {
 	}
  }
 
+typedef struct {
+  int size;
+  void *p1,*p2,*p3,*p4,*p5;
+  VALUE data[0x10000];
+} generic_scope_t;
 
 static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 
@@ -235,6 +240,7 @@ static inline void* stack_chunk_alloc(struct STACKCHUNK* sc, int size){
 		address = sc->pages[page]+position_in_page;
 	}
 
+  ((generic_scope_t*)address)->size = size;
 	return address;
 }
 
@@ -242,11 +248,19 @@ static inline void stack_chunk_mark(struct STACKCHUNK* sc) {
 	// Mark local variables on each allocated page up to current_position
 	int i;
 
-	for (i=0; i<sc->current_position; i++) {
+	for (i=0; i<sc->current_position; ) {
 		int position_in_page = i & PAGE_MASK;
 		int page = i / PAGE_SIZE;
 
-		rb_gc_mark(sc->pages[page][position_in_page]);
+    generic_scope_t* scope = (void*)&(sc->pages[page][position_in_page]);
+
+    if (scope->size == 0) {
+      i = i + 1;
+    } else {
+  	  i = i + scope->size;
+      int j;
+      for (j=0;j<scope->size-6;j++) rb_gc_mark(scope->data[j]);
+    }
 	}
 }
 
