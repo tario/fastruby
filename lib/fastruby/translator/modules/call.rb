@@ -176,7 +176,7 @@ module FastRuby
 
 block_wrapping_proc = proc { |name| "
   static VALUE #{name}(int argc, VALUE* argv, VALUE _locals, VALUE _parent_frame) {
-    return rb_funcall2(_locals, #{intern_num :call}, argc, argv); 
+    return rb_proc_call(_locals, rb_ary_new4(argc, argv)); 
   }
 "
 }
