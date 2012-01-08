@@ -164,4 +164,26 @@ describe FastRuby, "fastruby" do
     block = proc do |a| "44" end
     vy7.bar(44,block).should be == "44"
   end
+
+
+  class ::VY8
+      def foo(a)
+        yield(a)
+      end
+      
+    
+    fastruby "
+      def bar(x,block)
+        foo(x,&block)
+      end
+    "
+  end
+
+  it "should allow single arguments with block calling ruby methods and read block arguments" do
+    vy8 = ::VY8.new
+
+    block = proc do |a| a.to_s end
+    vy8.bar(555,block).should be == "555"
+  end
+
 end
