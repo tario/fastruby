@@ -76,6 +76,29 @@ module FastRuby
       
       if args.size > 1
         if args.last[0] == :splat
+
+          if block_pass_arg
+            
+            call_tree = tree.dup
+            call_tree[3] = args.select{|arg| if arg == :arglist 
+                true
+                else
+                  arg[0] != :block_pass
+                  end
+                  }
+            
+            block_arguments_tree = s(:masgn, s(:array, s(:splat, s(:lasgn, :__xblock_arguments))))
+            block_tree = s(:call, block_pass_arg[1], :call, s(:arglist, s(:splat, s(:lvar, :__xblock_arguments))))
+            
+            replace_iter_tree = s(:iter, call_tree, block_arguments_tree, block_tree).to_fastruby_sexp
+          
+            if result_var  
+              return to_c(replace_iter_tree,result_var)
+            else
+              return to_c(replace_iter_tree)
+            end
+          end
+
           aux_varname = "_aux_" + rand(1000000).to_s
           code = protected_block(
             "
