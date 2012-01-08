@@ -174,17 +174,18 @@ module FastRuby
           extraargs_signature = ""
         end
 
+          block_proc_tree = s(:call, block_pass_arg[1], :to_proc, s(:arglist)) if block_pass_arg
+
+          block_wrapping_proc = proc { |name| "
+            static VALUE #{name}(int argc, VALUE* argv, VALUE _locals, VALUE _parent_frame) {
+              return rb_proc_call(_locals, rb_ary_new4(argc, argv)); 
+            }
+          "
+          }
+ 
           if argnum == 0
             value_cast = "VALUE,VALUE,VALUE"
 
-block_wrapping_proc = proc { |name| "
-  static VALUE #{name}(int argc, VALUE* argv, VALUE _locals, VALUE _parent_frame) {
-    return rb_proc_call(_locals, rb_ary_new4(argc, argv)); 
-  }
-"
-}
-
-block_proc_tree = s(:call, block_pass_arg[1], :to_proc, s(:arglist)) if block_pass_arg
 
               if block_pass_arg or result_var
                 code = "
@@ -267,7 +268,6 @@ block_proc_tree = s(:call, block_pass_arg[1], :to_proc, s(:arglist)) if block_pa
                 VALUE proc = Qnil;
                 #{to_c(block_proc_tree, "proc") }
                 VALUE block_address_value = rb_ivar_get(proc, #{intern_num "__block_address"});
-
                 if (block_address_value != Qnil) {
                   block.block_function_address = block_address_value;
                   block.block_function_param = PTR2NUM(rb_ivar_get(proc, #{intern_num "__block_param"}));
