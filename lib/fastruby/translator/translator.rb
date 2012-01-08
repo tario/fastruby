@@ -1145,7 +1145,10 @@ fastruby_local_next:
                         #{anonymous_function{|name|
                           "
                             static VALUE #{name} (VALUE data, VALUE param) {
-                              return rb_proc_call(param, rb_ary_new4(0,(VALUE[]){}));
+                              if (CLASS_OF(data) != rb_cArray) {
+                                data = rb_ary_new3(1,data);
+                              }
+                              return rb_proc_call(param, data /*rb_ary_new4(0,(VALUE[]){})*/);
                             }
                           "
                         }},
