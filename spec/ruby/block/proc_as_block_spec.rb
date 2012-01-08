@@ -127,6 +127,25 @@ describe FastRuby, "fastruby" do
 
 
   class ::VY6
+    fastruby "
+      def foo(a)
+        yield(a)
+      end
+    
+      def bar(x,block)
+        foo(x,&block)
+      end
+    "
+  end
+
+  it "should allow single arguments with block" do
+    vy6 = ::VY6.new
+
+    block = proc do |a| "44" end
+    vy6.bar(44,block).should be == "44"
+  end
+
+  class ::VY7
       def foo(a)
         yield(a)
       end
@@ -139,10 +158,10 @@ describe FastRuby, "fastruby" do
     "
   end
 
-  it "should allow single arguments with block" do
-    vy6 = ::VY6.new
+  it "should allow single arguments with block calling ruby methods" do
+    vy7 = ::VY7.new
 
     block = proc do |a| "44" end
-    vy6.bar(44,block).should be == "44"
+    vy7.bar(44,block).should be == "44"
   end
 end
