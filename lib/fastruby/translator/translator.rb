@@ -1039,7 +1039,7 @@ fastruby_local_next:
       cfunc_address_name = self.add_global_name("void**", 0);
       cfunc_real_address_name  = self.add_global_name("void*", 0);
       tree_pointer_name = self.add_global_name("VALUE*", 0);
-      args_tree = call_tree[3]
+      args_tree = call_tree[3].reject{|st| st.respond_to?(:node_type) ? st[0] == :block_pass : false}
       method_tree = nil
 
       begin
@@ -1085,7 +1085,7 @@ fastruby_local_next:
         static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
         
           #{@frame_struct}* pframe = frame;
-          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
+          VALUE method_arguments[#{args_tree.size+1}] = {#{toprocstrargs},(VALUE)block};
           
           void* fptr = 0;
           
@@ -1118,9 +1118,43 @@ fastruby_local_next:
           } 
           
           if (fptr == 0) {
-            return #{
-              protected_block "last_expression = rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
-              };
+            if (block==0) {
+              return #{
+                protected_block "last_expression = rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+                };
+
+            } else {
+              return #{
+                  protected_block "
+                        #{@block_struct} *pblock;
+                        pblock = (typeof(pblock))( ((VALUE*)method_arguments)[#{args_tree.size}] );
+                        last_expression = rb_iterate(
+                        #{anonymous_function{|name|
+                          "
+                            static VALUE #{name} (VALUE data) {
+                              VALUE* method_arguments = (VALUE*)data;
+                              return rb_funcall(
+                                ((VALUE*)method_arguments)[0], 
+                                #{intern_num mname.to_sym}, 
+                                #{args_tree.size-1}#{inprocstrargs});
+                            }
+                          "
+                        }},
+                          (VALUE)method_arguments,
+                          
+                        #{anonymous_function{|name|
+                          "
+                            static VALUE #{name} (VALUE data, VALUE param) {
+                              return rb_proc_call(param, rb_ary_new4(0,(VALUE[]){}));
+                            }
+                          "
+                        }},
+                          pblock->proc
+                        );
+                ", false, "method_arguments"
+                };
+            }
+
           } else {
             return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*)) (fptr) )(self,(VALUE)block,(VALUE)frame,#{args_tree.size-1},method_arguments+1);  
           }
