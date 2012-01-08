@@ -180,7 +180,7 @@ block_wrapping_proc = proc { |name| "
   }
 "
 }
-
+              if block_pass_arg or result_var
                 code = "
                 {
                 VALUE recv = Qnil;
@@ -221,13 +221,18 @@ block_wrapping_proc = proc { |name| "
                 }
                 }
                 "
+              
+                result_var ? code : inline_block(code)
+              else
+                 "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"               
+              end          
 
-              result_var ? code : inline_block(code)
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",") + ",VALUE,VALUE"
             suffix = "_" + rand(1000000).to_s+"_"
 
                 strargs = (0..args_tree.size-2).map{|i| "#{suffix}arg#{i}"}.join(",")
+              if block_pass_arg or result_var
                 code = "
                 {
                 VALUE recv = Qnil;
@@ -283,7 +288,11 @@ block_wrapping_proc = proc { |name| "
                 
                 }
                 "
-            result_var ? code : inline_block(code)
+                result_var ? code : inline_block(code)
+              else
+                strargs = args[1..-1].map{|arg| to_c arg}.join(",")
+                "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
+              end
           end
 
       else # else recvtype
