@@ -26,7 +26,7 @@ module FastRuby
     def to_c_call(tree, result_var = nil)
       directive_code = directive(tree)
       repass_var = @repass_var
-      
+
       if directive_code
         if result_var
           return "#{result_var} = #{directive_code};\n"
@@ -54,28 +54,18 @@ module FastRuby
           else
           arg[0] == :block_pass
             end} 
-      if block_pass_arg
-        
-        call_tree = tree.dup
-        call_tree[3] = args.select{|arg| if arg == :arglist 
-            true
-            else
-              arg[0] != :block_pass
-              end
-              }
-        
-        block_arguments_tree = s(:masgn, s(:array, s(:splat, s(:lasgn, :__xblock_arguments))))
-        block_tree = s(:call, block_pass_arg[1], :call, s(:arglist, s(:splat, s(:lvar, :__xblock_arguments))))
-        
-        replace_iter_tree = s(:iter, call_tree, block_arguments_tree, block_tree).to_fastruby_sexp
-      
-        if result_var  
-          return to_c(replace_iter_tree,result_var)
-        else
-          return to_c(replace_iter_tree)
-        end
-      end
 
+      if block_pass_arg
+        args_tree = args_tree.dup.reject{|st| 
+          if st.respond_to? :node_type
+            st.node_type == :block_pass
+          else 
+            false
+          end
+         }
+        args = args_tree
+      end
+ 
       mname = :require_fastruby if mname == :require
 
       argnum = args.size - 1
@@ -160,24 +150,62 @@ module FastRuby
 
           if argnum == 0
             value_cast = "VALUE,VALUE,VALUE"
-            if result_var
-                "
+
+block_wrapping_proc = proc { |name| "
+  static VALUE #{name}(int argc, VALUE* argv, VALUE _locals, VALUE _parent_frame) {
+    return rb_funcall2(_locals, #{intern_num :call}, argc, argv); 
+  }
+"
+}
+
+                code = "
                 {
                 VALUE recv = Qnil;
                 #{to_c recv, "recv"};
-                #{result_var} = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, Qfalse, (VALUE)pframe);
+
+                #{@block_struct} block, *pblock = Qfalse;
+
+                #{if block_pass_arg
+                "
+                VALUE proc = Qnil;
+                #{to_c(block_pass_arg[1], "proc") }
+                VALUE block_address_value = rb_ivar_get(proc, #{intern_num "__block_address"});
+
+                if (block_address_value != Qnil) {
+                  block.block_function_address = block_address_value;
+                  block.block_function_param = PTR2NUM(rb_ivar_get(proc, #{intern_num "__block_param"}));
+                  pblock = &block;
+                } else {
+                  // create a block from a proc
+                  block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_wrapping_proc)});
+                  block.block_function_param = PTR2NUM(proc);
+                  pblock = &block;
+                }
+
+                "
+                end
+                }
+
+                #{if result_var
+                "
+                #{result_var} = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe);
+                "
+                else
+                "
+                ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe);
+                "
+                end
+                }
                 }
                 "
-            else
-              strargs = args[1..-1].map{|arg| to_c arg}.join(",")
-              "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"
-            end
+
+              result_var ? code : inline_block(code)
           else
             value_cast = ( ["VALUE"]*(args.size) ).join(",") + ",VALUE,VALUE"
             suffix = "_" + rand(1000000).to_s+"_"
-            if result_var
+
                 strargs = (0..args_tree.size-2).map{|i| "#{suffix}arg#{i}"}.join(",")
-                "
+                code = "
                 {
                 VALUE recv = Qnil;
                 
@@ -194,13 +222,45 @@ module FastRuby
                 }
                 
                 #{to_c recv, "recv"};
-                #{result_var} =((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, Qfalse, (VALUE)pframe, #{strargs});
+
+                #{@block_struct} block, *pblock = Qfalse;
+
+                #{if block_pass_arg
+                "
+                VALUE proc = Qnil;
+                #{to_c(block_pass_arg[1], "proc") }
+                VALUE block_address_value = rb_ivar_get(proc, #{intern_num "__block_address"});
+
+                if (block_address_value != Qnil) {
+                  block.block_function_address = block_address_value;
+                  block.block_function_param = PTR2NUM(rb_ivar_get(proc, #{intern_num "__block_param"}));
+                  pblock = &block;
+                } else {
+                  // create a block from a proc
+                  block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_wrapping_proc)});
+                  block.block_function_param = PTR2NUM(proc);
+                  pblock = &block;
+                }
+
+                "
+                end
+                }
+
+                #{if result_var
+                "
+                #{result_var} = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, #{strargs});
+                "
+                else
+                "
+                ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, #{strargs});
+                "
+                end
+                }
+
+                
                 }
                 "
-            else
-              strargs = args[1..-1].map{|arg| to_c arg}.join(",")
-              "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
-            end
+            result_var ? code : inline_block(code)
           end
 
       else # else recvtype
