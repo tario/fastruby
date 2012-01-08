@@ -63,8 +63,8 @@ module FastRuby
       }"
 
       @block_struct = "struct {
-        VALUE block_function_address;
-        VALUE block_function_param;
+        void* block_function_address;
+        void* block_function_param;
         VALUE proc;
       }"
 
@@ -225,7 +225,7 @@ module FastRuby
         if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
 
         volatile VALUE old_call_frame = plocals->call_frame;
-        plocals->call_frame = PTR2NUM(&call_frame);
+        plocals->call_frame = &call_frame;
 
         #{precode}
 
@@ -261,14 +261,14 @@ module FastRuby
 
     def initialize_method_structs(args_tree)
       @locals_struct = "struct {
-        VALUE return_value;
-        VALUE parent_locals;
-        VALUE pframe;
-        VALUE block_function_address;
-        VALUE block_function_param;
-        VALUE call_frame;
+        void* call_frame;
+        void* parent_locals;
+        void* pframe;
+        void* block_function_address;
+        void* block_function_param;
         VALUE active;
         VALUE targetted;
+        VALUE return_value;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -559,7 +559,7 @@ else
 end
 }
 
-          plocals->parent_locals = PTR2NUM(frame.thread_data->last_plocals);
+          plocals->parent_locals = (frame.thread_data->last_plocals);
           void* volatile old_parent_locals = frame.thread_data->last_plocals;
           
           #{
@@ -571,8 +571,8 @@ end
           frame.plocals = plocals;
           plocals->active = Qtrue;
           plocals->targetted = Qfalse;
-          plocals->pframe = PTR2NUM(&frame);
-          plocals->call_frame = PTR2NUM(0);
+          plocals->pframe = (&frame);
+          plocals->call_frame = (0);
 
           pframe = (void*)&frame;
 
@@ -622,8 +622,8 @@ end
               plocals->block_function_address = pblock->block_function_address;
               plocals->block_function_param = pblock->block_function_param;
             } else {
-              plocals->block_function_address = PTR2NUM(0);
-              plocals->block_function_param = PTR2NUM(Qnil);
+              plocals->block_function_address = (0);
+              plocals->block_function_param = 0;
             }
             "
           end
@@ -673,14 +673,14 @@ end
 
        @locals = locals
         @locals_struct = "struct {
-        VALUE return_value;
-        VALUE parent_locals;
-        VALUE pframe;
-        VALUE block_function_address;
-        VALUE block_function_param;
-        VALUE call_frame;
+        void* call_frame;
+        void* parent_locals;
+        void* pframe;
+        void* block_function_address;
+        void* block_function_param;
         VALUE active;
         VALUE targetted;
+        VALUE return_value;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -730,7 +730,7 @@ end
         @infer_lvar_map[lvar_name] = lvar_type
         return "Qnil"
       elsif mname == :block_given?
-        return "NUM2PTR(plocals->block_function_address) == 0 ? Qfalse : Qtrue"
+        return "plocals->block_function_address == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
 
         code = args[1][1]

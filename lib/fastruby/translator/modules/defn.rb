@@ -227,13 +227,13 @@ private
 
               if (rb_block_given_p()) {
                 struct {
-                  VALUE block_function_address;
-                  VALUE block_function_param;
+                  void* block_function_address;
+                  void* block_function_param;
                   VALUE proc;
                 } block_struct;
 
-                block_struct.block_function_address = PTR2NUM(re_yield);
-                block_struct.block_function_param = PTR2NUM(0);
+                block_struct.block_function_address = re_yield;
+                block_struct.block_function_param = 0;
                 block_struct.proc = Qnil;
 
                 block = (VALUE)&block_struct;

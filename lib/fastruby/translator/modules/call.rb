@@ -209,8 +209,8 @@ module FastRuby
                   pblock = &block;
                 } else {
                   // create a block from a proc
-                  block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_wrapping_proc)});
-                  block.block_function_param = PTR2NUM(proc);
+                  block.block_function_address = ((void*)#{anonymous_function(&block_wrapping_proc)});
+                  block.block_function_param = proc;
                   block.proc = proc;
                   pblock = &block;
                 }
@@ -270,13 +270,13 @@ module FastRuby
                 VALUE block_address_value = rb_ivar_get(proc, #{intern_num "__block_address"});
                 if (block_address_value != Qnil) {
                   block.block_function_address = block_address_value;
-                  block.block_function_param = PTR2NUM(rb_ivar_get(proc, #{intern_num "__block_param"}));
+                  block.block_function_param = (rb_ivar_get(proc, #{intern_num "__block_param"}));
                   block.proc = proc;
                   pblock = &block;
                 } else {
                   // create a block from a proc
-                  block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_wrapping_proc)});
-                  block.block_function_param = PTR2NUM(proc);
+                  block.block_function_address = ((void*)#{anonymous_function(&block_wrapping_proc)});
+                  block.block_function_param = proc;
                   block.proc = proc;
                   pblock = &block;
                 }

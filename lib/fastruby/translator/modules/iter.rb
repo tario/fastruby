@@ -295,7 +295,7 @@ module FastRuby
             if call_type == :lambda or call_type == :proc_new
             "
               VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
-              ((typeof(plocals))(pframe->plocals))->call_frame = PTR2NUM(pframe);
+              ((typeof(plocals))(pframe->plocals))->call_frame = pframe;
             "
             end
             }
@@ -599,7 +599,7 @@ fastruby_local_next:
                 current_plocals = pframe->thread_data->last_plocals;
                 while (current_plocals) {
                   current_plocals->active = Qfalse;
-                  current_plocals = (typeof(current_plocals))NUM2PTR(current_plocals->parent_locals); 
+                  current_plocals = (typeof(current_plocals))(current_plocals->parent_locals); 
                 }
                 
                 // restore last_plocals
@@ -610,7 +610,7 @@ fastruby_local_next:
                 
                 while (current_plocals) {
                   current_plocals->active = Qtrue;
-                  current_plocals = (typeof(current_plocals))NUM2PTR(current_plocals->parent_locals); 
+                  current_plocals = (typeof(current_plocals))(current_plocals->parent_locals); 
                 }
               }
               ", true), precode, postcode
@@ -676,8 +676,8 @@ fastruby_local_next:
         
         fastruby_precode = "                 #{@block_struct} block;
 
-                block.block_function_address = PTR2NUM((void*)#{anonymous_function(&block_code)});
-                block.block_function_param = PTR2NUM((void*)plocals);
+                block.block_function_address = ((void*)#{anonymous_function(&block_code)});
+                block.block_function_param = ((void*)plocals);
                 block.proc = Qnil;                
                 "
         

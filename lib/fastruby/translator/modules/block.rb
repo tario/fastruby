@@ -33,10 +33,10 @@ module FastRuby
           pframe = (void*)frame_param;
           plocals = (void*)pframe->plocals;
 
-          if (NUM2PTR(plocals->block_function_address) == 0) {
+          if ((plocals->block_function_address) == 0) {
             #{_raise("rb_eLocalJumpError", "no block given")};
           } else {
-            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))NUM2PTR(plocals->block_function_address))(size, block_args, (VALUE)NUM2PTR(plocals->block_function_param), (VALUE)pframe);
+            return ((VALUE(*)(int,VALUE*,VALUE,VALUE))(plocals->block_function_address))(size, block_args, (VALUE)(plocals->block_function_param), (VALUE)pframe);
           }
         }
       "
