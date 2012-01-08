@@ -107,5 +107,42 @@ describe FastRuby, "fastruby" do
     executed.should be == 1
   end
 
+  class ::VY5
+      def foo(a)
+        yield(a)
+      end
+      
+    
+    fastruby "
+      def bar(x,block)
+        foo(*x,&block)
+      end
+    "
+  end
 
+  it "should allow pass symbols as blocks" do
+    vy5 = ::VY5.new
+    vy5.bar([44],:to_s).should be == "44"
+  end
+
+
+  class ::VY6
+      def foo(a)
+        yield(a)
+      end
+      
+    
+    fastruby "
+      def bar(x,block)
+        foo(x,&block)
+      end
+    "
+  end
+
+  it "should allow single arguments with block" do
+    vy6 = ::VY6.new
+
+    block = proc do |a| "44" end
+    vy6.bar(44,block).should be == "44"
+  end
 end
