@@ -495,9 +495,9 @@ module FastRuby
             read_arguments_code << "
               if (pblock) {
               rb_ivar_set(plocals->#{block_argument.to_s.gsub("&","")},
-                        #{intern_num "__block_address"}, pblock->block_function_address); 
+                        #{intern_num "__block_address"}, PTR2NUM(pblock->block_function_address)); 
               rb_ivar_set(plocals->#{block_argument.to_s.gsub("&","")},
-                        #{intern_num "__block_param"}, pblock->block_function_param);            
+                        #{intern_num "__block_param"}, PTR2NUM(pblock->block_function_param));            
               }            
 
             "
