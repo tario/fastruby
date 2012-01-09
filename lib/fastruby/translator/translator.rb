@@ -224,7 +224,7 @@ module FastRuby
         call_frame.thread_data = old_pframe->thread_data;
         if (call_frame.thread_data == 0) call_frame.thread_data = rb_current_thread_data();
 
-        volatile void* old_call_frame = plocals->call_frame;
+        void* volatile old_call_frame = plocals->call_frame;
         plocals->call_frame = &call_frame;
 
         #{precode}

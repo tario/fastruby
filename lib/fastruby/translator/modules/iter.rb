@@ -294,7 +294,7 @@ module FastRuby
             #{
             if call_type == :lambda or call_type == :proc_new
             "
-              VALUE old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
+              void* volatile old_call_frame = ((typeof(plocals))(pframe->plocals))->call_frame;
               ((typeof(plocals))(pframe->plocals))->call_frame = pframe;
             "
             end
