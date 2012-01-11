@@ -186,4 +186,11 @@ describe FastRuby, "fastruby" do
     vy8.bar(555,block).should be == "555"
   end
 
+  it "should allow single arguments with block calling ruby methods and read array block arguments" do
+    vy8 = ::VY8.new
+
+    block = proc do |a| a end
+    vy8.bar([555],block).should be == [555]
+  end
+
 end
