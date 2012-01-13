@@ -193,4 +193,22 @@ describe FastRuby, "fastruby" do
     vy8.bar([555],block).should be == [555]
   end
 
+  class ::VY9
+      def foo(a)
+        yield(a)
+      end
+    
+    fastruby "
+      def bar(vy9,x,block)
+        vy9.first.foo(x,&block)
+      end
+    "
+  end
+
+  it "should allow block as proc with no type inference of the receiver" do
+    vy9 = ::VY9.new
+
+    block = proc do |a| a end
+    vy9.bar([vy9],555,block).should be == 555
+  end
 end
