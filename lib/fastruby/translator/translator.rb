@@ -1146,11 +1146,29 @@ fastruby_local_next:
                           
                         #{anonymous_function{|name|
                           "
-                            static VALUE #{name} (VALUE data, VALUE param) {
-                              if (CLASS_OF(data) != rb_cArray) {
-                                data = rb_ary_new3(1,data);
-                              }
-                              return rb_proc_call(param, data /*rb_ary_new4(0,(VALUE[]){})*/);
+                            static VALUE #{name} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
+
+           VALUE arg;
+            #{
+            # TODO: access directly to argc and argv for optimal execution
+            if RUBY_VERSION =~ /^1\.9/ 
+              "
+                if (TYPE(arg_) == T_ARRAY) {
+                  if (_RARRAY_LEN(arg_) <= 1) {
+                    arg = rb_ary_new4(argc,argv);
+                  } else {
+                    arg = arg_;
+                  }
+                } else {
+                  arg = rb_ary_new4(argc,argv);
+                }
+              "
+            else
+              "arg = arg_;"
+            end
+            }
+        
+                              return rb_proc_call(param, arg);
                             }
                           "
                         }},
