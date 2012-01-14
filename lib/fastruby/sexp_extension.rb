@@ -29,11 +29,13 @@ end
 
 module FastRuby
   class Graph
-    def edges
-      [[1,2]]
+    attr_reader :edges
+    def initialize
+      @edges = []
     end
  
     def add_edge(orig,dest)
+      @edges << [orig,dest]
     end
   end
 
