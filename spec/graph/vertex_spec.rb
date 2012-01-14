@@ -19,4 +19,10 @@ describe FastRuby::Graph, "fastruby sexp graph" do
     graph.vertexes.should include(1)
   end
 
+  it "should allow read vertex from graph with two vertexes" do
+    graph = Graph.new 1 => [1,2]
+    graph.vertexes.count.should be == 2
+    graph.vertexes.should include(1)
+    graph.vertexes.should include(2)
+  end
 end
