@@ -60,7 +60,7 @@ module FastRuby
       if outputs
         blk ? outputs.each(&blk) : outputs
       else
-        []
+        Set.new
       end
     end
   end
