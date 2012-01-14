@@ -72,7 +72,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
     {:a => :b, 
      :b => [:c, :d],
-     :c => [:d => :e],
+     :c => [:d, :e],
      :d => sexp,
      :e => sexp }
   end
