@@ -20,6 +20,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 require "fastruby/fastruby_sexp"
 require "ruby_parser"
+require "set"
 
 class Object
   def to_fastruby_sexp
@@ -30,22 +31,23 @@ end
 module FastRuby
   class Graph
     attr_reader :edges
+    attr_reader :vertexes
+
     def initialize(hash = {})
       @edges = []
+      @vertexes = Set.new
 
       hash.each do |orig,v|
         v.each do |dest|
-          @edges << [orig,dest]
+          add_edge(orig,dest)
         end
       end
     end
  
     def add_edge(orig,dest)
+      @vertexes << orig
+      @vertexes << dest
       @edges << [orig,dest]
-    end
-
-    def vertexes
-      []
     end
   end
 
