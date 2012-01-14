@@ -108,6 +108,8 @@ module FastRuby
         end
       end
 
+      alias edges_until edges_while
+
       def edges_block(&blk)
         (2..@frbsexp.size-1).each do |i|
           blk.call(@frbsexp[i-1], @frbsexp[i].first_tree)
@@ -169,7 +171,7 @@ module FastRuby
 
     def first_tree
       return self if [:lvar,:lit,:break].include? node_type
-      return self[1].first_tree if [:if,:block,:while].include? node_type
+      return self[1].first_tree if [:if,:block,:while,:until].include? node_type
 
       send("first_tree_#{node_type}")
     end
