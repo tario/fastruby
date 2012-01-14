@@ -43,6 +43,21 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     
   end
 
+  assert_graph("should create circular connection from until nodes",
+              "until(a); foo; bar; end",5) do |sexp, edges|
+    { :a => :foo, sexp.find_tree(:block) => :a, :a => sexp}
+  end
+
+  assert_graph("should connect break inside until nodes with until", "until(a); foo; break; bar; end", 7) do |sexp,edges|
+    {:a => [:foo,sexp], sexp.find_tree(:break) => sexp, sexp.find_tree(:block) => :a}
+  end
+
+  assert_graph("should connect previous call on block with condition of next until",
+      "foo; until(a); b; end") do |sexp,edges|
+      {:foo => :a }
+    
+  end
+
   assert_graph("should connect previous call on block with condition of next while","
       case a
       when b
