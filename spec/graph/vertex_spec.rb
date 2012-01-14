@@ -25,4 +25,13 @@ describe FastRuby::Graph, "fastruby sexp graph" do
     graph.vertexes.should include(1)
     graph.vertexes.should include(2)
   end
+
+  it "should allow allow read vertex outputs" do
+    graph = Graph.new 1 => [1]
+
+    array = []
+    graph.each_vertex_output(1, &array.method(:<<))
+
+    array.should include(1)
+  end
 end
