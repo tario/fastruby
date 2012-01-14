@@ -13,4 +13,10 @@ describe FastRuby::Graph, "fastruby sexp graph" do
     graph.edges.count.should be == 1
     graph.edges.first.should be == [1,2]
   end
+
+  it "should return 0 edges for an empty graph" do
+    graph = Graph.new 
+    graph.edges.count.should be == 0
+  end
+
 end
