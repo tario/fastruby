@@ -58,7 +58,9 @@ module FastRuby
     def each_vertex_output(vertex,&blk)
       outputs = @vertex_output[vertex]
       if outputs
-        outputs.each(&blk)
+        blk ? outputs.each(&blk) : outputs
+      else
+        []
       end
     end
   end
