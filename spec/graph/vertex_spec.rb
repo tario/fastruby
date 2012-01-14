@@ -48,4 +48,11 @@ describe FastRuby::Graph, "fastruby sexp graph" do
 
     array.should be == []
   end
+
+
+  it "should allow read vertex outputs with no blocks (returning sets)" do
+    graph = Graph.new 1 => [2]
+    graph.each_vertex_output(1).should include(2)
+    graph.each_vertex_output(2).count.should == 0
+  end
 end
