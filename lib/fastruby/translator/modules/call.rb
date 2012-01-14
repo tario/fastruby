@@ -75,6 +75,7 @@ module FastRuby
       recvtype = infer_type(recv)
       
       if args.size > 1
+        if (not recvtype) or args.last[0] == :splat
           if block_pass_arg
             call_tree = tree.dup
             call_tree[3] = args.select{|arg| if arg == :arglist 
@@ -98,6 +99,8 @@ module FastRuby
               return to_c(replace_iter_tree)
             end
           end
+        end
+
         if args.last[0] == :splat
           aux_varname = "_aux_" + rand(1000000).to_s
           code = protected_block(
