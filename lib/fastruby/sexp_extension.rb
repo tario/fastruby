@@ -43,6 +43,10 @@ module FastRuby
     def add_edge(orig,dest)
       @edges << [orig,dest]
     end
+
+    def vertexes
+      []
+    end
   end
 
   class FastRubySexp
