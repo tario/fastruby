@@ -37,6 +37,8 @@ module FastRuby
         impl_tree = tree[4]
       end
 
+      graph = impl_tree.to_graph
+
       args_tree[1..-1].each do |subtree|
         return :dag if subtree.to_s =~ /^\&/
       end

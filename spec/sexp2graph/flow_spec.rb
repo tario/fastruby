@@ -91,4 +91,12 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
      :d => sexp,
      :e => sexp }
   end
+
+
+  assert_graph("literals, literals everywhere","
+      1; 2; 3; 4
+      ") do |sexp, edges|
+
+    {}
+  end
 end

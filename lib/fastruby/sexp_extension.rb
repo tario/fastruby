@@ -60,10 +60,12 @@ module FastRuby
             blk.call(array_tree[i],array_tree[i+1])
           end
 
-          array_tree[1..-1].each do |st2|
-            blk.call(st2,st[2].first_tree)  
+          if st[2]
+            array_tree[1..-1].each do |st2|
+              blk.call(st2,st[2].first_tree)  
+            end
+            blk.call(st[2],@frbsexp)
           end
-          blk.call(st[2],@frbsexp)
         end
 
         (3..@frbsexp.size-2).each do |i|
@@ -165,15 +167,44 @@ module FastRuby
       from_sexp(RubyParser.new.parse(code))
     end
 
+    def to_graph
+      self.edges.each do |edge|
+      end
+    end
+
     def edges
       @edges
     end
 
     def first_tree
-      return self if [:lvar,:lit,:break].include? node_type
+      return self if [:lvar,:lit,:break,:true,:false,:nil,:self,:retry,:lvar].include? node_type
       return self[1].first_tree if [:if,:block,:while,:until].include? node_type
+      return self[2].first_tree if [:lasgn].include? node_type
 
       send("first_tree_#{node_type}")
+    end
+
+    def first_tree_yield
+      if self.size > 1
+        self[-1].first_tree
+      else
+        self
+      end
+    end
+
+    def first_tree_iter
+      call_tree = self[1]
+      recv = call_tree[1]
+      if recv
+        recv.first_tree
+      else
+        args_tree = call_tree[3]
+        if args_tree.size > 1
+          args_tree[1].first_tree
+        else
+          call_tree
+        end
+      end
     end
 
     def first_tree_call
