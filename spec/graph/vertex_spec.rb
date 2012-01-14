@@ -13,4 +13,10 @@ describe FastRuby::Graph, "fastruby sexp graph" do
     graph.vertexes.count.should be == 0
   end
 
+  it "should allow read vertex from graph with one vertex" do
+    graph = Graph.new 1 => [1]
+    graph.vertexes.count.should be == 1
+    graph.vertexes.should include(1)
+  end
+
 end
