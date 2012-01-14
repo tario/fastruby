@@ -30,8 +30,14 @@ end
 module FastRuby
   class Graph
     attr_reader :edges
-    def initialize
+    def initialize(hash = {})
       @edges = []
+
+      hash.each do |orig,v|
+        v.each do |dest|
+          @edges << [orig,dest]
+        end
+      end
     end
  
     def add_edge(orig,dest)
