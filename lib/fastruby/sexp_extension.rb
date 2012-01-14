@@ -28,6 +28,9 @@ class Object
 end
 
 module FastRuby
+  class Graph
+  end
+
   class FastRubySexp
     class Edges
       def initialize(frbsexp)
