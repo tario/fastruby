@@ -36,6 +36,7 @@ module FastRuby
     def initialize(hash = {})
       @edges = []
       @vertexes = Set.new
+      @vertex_output = Hash.new
 
       hash.each do |orig,v|
         v.each do |dest|
@@ -47,11 +48,18 @@ module FastRuby
     def add_edge(orig,dest)
       @vertexes << orig
       @vertexes << dest
+
+      @vertex_output[orig] ||= Set.new
+      @vertex_output[orig] << dest
+
       @edges << [orig,dest]
     end
 
-    def each_vertex_output(vertex)
-      yield(1)
+    def each_vertex_output(vertex,&blk)
+      outputs = @vertex_output[vertex]
+      if outputs
+        outputs.each(&blk)
+      end
     end
   end
 
