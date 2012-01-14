@@ -49,6 +49,10 @@ module FastRuby
       @vertexes << dest
       @edges << [orig,dest]
     end
+
+    def each_vertex_output(vertex)
+      yield(1)
+    end
   end
 
   class FastRubySexp
