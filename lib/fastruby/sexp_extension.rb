@@ -50,22 +50,31 @@ module FastRuby
       def edges_case(&blk)
         variable_tree = @frbsexp[1]
 
+        #require "pry";binding.pry
+
         blk.call(variable_tree,@frbsexp[2][1][1].first_tree)
         
         @frbsexp[2..-2].each do |st|
-          blk.call(st[1][1],st[2].first_tree)
+          array_tree = st[1]
+          (1..array_tree.size-2).each do |i|
+            blk.call(array_tree[i],array_tree[i+1])
+          end
+
+          array_tree[1..-1].each do |st2|
+            blk.call(st2,st[2].first_tree)  
+          end
           blk.call(st[2],@frbsexp)
         end
 
         (3..@frbsexp.size-2).each do |i|
-          blk.call(@frbsexp[i-1][1][1], @frbsexp[i][1][1].first_tree)
+          blk.call(@frbsexp[i-1][1][-1], @frbsexp[i][1][1].first_tree)
         end
 
         if @frbsexp[-1]
-          blk.call(@frbsexp[-2][1][1], @frbsexp[-1].first_tree)
+          blk.call(@frbsexp[-2][1][-1], @frbsexp[-1].first_tree)
           blk.call(@frbsexp[-1], @frbsexp)
         else
-          blk.call(@frbsexp[-2][1][1], @frbsexp)
+          blk.call(@frbsexp[-2][1][-1], @frbsexp)
         end
       end
   
