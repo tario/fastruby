@@ -25,5 +25,11 @@ describe FastRuby::Graph, "fastruby sexp graph" do
     graph.edges.should include([3,4])
   end
 
-
+  it "should allow creation of graphs using hashes with multiple nodes" do
+    graph = Graph.new 3 => [4,5,6]
+    graph.edges.count.should be == 3
+    graph.edges.should include([3,4])
+    graph.edges.should include([3,5])
+    graph.edges.should include([3,6])
+  end
 end
