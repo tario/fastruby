@@ -154,13 +154,15 @@ module FastRuby
       end
 
       def edges_while(&blk)
-        blk.call(@frbsexp[1], @frbsexp[2].first_tree)
-        blk.call(@frbsexp[2], @frbsexp[1].first_tree)
-        blk.call(@frbsexp[1], @frbsexp)
-
-        @frbsexp[2].find_break do |subtree|
-          blk.call(subtree, @frbsexp)
+        if @frbsexp[2]
+          blk.call(@frbsexp[1], @frbsexp[2].first_tree)
+          blk.call(@frbsexp[2], @frbsexp[1].first_tree)
+          @frbsexp[2].find_break do |subtree|
+            blk.call(subtree, @frbsexp)
+          end
         end
+
+        blk.call(@frbsexp[1], @frbsexp)
       end
 
       alias edges_until edges_while
@@ -230,12 +232,23 @@ module FastRuby
     end
 
     def first_tree
-      return self if [:lvar,:lit,:break,:true,:false,:nil,:self,:retry,:lvar].include? node_type
-      return self[1].first_tree if [:if,:block,:while,:until].include? node_type
-      return self[2].first_tree if [:lasgn].include? node_type
+      if respond_to? "first_tree_#{node_type}" 
+        send("first_tree_#{node_type}")
+      else
+        return self[1].first_tree if self.count == 2 and self[1].respond_to? :node_type
+        return self[1].first_tree if [:if,:block,:while,:until].include? node_type
+        return self[2].first_tree if [:lasgn,:iasgn,:gasgn,:cdecl].include? node_type
 
-      send("first_tree_#{node_type}")
+        self
+      end    
     end
+
+    def first_tree_return
+      self[1] ? self[1].first_tree : self
+    end
+
+    alias first_tree_break first_tree_return
+    alias first_tree_next first_tree_return 
 
     def first_tree_yield
       if self.size > 1

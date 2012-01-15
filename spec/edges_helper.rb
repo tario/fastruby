@@ -1,6 +1,6 @@
 module EdgesHelper
 
-  class Edges < Array
+  class GraphEdges < Array
     def initialize(sexp); @sexp = sexp; end
 
     def to_sexp(obj, &blk)
@@ -29,7 +29,7 @@ module EdgesHelper
   def get_defn_edges(code)
     sexp = FastRuby::FastRubySexp.parse(code)
 
-    edges = Edges.new(sexp)
+    edges = GraphEdges.new(sexp)
     sexp[3].edges.each do |tree_orig, tree_dest|
       edges << [tree_orig, tree_dest]
     end
@@ -40,7 +40,7 @@ module EdgesHelper
   def get_edges(code)
     sexp = FastRuby::FastRubySexp.parse(code)
 
-    edges = Edges.new(sexp)
+    edges = GraphEdges.new(sexp)
     sexp.edges.each do |tree_orig, tree_dest|
       edges << [tree_orig, tree_dest]
     end

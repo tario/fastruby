@@ -504,9 +504,10 @@ module FastRuby
           end
 
         end
-       
+
+        require "fastruby/sexp_extension"       
         scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(tree)
-        
+
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
 

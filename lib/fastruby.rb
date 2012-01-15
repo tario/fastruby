@@ -23,6 +23,7 @@ require "fastruby/object"
 require "fastruby/exceptions"
 require "fastruby/custom_require"
 require "fastruby/set_tree"
+require "fastruby/sexp_extension"
 require "base64"
 
 class Object
