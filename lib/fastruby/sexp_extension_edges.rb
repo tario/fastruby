@@ -38,6 +38,15 @@ module FastRuby
         end
       end
 
+      def edges_or(&blk)
+        (1..@frbsexp.size-2).each do |i|
+          blk.call(@frbsexp[i],@frbsexp[i+1].first_tree)
+        end
+
+        blk.call(@frbsexp[-1],@frbsexp)
+      end
+      alias edges_and edges_or
+
       def edges_case(&blk)
         variable_tree = @frbsexp[1]
 
