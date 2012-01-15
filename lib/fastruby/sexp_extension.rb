@@ -118,6 +118,23 @@ module FastRuby
     def to_graph
       graph = Graph.new
       self.edges.each &graph.method(:add_edge)
+
+      if ENV['FASTRUBY_GRAPH_VERTEX_CHECK'] == '1' 
+        output_vertexes = [];
+
+        self.walk_tree do |subtree|
+          if graph.each_vertex_output(subtree).count == 0
+            # vertexes with no output
+            unless [:arglist,:scope].include? subtree.node_type 
+              output_vertexes << subtree
+              if output_vertexes.count > 1
+                raise RuntimeError, "invalid output vertexes #{output_vertexes.map &:node_type}"
+              end
+            end
+          end
+        end
+      end
+
       graph
     end
 
