@@ -96,6 +96,10 @@ module FastRuby
 
           path.each do |st2|
             if st2.node_type == :call
+              if has_call and st2[1] == nil
+                return :dag
+              end
+
               writes.clear
               has_call = true
             elsif st2.node_type == :lasgn
@@ -104,12 +108,16 @@ module FastRuby
                   st2.node_type == :return or st2.node_type == :yield
 
               if has_call
-                if writes.include? st2[1]
-                  # no problem
+                if st2.node_type == :lvar
+                  if writes.include? st2[1]
+                    # no problem
+                  else
+                    # read after call, the scope of this function must be implemented on heap
+                    return :dag
+                  end
                 else
-                  # read after call, the scope of this function must be implemented on heap
                   return :dag
-                end
+                end              
               end
             end
           end
