@@ -39,9 +39,10 @@ describe FastRuby::Graph, "fastruby sexp graph" do
 
   # cyclic paths
   assert_graph_paths(1, [[1]], 1 => [1] )
-  assert_graph_paths(1, [[1,2]], 1 => [2], 2 => [1] )
-  assert_graph_paths(2, [[2,1]], 1 => [2], 2 => [1] )
+  assert_graph_paths(1, [[1,2,1]], 1 => [2], 2 => [1] )
+  assert_graph_paths(2, [[2,1,2]], 1 => [2], 2 => [1] )
 
+  # cyclyc paths with repeated vertexes
   assert_graph_paths(1, [[1,2,4],[1,2,3,2,4]], 1 => [2], 2 => [3,4], 3 => [2])
 end
 

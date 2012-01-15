@@ -65,7 +65,7 @@ module FastRuby
     end
 
     def each_path_from(vertex, history = [])
-      outputs = each_vertex_output(vertex) - history
+      outputs = each_vertex_output(vertex) - history.select{|h| h[0] == vertex }.map(&:last)
       outputs.delete(vertex)
 
       if outputs.count == 0
@@ -74,7 +74,7 @@ module FastRuby
       end      
 
       outputs.each do |vo|
-        each_path_from(vo,history+[vertex]) do |subpath|
+        each_path_from(vo,history+[[vertex,vo]]) do |subpath|
           yield [vertex]+subpath
         end
       end
