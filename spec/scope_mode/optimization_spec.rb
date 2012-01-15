@@ -118,20 +118,6 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :linear
   end
 
-  it "case with two call (when) after read should return :linear scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(a,b,c)
-        case a
-          when b
-            43
-          when c
-            439
-        end
-      end"
-    ).should be == :linear
-  end
-
-
   it "read of variable AFTER write without call between them should return :linear scope" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a,b) 
