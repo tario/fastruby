@@ -33,4 +33,22 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
     {sexp.find_tree(:rescue)[1] => [sexp.find_tree(:rescue)]}
   end
+
+  assert_graph_defn("should enter the rescue in the body","
+    def foo
+      a
+      begin
+          b
+        rescue
+          c
+        end
+      end") do |sexp, edges|
+
+    {:a => :b,
+      sexp.find_tree(:rescue)[1] => sexp.find_tree(:rescue),
+      sexp.find_tree(:rescue) => sexp.find_tree(:block),
+      :b => :c,
+      :b => sexp.find_tree(:rescue)
+    }
+  end
 end
