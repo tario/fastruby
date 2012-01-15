@@ -42,16 +42,6 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :dag
   end
 
-  it "read AFTER call should return :dag scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
-      $parser.parse "def foo(a,b) 
-        a+b
-        c=55
-        c
-      end"
-    ).should be == :dag
-  end
-
   it "method call AFTER read inside while should return :dag scope" do
     FastRuby::ScopeModeHelper.get_scope_mode(
       $parser.parse "def foo(a,b)

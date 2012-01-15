@@ -130,4 +130,15 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
       end"
     ).should be == :linear
   end
+
+
+  it "read of variable AFTER write without call between them should return :linear scope" do
+    FastRuby::ScopeModeHelper.get_scope_mode(
+      $parser.parse "def foo(a,b) 
+        a+b
+        c=55
+        c
+      end"
+    ).should be == :linear
+  end
 end
