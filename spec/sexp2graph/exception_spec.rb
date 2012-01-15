@@ -22,4 +22,15 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     sexp.find_tree(:retry) => :b
     }
   end
+
+  assert_graph_defn("should have edges for rescue","
+    def foo
+      begin
+          b
+        rescue
+        end
+      end") do |sexp, edges|
+
+    {sexp.find_tree(:rescue)[1] => [sexp.find_tree(:rescue)]}
+  end
 end
