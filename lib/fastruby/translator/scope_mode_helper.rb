@@ -61,6 +61,11 @@ module FastRuby
           return :dag
         end
       end
+
+      impl_tree.walk_tree do |subtree|
+        graph.each_path_from(subtree) do |path|
+        end
+      end
       
       impl_tree.walk_tree do |subtree|
         if subtree.node_type == :block

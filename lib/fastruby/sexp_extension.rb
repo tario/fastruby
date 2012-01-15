@@ -96,8 +96,9 @@ module FastRuby
     end
 
     def to_graph
-      self.edges.each do |edge|
-      end
+      graph = Graph.new
+      self.edges.each &graph.method(:add_edge)
+      graph
     end
 
     def edges
