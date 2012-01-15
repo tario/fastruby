@@ -128,40 +128,6 @@ module FastRuby
     end
     
 private
-    def has_call?(*trees)
-      trees.each do |tree|
-        return false unless tree.kind_of? FastRuby::FastRubySexp
-        
-        tree.walk_tree do |subtree|
-          if subtree.node_type == :call or subtree.node_type == :when
-            return true
-          end
-        end
-      end
-      
-      false
-    end
-    def has_lvar?(*trees)
-      trees.each do |tree|
-        return false unless tree.kind_of? FastRuby::FastRubySexp
-
-        tree.walk_tree do |subtree|
-          if subtree.node_type == :lvar or 
-            subtree.node_type == :self or
-            subtree.node_type == :yield
-            return true
-          end
-          
-          if subtree.node_type == :call
-            if subtree[1] == nil
-              return true
-            end
-          end
-        end
-      end
-      
-      false
-    end
     def has_local_variable_access?(*trees) 
       trees.each do |tree|
         return false unless tree.kind_of? FastRuby::FastRubySexp
