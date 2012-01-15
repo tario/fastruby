@@ -85,7 +85,7 @@ module FastRuby
   class FastRubySexp
     def self.from_sexp(value)
       return nil if value == nil
-      return self if value.kind_of? FastRubySexp
+      return value if value.kind_of? FastRubySexp
 
       ary = FastRuby::FastRubySexp.new
       value.each do |x|
