@@ -65,8 +65,15 @@ module FastRuby
     end
 
     def each_path_from(vertex)
+      if each_vertex_output(vertex).count == 0
+        yield [vertex]
+        return
+      end      
+
       each_vertex_output(vertex) do |vo|
-        yield [vertex,vo]
+        each_path_from(vo) do |subpath|
+          yield [vertex]+subpath
+        end
       end
     end
   end
