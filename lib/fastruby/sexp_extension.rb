@@ -137,6 +137,10 @@ module FastRuby
       end    
     end
 
+    def first_tree_or
+      self[1].first_tree
+    end
+
     def first_tree_return
       self[1] ? self[1].first_tree : self
     end
