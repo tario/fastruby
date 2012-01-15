@@ -63,6 +63,10 @@ module FastRuby
         Set.new
       end
     end
+
+    def each_path_from(vertex)
+      yield [1,2]
+    end
   end
 
   class FastRubySexp
