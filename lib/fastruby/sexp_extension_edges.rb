@@ -38,6 +38,10 @@ module FastRuby
         end
       end
 
+      def edges_lasgn(&blk)
+        blk.call(@frbsexp[2],@frbsexp)        
+      end
+
       def edges_or(&blk)
         (1..@frbsexp.size-2).each do |i|
           blk.call(@frbsexp[i],@frbsexp[i+1].first_tree)
