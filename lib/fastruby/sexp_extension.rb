@@ -65,12 +65,15 @@ module FastRuby
     end
 
     def each_path_from(vertex)
-      if each_vertex_output(vertex).count == 0
+      outputs = each_vertex_output(vertex)
+      outputs.delete vertex
+
+      if outputs.count == 0
         yield [vertex]
         return
       end      
 
-      each_vertex_output(vertex) do |vo|
+      outputs.each do |vo|
         each_path_from(vo) do |subpath|
           yield [vertex]+subpath
         end
