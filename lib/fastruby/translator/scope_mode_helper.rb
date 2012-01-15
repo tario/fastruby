@@ -25,10 +25,36 @@ module FastRuby
     def self.get_scope_mode(tree_)
       new.get_scope_mode(tree_)
     end
+
+    def when_array_to_if(array)
+      if array.size == 1
+        array[0] || s(:nil)
+      else
+        first_when_tree = array[0]
+        comparers = first_when_tree[1][1..-1]
+
+        condition_tree = s(:or)
+        comparers.each do |st|
+          condition_tree << s(:call, st, :===, s(:arglist, s(:lvar, :temporal_case_var))) 
+        end
+
+        s(:if, condition_tree, first_when_tree[2], when_array_to_if(array[1..-1]) )
+      end
+    end
     
     def get_scope_mode(tree_)
-      tree = FastRuby::FastRubySexp.from_sexp(tree_)
-      
+      tree = FastRuby::FastRubySexp.from_sexp(tree_).transform do |subtree|
+        if subtree.node_type == :for
+          s(:iter,s(:call, subtree[1],:each, s(:arglist)),subtree[2], subtree[3] )
+        elsif subtree.node_type == :case
+          ifs = when_array_to_if(subtree[2..-1])
+
+          s(:block, s(:lasgn, :temporal_case_var, subtree[1]), ifs)
+        else
+          nil
+        end
+      end
+
       if tree.node_type == :defn
         args_tree = tree[2]
         impl_tree = tree[3]
@@ -42,7 +68,7 @@ module FastRuby
       args_tree[1..-1].each do |subtree|
         return :dag if subtree.to_s =~ /^\&/
       end
-      
+
       tree.walk_tree do |subtree|
         if subtree.node_type == :iter
           iter_impl = subtree[3]
@@ -64,77 +90,32 @@ module FastRuby
 
       impl_tree.walk_tree do |subtree|
         graph.each_path_from(subtree) do |path|
-        end
-      end
-      
-      impl_tree.walk_tree do |subtree|
-        if subtree.node_type == :block
-          first_call_index = subtree.size
-          last_read_index = 0
-          (1..subtree.size).each do |i|
-            first_call_index = i if has_call?(subtree[i]) and i < first_call_index 
-            last_read_index = i if has_lvar?(subtree[i]) and i > last_read_index 
-            
-          end
-          
-          return :dag if last_read_index > first_call_index
-        elsif subtree.node_type == :if
-          # condition_tree -> true_tree
-          # condition_tree -> false_tree
-          condition_tree = subtree[1]
-          true_tree = subtree[2]
-          false_tree = subtree[3]
-          
-          if has_call?(condition_tree)
-            return :dag if has_lvar?(true_tree)
-            return :dag if has_lvar?(false_tree)
-          end
-        elsif subtree.node_type == :rescue
-          begin_body = subtree[1]
-          
-          if has_call?(begin_body)
-            subtree[2..3].each do |st2|
-              return :dag if has_lvar?(st2) 
-            end
-          end
-          
-          if has_lvar?(begin_body)
-            subtree[2..3].each do |st2|
-              if st2.find_tree{|st3| st3.node_type == :retry}
-                return :dag if has_call?(st2) or has_call?(begin_body)
+          # verify path prohibitive for :linear scope (local variable read after call)
+          has_call = false
+          writes = Set.new
+
+          path.each do |st2|
+            if st2.node_type == :call
+              writes.clear
+              has_call = true
+            elsif st2.node_type == :lasgn
+              writes << st2[1] # record local writes
+            elsif st2.node_type == :lvar or st2.node_type == :self or 
+                  st2.node_type == :return or st2.node_type == :yield
+
+              if has_call
+                if writes.include? st2[1]
+                  # no problem
+                else
+                  # read after call, the scope of this function must be implemented on heap
+                  return :dag
+                end
               end
             end
           end
-        elsif subtree.node_type == :for
-          return :dag
-        elsif subtree.node_type == :case
-          eval_expr_tree = subtree[1]
-
-          eval_expr_tree_has_call =  has_call? eval_expr_tree
-
-          subtree[2..-2].each do |st2|
-            return :dag if has_lvar?(st2[1]) if eval_expr_tree_has_call
-            if eval_expr_tree_has_call or has_call?(st2)
-                return :dag if has_lvar?(st2[2])
-            end
-          end
-
-          if subtree[-1]
-            if eval_expr_tree_has_call
-              return :dag if has_lvar?(subtree[-1])
-            end
-          end
-        elsif subtree.node_type == :resbody
-        else
-          subtrees = subtree.select{|st2| st2.instance_of? FastRuby::FastRubySexp}
-      	  if subtrees.size > 1
-            if has_lvar?(*subtrees) and has_call?(*subtrees)
-              return :dag
-            end
-          end
         end
       end
-      
+
       :linear
     end
     

@@ -84,11 +84,31 @@ module FastRuby
 
   class FastRubySexp
     def self.from_sexp(value)
+      return nil if value == nil
+      return self if value.kind_of? FastRubySexp
+
       ary = FastRuby::FastRubySexp.new
       value.each do |x|
         ary << x.to_fastruby_sexp
       end
       ary
+    end
+
+    def transform(&blk)
+      ret = FastRuby::FastRubySexp.from_sexp( blk.call(self) )
+
+      unless ret
+        ret = FastRuby::FastRubySexp.new
+        each{|st2|
+          if st2.respond_to?(:transform)
+            ret << st2.transform(&blk)
+          else
+            ret << st2
+          end
+        } 
+      end
+
+      ret
     end
 
     def self.parse(code)
