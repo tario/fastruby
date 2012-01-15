@@ -83,12 +83,6 @@ module FastRuby
   end
 
   class FastRubySexp
-    def initialize
-      super
-
-      @edges = Edges.new(self)
-    end
-
     def self.from_sexp(value)
       ary = FastRuby::FastRubySexp.new
       value.each do |x|
@@ -107,7 +101,7 @@ module FastRuby
     end
 
     def edges
-      @edges
+      Edges.new(self)
     end
 
     def first_tree
