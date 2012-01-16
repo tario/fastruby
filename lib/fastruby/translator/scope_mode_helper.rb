@@ -102,6 +102,13 @@ module FastRuby
 
               writes.clear
               has_call = true
+            elsif st2.node_type == :iter
+              if has_call and st2[1][1] == nil
+                return :dag
+              end
+
+              writes.clear
+              has_call = true
             elsif st2.node_type == :lasgn
               writes << st2[1] # record local writes
             elsif st2.node_type == :lvar or st2.node_type == :self or 
