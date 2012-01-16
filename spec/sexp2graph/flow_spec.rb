@@ -58,41 +58,6 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     
   end
 
-  assert_graph("should connect previous call on block with condition of next while","
-      case a
-      when b
-        c
-      when d
-        e
-      else
-        f
-      end
-      ") do |sexp, edges|
-
-     { :a => :b,:b => [:c,:d],
-                     :c => sexp, 
-                     :d => [:e, :f],
-                     :e => sexp,
-                     :f => sexp }
-  end
-
-  assert_graph("should connect nodes of multiple options of when","
-      case a
-      when b,c
-        d
-      else
-        e
-      end
-      ") do |sexp, edges|
-
-    {:a => :b, 
-     :b => [:c, :d],
-     :c => [:d, :e],
-     :d => sexp,
-     :e => sexp }
-  end
-
-
   assert_graph("literals, literals everywhere","
       1; 2; 3; 4
       ") do |sexp, edges|
