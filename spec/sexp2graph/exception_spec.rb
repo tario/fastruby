@@ -111,4 +111,23 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       sexp.find_tree(:lasgn) => :d     
        }
   end
+
+  assert_graph_defn("should link multiple declaration of exceptions on rescue","
+    def foo
+      begin
+          a
+        rescue b, d => e
+          f
+        end
+      end") do |sexp, edges|
+
+    array_tree = sexp.find_tree(:array)
+
+    {:a => :b,
+      :b => [sexp.find_tree(:gvar), :d], 
+      sexp.find_tree(:gvar) => sexp.find_tree(:lasgn),
+      sexp.find_tree(:lasgn) => :f,
+      :d => sexp.find_tree(:gvar)
+       }
+  end
 end
