@@ -63,22 +63,54 @@ module FastRuby
       def edges_rescue(&blk)
         blk.call(@frbsexp[1],@frbsexp)
 
-        if @frbsexp[2]
-        if @frbsexp[2][2]
-          @frbsexp[1].walk_tree do |subtree|
-            if subtree.node_type == :call or subtree.node_type == :iter
-              blk.call(subtree,@frbsexp[2][2].first_tree)
-            end
-          end    
+        exit_tree = nil
+        resbody_array_tree = @frbsexp[2][1]
 
-          blk.call(@frbsexp[2][2],@frbsexp)
-          blk.call(@frbsexp[1],@frbsexp[2][2].first_tree)
-          retry_tree = @frbsexp[2][2].find_tree(:retry)
-          if retry_tree
-            blk.call(retry_tree,@frbsexp[1].first_tree)
+        if resbody_array_tree.size > 1
+          exit_tree = resbody_array_tree[1].first_tree
+          lasgn_tree = resbody_array_tree[2]
+          gvar_tree = lasgn_tree[2]
+
+          blk.call(resbody_array_tree[1], gvar_tree)
+          blk.call(gvar_tree, lasgn_tree)
+          if @frbsexp[2]
+            if @frbsexp[2][2]
+              blk.call(lasgn_tree,@frbsexp[2][2].first_tree)
+            else            
+              blk.call(lasgn_tree,@frbsexp)
+            end
+          else
+            blk.call(lasgn_tree,@frbsexp)
+          end
+        else
+          if @frbsexp[2]
+          if @frbsexp[2][2]
+            exit_tree = @frbsexp[2][2].first_tree
+          end
           end
         end
+
+        unless exit_tree
+          exit_tree = @frbsexp
         end
+
+        if @frbsexp[2]
+          if @frbsexp[2][2]
+            blk.call(@frbsexp[2][2],@frbsexp)
+            blk.call(@frbsexp[1],exit_tree)
+            retry_tree = @frbsexp[2][2].find_tree(:retry)
+            if retry_tree
+              blk.call(retry_tree,@frbsexp[1].first_tree)
+            end
+          end
+        end
+
+        @frbsexp[1].walk_tree do |subtree|
+          if subtree.node_type == :call or subtree.node_type == :iter
+            blk.call(subtree,exit_tree)
+          end
+        end    
+
       end
 
       def edges_or(&blk)
