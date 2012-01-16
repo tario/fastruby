@@ -68,19 +68,30 @@ module FastRuby
 
         if resbody_array_tree.size > 1
           exit_tree = resbody_array_tree[1].first_tree
-          lasgn_tree = resbody_array_tree[2]
-          gvar_tree = lasgn_tree[2]
+          lasgn_tree = resbody_array_tree.find{|st| 
+                if st.respond_to? :node_type
+                  st.node_type == :lasgn
+                else
+                  false
+                end
+          }
 
-          blk.call(resbody_array_tree[1], gvar_tree)
-          blk.call(gvar_tree, lasgn_tree)
+          (1..resbody_array_tree.size-2).each do |i|
+            blk.call(resbody_array_tree[i], resbody_array_tree[i+1].first_tree)
+
+            if lasgn_tree
+              blk.call(resbody_array_tree[i], lasgn_tree.first_tree)
+            end 
+          end
+
           if @frbsexp[2]
             if @frbsexp[2][2]
-              blk.call(lasgn_tree,@frbsexp[2][2].first_tree)
+              blk.call(resbody_array_tree[-1],@frbsexp[2][2].first_tree)
             else            
-              blk.call(lasgn_tree,@frbsexp)
+              blk.call(resbody_array_tree[-1],@frbsexp)
             end
           else
-            blk.call(lasgn_tree,@frbsexp)
+            blk.call(resbody_array_tree[-1],@frbsexp)
           end
         else
           if @frbsexp[2]
