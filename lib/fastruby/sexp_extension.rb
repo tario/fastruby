@@ -147,7 +147,7 @@ module FastRuby
         send("first_tree_#{node_type}")
       else
         return self[1].first_tree if self.count == 2 and self[1].respond_to? :node_type
-        return self[1].first_tree if [:if,:block,:while,:until,:or,:and,:rescue].include? node_type
+        return self[1].first_tree if [:if,:block,:while,:until,:or,:and,:rescue,:ensure].include? node_type
         return self[2].first_tree if [:lasgn,:iasgn,:gasgn,:cdecl].include? node_type
 
         self
