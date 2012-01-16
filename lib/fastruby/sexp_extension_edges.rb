@@ -47,10 +47,16 @@ module FastRuby
       alias edges_iasgn edges_lasgn
 
       def edges_rescue(&blk)
-        blk.call(@frbsexp[1],@frbsexp)      
+        blk.call(@frbsexp[1],@frbsexp)
 
         if @frbsexp[2]
         if @frbsexp[2][2]
+          @frbsexp[1].walk_tree do |subtree|
+            if subtree.node_type == :call or subtree.node_type == :iter
+              blk.call(subtree,@frbsexp[2][2].first_tree)
+            end
+          end    
+
           blk.call(@frbsexp[2][2],@frbsexp)
           blk.call(@frbsexp[1],@frbsexp[2][2].first_tree)
           retry_tree = @frbsexp[2][2].find_tree(:retry)
