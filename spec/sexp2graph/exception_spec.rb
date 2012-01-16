@@ -80,4 +80,18 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
 
     {:a => :d, :b => :d, :c => :d, sexp.find_tree(:ensure)[2] => sexp.find_tree(:ensure) }
   end
+
+  assert_graph_defn("should enter the ensure in the body","
+    def foo
+      a
+      begin
+          b
+        ensure
+          c
+        end
+      end") do |sexp, edges|
+
+    {:a => :b,
+      :b => :c}
+  end
 end
