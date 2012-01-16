@@ -66,4 +66,18 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     {:a => :d, :b => :d, :c => [:d, sexp.find_tree(:rescue)[1] ], 
       sexp.find_tree(:rescue)[1] => sexp.find_tree(:rescue) }
   end
+
+  assert_graph_defn("multiple calls on ensure may raise and go to rescue","
+    def foo
+      begin
+          a
+          b
+          c
+       ensure
+          d
+       end
+      end") do |sexp, edges|
+
+    {:a => :d, :b => :d, :c => :d, sexp.find_tree(:ensure)[2] => sexp.find_tree(:ensure) }
+  end
 end
