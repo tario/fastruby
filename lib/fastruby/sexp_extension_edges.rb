@@ -46,6 +46,20 @@ module FastRuby
       alias edges_cdecl edges_lasgn
       alias edges_iasgn edges_lasgn
 
+      def edges_ensure(&blk)
+        if @frbsexp.size > 2
+          @frbsexp[1].walk_tree do |subtree|
+            if subtree.node_type == :call or subtree.node_type == :iter
+              blk.call(subtree,@frbsexp[2].first_tree)
+            end
+          end
+
+          blk.call(@frbsexp[2],@frbsexp)
+        else
+          blk.call(@frbsexp[1],@frbsexp)
+        end
+      end
+
       def edges_rescue(&blk)
         blk.call(@frbsexp[1],@frbsexp)
 
