@@ -49,6 +49,7 @@ module FastRuby
       def edges_rescue(&blk)
         blk.call(@frbsexp[1],@frbsexp)      
 
+        if @frbsexp[2]
         if @frbsexp[2][2]
           blk.call(@frbsexp[2][2],@frbsexp)
           blk.call(@frbsexp[1],@frbsexp[2][2].first_tree)
@@ -56,6 +57,7 @@ module FastRuby
           if retry_tree
             blk.call(retry_tree,@frbsexp[1].first_tree)
           end
+        end
         end
       end
 
