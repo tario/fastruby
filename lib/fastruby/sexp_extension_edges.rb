@@ -61,6 +61,8 @@ module FastRuby
       end
 
       def edges_rescue(&blk)
+        return if @frbsexp[1].node_type == :resbody
+        
         blk.call(@frbsexp[1],@frbsexp)
 
         exit_tree = nil
