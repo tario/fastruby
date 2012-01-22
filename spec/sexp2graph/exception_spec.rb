@@ -155,4 +155,18 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     
   end
 
+  assert_graph_defn("should link call previous to rescue when execution body of rescue is empty","
+               def foo
+                  z
+                  begin
+                  rescue Exception
+                    return a
+                  else
+                    return b
+                  end
+                end") do |sexp,edges|  
+    {:z => sexp.find_tree(:rescue) }
+    
+  end
+
 end
