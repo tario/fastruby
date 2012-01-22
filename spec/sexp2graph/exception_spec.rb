@@ -130,4 +130,29 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       :d => sexp.find_tree(:gvar)
        }
   end
+  
+  assert_graph_defn("should link trees on rescue without execution body","
+               def foo
+                  begin
+                  rescue Exception
+                    return a
+                  end
+                end") do |sexp,edges|  
+     {}
+    
+  end
+
+  assert_graph_defn("should link trees on rescue without execution body and else","
+               def foo
+                  begin
+                  rescue Exception
+                    return a
+                  else
+                    return b
+                  end
+                end") do |sexp,edges|  
+    {}
+    
+  end
+
 end
