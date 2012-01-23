@@ -32,5 +32,5 @@ class Object
 end
 
 module FastRuby
-  VERSION = "0.0.16" unless defined? FastRuby::VERSION
+  VERSION = "0.0.17" unless defined? FastRuby::VERSION
 end
