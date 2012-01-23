@@ -234,7 +234,7 @@ private
 
                 block_struct.block_function_address = re_yield;
                 block_struct.block_function_param = 0;
-                block_struct.proc = Qnil;
+                block_struct.proc = rb_block_proc();
 
                 block = (VALUE)&block_struct;
               }
