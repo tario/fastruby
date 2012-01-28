@@ -43,13 +43,11 @@ module FastRuby
     nil
   end
 
-  $dddd = []
   def self.set_tree(klass, method_name, tree, snippet_hash, options = {})
     locals = Set.new
     locals << :self
     
     tree = Reductor.new.reduce tree
-    $dddd << tree
     
     FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
       locals << local
@@ -62,6 +60,7 @@ module FastRuby
     end
 
     fastrubym = klass.fastruby_method(method_name)
+    
     fastrubym.tree = tree
     fastrubym.locals = locals
     fastrubym.options = options

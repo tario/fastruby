@@ -412,6 +412,7 @@ static VALUE fastruby_method_tree_pointer(VALUE self) {
 
 static VALUE fastruby_method_tree_eq(VALUE self, VALUE val) {
 	VALUE* tree_pointer = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(self));
+  rb_ivar_set(self, rb_intern("__current_tree"), val);
 	*tree_pointer = val;
 	return Qnil;
 }
