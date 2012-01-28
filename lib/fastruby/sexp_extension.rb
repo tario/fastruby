@@ -29,6 +29,12 @@ class Object
   end
 end
 
+def fs(*args)
+  sexp = FastRuby::FastRubySexp.new
+  args.each &sexp.method(:<<)
+  sexp
+end
+
 module FastRuby
   class Graph
     attr_reader :edges

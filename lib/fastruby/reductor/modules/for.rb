@@ -24,5 +24,11 @@ require "define_method_handler"
 
 module FastRuby
   class Reductor
+    reduce_for(:for) do |tree|
+      alter_tree = tree.dup
+      alter_tree[0] = :iter
+      alter_tree[1] = fs(:call, alter_tree[1], :each, fs(:arglist))
+      alter_tree
+    end
   end
 end
