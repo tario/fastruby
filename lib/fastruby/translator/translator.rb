@@ -54,16 +54,24 @@ module FastRuby
         end
       end
       
-      define_method_handler(:_to_c, options, &blk).condition &condition_blk
+      define_method_handler(:to_c, options, &blk).condition &condition_blk
     end
 
     TranslatorModules.instance.load_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/")
 
-    define_method_handler(:_to_c, :priority => -9000){ |tree, result_var|
-      "#{result_var} = #{_to_c(tree)};"
+    define_method_handler(:to_c, :priority => 10000){|*x|
+        "Qnil"
+      }.condition{|*x| x.size == 1 and (not x.first)}
+
+    define_method_handler(:to_c, :priority => 1000){|tree, result_var|
+        "#{result_var} = #{to_c(tree)};"
+      }.condition{|*x| x.size == 2 and (not x.first)}
+
+    define_method_handler(:to_c, :priority => -9000){ |tree, result_var|
+      "#{result_var} = #{to_c(tree)};"
     }.condition{|*x| x.size == 2 }
     
-    define_method_handler(:_to_c, :priority => -10000) do |tree, result_var=nil|
+    define_method_handler(:to_c, :priority => -10000) do |tree, result_var=nil|
       raise "undefined translator for node type :#{tree.node_type}"
     end
 
@@ -232,16 +240,6 @@ module FastRuby
 
     end
     
-    def to_c(tree, result_variable = nil)
-      return "Qnil" unless tree
-#      mname = "to_c_" + tree[0].to_s
-      if result_variable
-        _to_c(tree, result_variable)
-      else
-        _to_c(tree)
-      end
-    end
-
     def anonymous_function(*x)
 
       name = "anonymous" + rand(10000000).to_s
