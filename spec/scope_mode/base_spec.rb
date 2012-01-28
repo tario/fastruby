@@ -6,8 +6,17 @@ require "fastruby/translator/scope_mode_helper"
 $parser = RubyParser.new
 
 describe FastRuby::ScopeModeHelper, "scope mode helper" do
-  it "method with only ONE call and read after call should return :dag scope mode" do
+    
+  def get_scope_mode(tree)
     FastRuby::ScopeModeHelper.get_scope_mode(
+      FastRuby::Reductor.new.reduce(
+        FastRuby::FastRubySexp.from_sexp(tree)
+        )
+        )
+  end
+  
+  it "method with only ONE call and read after call should return :dag scope mode" do
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         a+b
         c
@@ -16,7 +25,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method with only ONE call and self read after call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         a+b
         self
@@ -25,7 +34,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method with only ONE call and yield after call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         a+b
         yield
@@ -34,7 +43,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method with only ONE call and local call after call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         a+b
         foo
@@ -43,7 +52,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method call AFTER read inside while should return :dag scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b)
         while (true) 
           a=b

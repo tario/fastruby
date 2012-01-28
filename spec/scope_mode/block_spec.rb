@@ -6,8 +6,17 @@ require "fastruby/translator/scope_mode_helper"
 $parser = RubyParser.new
 
 describe FastRuby::ScopeModeHelper, "scope mode helper" do
-  it "iter call with block accessing locals should return dag" do
+    
+  def get_scope_mode(tree)
     FastRuby::ScopeModeHelper.get_scope_mode(
+      FastRuby::Reductor.new.reduce(
+        FastRuby::FastRubySexp.from_sexp(tree)
+        )
+        )
+  end
+  
+  it "iter call with block accessing locals should return dag" do
+    get_scope_mode(
       $parser.parse "def foo(a)
         bar do
           a
@@ -17,7 +26,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "iter call with block doing yield should return dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a)
         bar do
           yield
@@ -27,7 +36,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end  
   
   it "iter call with block with arguments should return dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a)
         bar do |x|
         end
@@ -36,7 +45,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end  
 
   it "iter call with block writing local variable should return dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a)
         bar do
           a = 87
@@ -46,7 +55,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "two iter call, one empty and the second with yield should return dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a)
         bar do
         end
@@ -59,7 +68,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "lambda with yield must return :dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "          def foo
             lambda {
               yield
@@ -70,7 +79,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end  
 
   it "method with return from inside block return :dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "    def bar
             foo do
               return 9
@@ -81,7 +90,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "method with self from inside block return :dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "    def bar
             foo do
               self
@@ -92,7 +101,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "local call from inside block should return :dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "    def bar
             foo do
               print

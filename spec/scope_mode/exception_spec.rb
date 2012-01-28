@@ -6,8 +6,17 @@ require "fastruby/translator/scope_mode_helper"
 $parser = RubyParser.new
 
 describe FastRuby::ScopeModeHelper, "scope mode helper" do
-  it "method with read on begin body, call on rescue body and retry should return :dag scope mode" do
+    
+  def get_scope_mode(tree)
     FastRuby::ScopeModeHelper.get_scope_mode(
+      FastRuby::Reductor.new.reduce(
+        FastRuby::FastRubySexp.from_sexp(tree)
+        )
+        )
+  end
+  
+  it "method with read on begin body, call on rescue body and retry should return :dag scope mode" do
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         begin
           b
@@ -20,7 +29,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "method with read on begin body and retry should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         begin
           nil.bar(b)

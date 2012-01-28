@@ -6,14 +6,22 @@ require "fastruby/translator/scope_mode_helper"
 $parser = RubyParser.new
 
 describe FastRuby::ScopeModeHelper, "scope mode helper" do
-  it "empty method should return :linear scope mode" do
+  def get_scope_mode(tree)
     FastRuby::ScopeModeHelper.get_scope_mode(
+      FastRuby::Reductor.new.reduce(
+        FastRuby::FastRubySexp.from_sexp(tree)
+        )
+        )
+  end
+  
+  it "empty method should return :linear scope mode" do
+    get_scope_mode(
       $parser.parse "def foo(); end"
     ).should be == :linear
   end
 
   it "method without calls should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c) 
         a
       end"
@@ -21,7 +29,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method with only ONE call should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b) 
         a+b
       end"
@@ -29,7 +37,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method call AFTER read should return :linear scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b) 
         a=b
         a+b
@@ -38,7 +46,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "empty if should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         if (a)
         end
@@ -46,7 +54,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
     ).should be == :linear
   end
   it "iter call with empty block should return linear" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo
         bar do
         end
@@ -55,7 +63,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "return of simple call should return :linear" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b)
       return a+b
       end"
@@ -63,7 +71,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "call on if body and read on condition should return :linear (no read after call risk)" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b)
         if a
           b.foo
@@ -73,7 +81,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end  
 
   it "call on if body and read on else body should return :linear (no read after call risk)" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b)
         if true
           b
@@ -85,7 +93,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end  
 
   it "method with read on begin body should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         begin
           nil.bar(b)
@@ -96,7 +104,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "method with read on begin body and call on rescue body   should return :linear scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         begin
           b
@@ -108,7 +116,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "case with call (when) after read should return :linear scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         case a
           when b
@@ -119,7 +127,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "read of variable AFTER write without call between them should return :linear scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b) 
         a+b
         c=55

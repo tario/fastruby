@@ -26,34 +26,8 @@ module FastRuby
       new.get_scope_mode(tree_)
     end
 
-    def when_array_to_if(array)
-      if array.size == 1
-        array[0] || s(:nil)
-      else
-        first_when_tree = array[0]
-        comparers = first_when_tree[1][1..-1]
-
-        condition_tree = s(:or)
-        comparers.each do |st|
-          condition_tree << s(:call, st, :===, s(:arglist, s(:lvar, :temporal_case_var))) 
-        end
-
-        s(:if, condition_tree, first_when_tree[2], when_array_to_if(array[1..-1]) )
-      end
-    end
-    
     def get_scope_mode(tree_)
-      tree = FastRuby::FastRubySexp.from_sexp(tree_).transform do |subtree|
-        if subtree.node_type == :for
-          s(:iter,s(:call, subtree[1],:each, s(:arglist)),subtree[2], subtree[3] )
-        elsif subtree.node_type == :case
-          ifs = when_array_to_if(subtree[2..-1])
-
-          s(:block, s(:lasgn, :temporal_case_var, subtree[1]), ifs)
-        else
-          nil
-        end
-      end
+      tree = FastRuby::FastRubySexp.from_sexp(tree_)
 
       if tree.node_type == :defn
         args_tree = tree[2]
@@ -95,6 +69,7 @@ module FastRuby
           writes = Set.new
 
           path.each do |st2|
+            next unless st2 
             if st2.node_type == :call
               if has_call and st2[1] == nil
                 return :dag

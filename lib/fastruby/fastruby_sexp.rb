@@ -22,6 +22,14 @@ module FastRuby
   class FastRubySexp < Array
     alias node_type first
     
+    def map
+      sexp = FastRubySexp.new
+      self.each do |subtree|
+        sexp << yield(subtree)
+      end
+      sexp
+    end
+    
     def walk_tree(&block)
       each do |subtree|
         if subtree.instance_of? FastRubySexp

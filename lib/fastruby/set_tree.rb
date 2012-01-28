@@ -21,6 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
+require "fastruby/reductor/reductor"
 
 module FastRuby
 
@@ -42,10 +43,14 @@ module FastRuby
     nil
   end
 
+  $dddd = []
   def self.set_tree(klass, method_name, tree, snippet_hash, options = {})
     locals = Set.new
     locals << :self
-
+    
+    tree = Reductor.new.reduce tree
+    $dddd << tree
+    
     FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
       locals << local
     end

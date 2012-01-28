@@ -28,6 +28,10 @@ module FastRuby
       define_method_handler(:reduce, options, &blk).condition{|tree| tree.respond_to?(:node_type) && tree.node_type == ntype}
     end
     
+    define_method_handler(:reduce, :priority => -1000) do |tree|
+      FastRubySexp.from_sexp(tree)
+    end
+    
     Dir.glob(FastRuby.fastruby_load_path + "/fastruby/reductor/modules/**/*.rb").each do |path|
       require path
     end

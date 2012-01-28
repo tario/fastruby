@@ -2,12 +2,22 @@ require "fastruby"
 require "sexp"
 require "ruby_parser"
 require "fastruby/translator/scope_mode_helper"
+require "fastruby/reductor/reductor"
 
 $parser = RubyParser.new
 
 describe FastRuby::ScopeModeHelper, "scope mode helper" do
-  it "possible read on if after call should return :dag scope mode" do
+  
+  def get_scope_mode(tree)
     FastRuby::ScopeModeHelper.get_scope_mode(
+      FastRuby::Reductor.new.reduce(
+        FastRuby::FastRubySexp.from_sexp(tree)
+        )
+        )
+  end
+  
+  it "possible read on if after call should return :dag scope mode" do
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         if (a > 0)
           c
@@ -17,7 +27,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "possible read on case after call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         case (a > 0)
           when 0
@@ -28,7 +38,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "possible read on case (on enum) after call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         case (a > 0)
           when c
@@ -39,7 +49,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "for with local read and call should return :dag scope mode" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         for a in b
           foo
@@ -50,7 +60,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "empty for with local read should return :dag scope mode (because for is a iter call to each with one argument)" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         for a in b
         end
@@ -59,7 +69,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
 
   it "case with a when should act as call and local read after case when should return :dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         case b
           when c
@@ -70,7 +80,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end
   
   it "case with a when should act as call and local read after case when should return :dag" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         case b
           when c
@@ -83,7 +93,7 @@ describe FastRuby::ScopeModeHelper, "scope mode helper" do
   end  
 
   it "case with two call (when) after read should return :dag scope" do
-    FastRuby::ScopeModeHelper.get_scope_mode(
+    get_scope_mode(
       $parser.parse "def foo(a,b,c)
         case a
           when b # call to a.===(b)
