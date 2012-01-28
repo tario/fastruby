@@ -57,8 +57,6 @@ module FastRuby
       define_method_handler(:to_c, options, &blk).condition &condition_blk
     end
 
-    TranslatorModules.instance.load_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/")
-
     define_method_handler(:to_c, :priority => 10000){|*x|
         "Qnil"
       }.condition{|*x| x.size == 1 and (not x.first)}
@@ -73,6 +71,13 @@ module FastRuby
     
     define_method_handler(:to_c, :priority => -10000) do |tree, result_var=nil|
       raise "undefined translator for node type :#{tree.node_type}"
+    end
+
+    TranslatorModules.instance.each_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/") do |path|
+      groupname = path.split("/").last.split(".").first.to_sym
+      handler_scope(:group => groupname) do
+        require path
+      end
     end
 
     def initialize(common_func = true)

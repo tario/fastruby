@@ -34,10 +34,14 @@ module FastRuby
       @modls << modl  
     end
     
-    def load_under(dir)
+    def each_under(dir)
       Dir.glob(dir + "/*.rb") do |x|
-        require x
+        yield x
       end
+    end
+
+    def load_under(dir)
+      each_under(dir, &method(:require))
     end
   end
 end
