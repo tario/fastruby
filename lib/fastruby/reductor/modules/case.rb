@@ -24,5 +24,26 @@ require "define_method_handler"
 
 module FastRuby
   class Reductor
+    def when_array_to_if(array, temporal_var_name)
+      if array.size == 1
+        array[0] || s(:nil)
+      else
+        first_when_tree = array[0]
+        comparers = first_when_tree[1][1..-1]
+
+        condition_tree = fs(:or)
+        comparers.each do |st|
+          condition_tree << fs(:call, st, :===, fs(:arglist, fs(:lvar, temporal_var_name))) 
+        end
+
+        fs(:if, condition_tree, first_when_tree[2], when_array_to_if(array[1..-1], temporal_var_name) )
+      end
+    end
+        
+    reduce_for(:case) do |tree|
+      temporal_var_name = "temporal_case_var_#{rand(1000000000)}".to_sym
+      ifs = when_array_to_if(tree[2..-1], temporal_var_name)
+      fs(:block, fs(:lasgn, :temporal_case_var, tree[1]), ifs)      
+    end
   end
 end
