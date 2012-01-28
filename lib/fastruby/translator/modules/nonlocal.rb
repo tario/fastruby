@@ -19,9 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module NonLocalTranslator
-    register_translator_module self
-
+  class Context
+    
+    define_translator_for(:return, :method => :to_c_return)
     def to_c_return(tree, return_variable = nil)
       code = "
         #{to_c(tree[1],"last_expression")};
@@ -35,6 +35,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:break, :method => :to_c_break)
     def to_c_break(tree, result_var = nil)
       
         value_tmp_var = "value_" + rand(10000000).to_s
@@ -73,6 +74,7 @@ module FastRuby
          end
     end
 
+    define_translator_for(:retry, :method => :to_c_retry)
     def to_c_retry(tree, result_var = nil)
         code = "
           {
@@ -94,6 +96,7 @@ module FastRuby
        end
     end
 
+    define_translator_for(:redo, :method => :to_c_redo)
     def to_c_redo(tree, result_var = nil)
       if @on_block
          code = "
@@ -110,6 +113,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:next, :method => :to_c_next)
     def to_c_next(tree, result_var = nil)
       tmp_varname = "_acc_" + rand(10000000).to_s
       if @on_block
@@ -135,7 +139,5 @@ module FastRuby
         _raise("rb_eLocalJumpError","illegal next");
       end
     end
-
-    
   end
 end

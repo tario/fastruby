@@ -19,10 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module IterTranslator
+  class Context
     
-    register_translator_module IterTranslator
-
+    define_translator_for(:iter, :method => :to_c_iter)
     def to_c_iter(tree, result_var = nil)
 
       call_tree = tree[1]

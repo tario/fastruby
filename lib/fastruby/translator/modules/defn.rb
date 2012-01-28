@@ -19,9 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module DefnTranslator
-    register_translator_module self
-
+  class Context
+    
+    define_translator_for(:defn, :method => :to_c_defn)
     def to_c_defn(tree, result_var = nil)
 
       method_name = tree[1]
@@ -82,6 +82,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:defs, :method => :to_c_defs)
     def to_c_defs(tree, result_var = nil)
       method_name = tree[2]
       args_tree = tree[3].select{|x| x.to_s[0] != ?&}
@@ -127,6 +128,7 @@ module FastRuby
         
     end
 
+    define_translator_for(:scope, :method => :to_c_scope)
     def to_c_scope(tree, result_var = nil)
       if tree[1]
         if result_var

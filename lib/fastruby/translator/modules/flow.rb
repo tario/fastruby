@@ -19,10 +19,8 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module FlowControlTranslator
-    
-    register_translator_module self
-    
+  class Context
+    define_translator_for(:case, :method => :to_c_case)
     def to_c_case(tree, result_var = nil)
 
       tmpvarname = "tmp" + rand(1000000).to_s;
@@ -79,6 +77,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:if, :method => :to_c_if)
     def to_c_if(tree, result_variable_ = nil)
       condition_tree = tree[1]
       impl_tree = tree[2]
@@ -108,6 +107,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:for, :method => :to_c_for, :arity => 1)
     def to_c_for(tree)
       alter_tree = tree.dup
       alter_tree[0] = :iter
@@ -115,6 +115,7 @@ module FastRuby
       to_c alter_tree
     end
 
+    define_translator_for(:while, :method => :to_c_while)
     def to_c_while(tree, result_var = nil)
       
       begin_while = "begin_while_"+rand(10000000).to_s

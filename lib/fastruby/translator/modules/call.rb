@@ -19,10 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module CallTranslator
-    
-    register_translator_module self
+  class Context
 
+    define_translator_for(:call, :method => :to_c_call)
     def to_c_call(tree, result_var = nil)
       directive_code = directive(tree)
       repass_var = @repass_var
@@ -330,6 +329,7 @@ module FastRuby
       end # if recvtype
     end
 
+    define_translator_for(:call, :method => :to_c_attrasgn, :arity => 1)
     def to_c_attrasgn(tree)
       to_c_call(tree)
     end

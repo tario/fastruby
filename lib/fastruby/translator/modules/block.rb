@@ -19,10 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module BlockTranslator
-    
-    register_translator_module self
-    
+  class Context
+
+    define_translator_for(:yield, :method => :to_c_yield, :arity => 1)
     def to_c_yield(tree)
 
       block_code = proc { |name| "
@@ -94,6 +93,7 @@ module FastRuby
       protected_block(ret, false)
     end
 
+    define_translator_for(:block, :method => :to_c_block)
     def to_c_block(tree, result_variable = nil)
       if tree.size == 1
         return inline_block("return Qnil;")

@@ -19,9 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module LogicalOperatorTranslator
-    register_translator_module self
-
+  class Context
+    
+    define_translator_for(:and, :method => :to_c_and)
     def to_c_and(tree, return_var = nil)
       if return_var
         "
@@ -39,6 +39,7 @@ module FastRuby
       
     end
 
+    define_translator_for(:or, :method => :to_c_or)
     def to_c_or(tree, return_var = nil)
       if return_var
         "
@@ -55,6 +56,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:not, :method => :to_c_not)
     def to_c_not(tree, return_var = nil)
       if return_var
         "

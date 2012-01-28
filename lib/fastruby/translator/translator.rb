@@ -26,6 +26,7 @@ require "fastruby/set_tree"
 require "fastruby/exceptions"
 require "fastruby/translator/translator_modules"
 require "fastruby/translator/scope_mode_helper"
+require "define_method_handler"
 
 module FastRuby
   class Context
@@ -39,9 +40,31 @@ module FastRuby
     attr_reader :init_extra
     attr_reader :extra_code
     
+    
+    def self.define_translator_for(ntype, options = {}, &blk)
+      condition_blk = proc do |*x|
+        tree = x.first; tree.node_type == ntype
+      end
+      
+      if options[:arity]
+        if options[:arity] == 1
+          condition_blk = proc do |*x|
+            tree = x.first; x.size == 1 and tree.node_type == ntype
+          end
+        end
+      end
+      
+      define_method_handler(:_to_c, options, &blk).condition &condition_blk
+    end
+
     TranslatorModules.instance.load_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/")
-    TranslatorModules.instance.modls.each do |modl|
-      include modl
+
+    define_method_handler(:_to_c, :priority => -9000){ |tree, result_var|
+      "#{result_var} = #{_to_c(tree)};"
+    }.condition{|*x| x.size == 2 }
+    
+    define_method_handler(:_to_c, :priority => -10000) do |tree, result_var=nil|
+      raise "undefined translator for node type :#{tree.node_type}"
     end
 
     def initialize(common_func = true)
@@ -183,19 +206,39 @@ module FastRuby
       end
     end
 
+
+    def _raise(class_tree, message_tree = nil)
+      class_tree = to_c class_tree unless class_tree.instance_of? String
+
+      if message_tree.instance_of? String
+        message_tree = "rb_str_new2(#{message_tree.inspect})"
+      else
+        message_tree = to_c message_tree
+      end
+
+      if message_tree
+        return inline_block("
+            pframe->thread_data->exception = rb_funcall(#{class_tree}, #{intern_num :exception},1,#{message_tree});
+            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+            return Qnil;
+            ")
+      else
+        return inline_block("
+            pframe->thread_data->exception = rb_funcall(#{class_tree}, #{intern_num :exception},0);
+            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
+            return Qnil;
+            ")
+      end
+
+    end
+    
     def to_c(tree, result_variable = nil)
       return "Qnil" unless tree
-      
-      mname = "to_c_" + tree[0].to_s
-      
+#      mname = "to_c_" + tree[0].to_s
       if result_variable
-        if method(mname).arity == 1
-          "#{result_variable} = #{send(mname, tree)};\n"
-        else
-          send(mname, tree, result_variable)
-        end 
+        _to_c(tree, result_variable)
       else
-        send(mname, tree)
+        _to_c(tree)
       end
     end
 
@@ -359,7 +402,7 @@ module FastRuby
         block_argument = tree[3].find{|x| x.to_s[0] == ?&}
         impl_tree = tree[4][1]
       end
-
+      
       args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
         initialize_method_structs(original_args_tree)

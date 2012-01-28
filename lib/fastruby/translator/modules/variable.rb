@@ -19,14 +19,13 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module VariabeTranslator
-    register_translator_module self
-
-
+  class Context
+    define_translator_for(:cvar, :method => :to_c_cvar, :arity => 1)
     def to_c_cvar(tree)
       "rb_cvar_get(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]})"
     end
 
+    define_translator_for(:cvasgn, :method => :to_c_cvasgn)
     def to_c_cvasgn(tree, result_var = nil)
       if result_var
         "
@@ -50,6 +49,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:gvar, :method => :to_c_gvar, :arity => 1)
     def to_c_gvar(tree)
       if (tree[1] == :$!)
         "pframe->thread_data->exception"
@@ -58,6 +58,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:gasgn, :method => :to_c_gasgn)
     def to_c_gasgn(tree, result_var = nil)
       if result_var
           "
@@ -71,10 +72,12 @@ module FastRuby
       end
     end
 
+    define_translator_for(:ivar, :method => :to_c_ivar, :arity => 1)
     def to_c_ivar(tree)
       "rb_ivar_get(#{locals_accessor}self,#{intern_num tree[1]})"
     end
 
+    define_translator_for(:iasgn, :method => :to_c_iasgn)
     def to_c_iasgn(tree, result_var = nil)
       if result_var
           "
@@ -88,10 +91,11 @@ module FastRuby
       end
     end
 
-    def to_c_const(tree)
+    define_translator_for(:const, :arity => 1) do |tree|
       "rb_const_get(CLASS_OF(plocals->self), #{intern_num(tree[1])})"
     end
     
+    define_translator_for(:cdecl, :method => :to_c_cdecl)
     def to_c_cdecl(tree, result_var_ = nil)
       
       result_var = result_var_ || "value"
@@ -136,10 +140,12 @@ module FastRuby
       end
     end
 
+    define_translator_for(:colon3, :method => :to_c_colon3, :arity => 1)
     def to_c_colon3(tree)
       "rb_const_get_from(rb_cObject, #{intern_num tree[1]})"
     end
-    
+   
+    define_translator_for(:colon2, :method => :to_c_colon2) 
     def to_c_colon2(tree, result_var = nil)
       code = "
         {
@@ -194,6 +200,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:lasgn, :method => :to_c_lasgn)
     def to_c_lasgn(tree, result_var = nil)
       code = "
           {
@@ -244,12 +251,12 @@ module FastRuby
         end
       end
     end
-
-    def to_c_lvar(tree)
+    
+    define_translator_for(:lvar, :arity => 1) do |tree|
       locals_accessor + tree[1].to_s
     end
 
-
+    define_translator_for(:defined, :method => :to_c_defined, :arity => 1)
     def to_c_defined(tree)
       nt = tree[1].node_type
 

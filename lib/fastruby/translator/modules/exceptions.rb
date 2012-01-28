@@ -19,10 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module ExceptionsTranslator
-    register_translator_module self
-
-
+  class Context
+    
+    define_translator_for(:rescue, :method => :to_c_rescue, :arity => 1)
     def to_c_rescue(tree)
       if tree[1][0] == :resbody
         else_tree = tree[2]
@@ -51,7 +50,7 @@ module FastRuby
           next if resbody_tree[0] != :resbody
 
           if resbody_tree[1].size == 1
-            resbody_tree[1][1] = [:const, :Exception]
+            resbody_tree[1][1] = s(:const, :Exception)
           end
 
           if resbody_tree[1].last[0] == :lasgn
@@ -94,6 +93,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:ensure, :method => :to_c_ensure, :arity => 1)
     def to_c_ensure(tree)
       if tree.size == 2
         to_c tree[1]
@@ -105,30 +105,5 @@ module FastRuby
       end
     end
 
-    def _raise(class_tree, message_tree = nil)
-      class_tree = to_c class_tree unless class_tree.instance_of? String
-
-      if message_tree.instance_of? String
-        message_tree = "rb_str_new2(#{message_tree.inspect})"
-      else
-        message_tree = to_c message_tree
-      end
-
-      if message_tree
-        return inline_block("
-            pframe->thread_data->exception = rb_funcall(#{class_tree}, #{intern_num :exception},1,#{message_tree});
-            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-            return Qnil;
-            ")
-      else
-        return inline_block("
-            pframe->thread_data->exception = rb_funcall(#{class_tree}, #{intern_num :exception},0);
-            longjmp(pframe->jmp, FASTRUBY_TAG_RAISE);
-            return Qnil;
-            ")
-      end
-
-    end
-    
   end
 end

@@ -19,21 +19,13 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module LiteralTranslator
-    register_translator_module self
+  class Context
+    
+    define_translator_for(:lit, :arity => 1){|tree| literal_value tree[1]}
+    define_translator_for(:nil, :arity => 1){|tree| "Qnil"}
+    define_translator_for(:str, :arity => 1){|tree| literal_value tree[1]}
 
-    def to_c_lit(tree)
-      literal_value tree[1]
-    end
-
-    def to_c_nil(tree)
-      "Qnil"
-    end
-
-    def to_c_str(tree)
-      literal_value tree[1]
-    end
-
+    define_translator_for(:hash, :method => :to_c_hash)
     def to_c_hash(tree, result_var = nil)
       
       hash_tmp_var = "_hash_"+rand(1000000).to_s
@@ -78,6 +70,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:array, :method => :to_c_array)
     def to_c_array(tree, result_var = nil)
       if tree.size > 1
         if result_var
@@ -112,18 +105,11 @@ module FastRuby
       end
     end
 
-    def to_c_self(tree)
-      locals_accessor + "self"
-    end
+    define_translator_for(:self, :arity => 1){|tree| locals_accessor + "self"}
+    define_translator_for(:false, :arity => 1){|tree| "Qfalse"}
+    define_translator_for(:true, :arity => 1){|tree| "Qtrue"}
 
-    def to_c_false(tree)
-      "Qfalse"
-    end
-
-    def to_c_true(tree)
-      "Qtrue"
-    end
-
+    define_translator_for(:dot2, :method => :to_c_dot2)
     def to_c_dot2(tree, result_var = nil)
       
       begin_var = "_begin"+rand(10000000).to_s

@@ -19,9 +19,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 module FastRuby
-  module BlockTranslator
-    register_translator_module self
-    
+  class Context
+
+    define_translator_for(:class, :method => :to_c_class)
     def to_c_class(tree, result_var = nil)
       str_class_name = get_class_name(tree[1])
       container_tree = get_container_tree(tree[1])
@@ -60,6 +60,7 @@ module FastRuby
       end
     end
 
+    define_translator_for(:module, :method => :to_c_module)
     def to_c_module(tree, result_var = nil)
       str_class_name = get_class_name(tree[1])
       container_tree = get_container_tree(tree[1])
