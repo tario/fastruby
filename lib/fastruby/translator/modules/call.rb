@@ -23,24 +23,7 @@ module FastRuby
 
     define_translator_for(:call, :method => :to_c_call)
     def to_c_call(tree, result_var = nil)
-      directive_code = directive(tree)
       repass_var = @repass_var
-
-      if directive_code
-        if result_var
-          return "#{result_var} = #{directive_code};\n"
-        else
-          return directive_code
-        end
-      end
-      
-      if tree[2] == :require
-        tree[2] = :fastruby_require
-      elsif tree[2] == :raise
-        # raise code
-        args = tree[3]
-        return _raise(args[1],args[2])
-      end
 
       recv = tree[1]
       mname = tree[2]

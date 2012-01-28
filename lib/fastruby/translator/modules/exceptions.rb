@@ -105,5 +105,12 @@ module FastRuby
       end
     end
 
+    define_translator_for(:call, :priority => 100){ |tree, result_var=nil|
+      # raise code
+      args = tree[3]
+      _raise(args[1],args[2])
+    }.condition{|*x|
+      tree = x.first; tree.node_type == :call && tree[2] == :raise
+    }
   end
 end

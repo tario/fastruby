@@ -73,6 +73,13 @@ module FastRuby
       raise "undefined translator for node type :#{tree.node_type}"
     end
 
+    define_translator_for(:call, :priority => 100){ |tree, result_var=nil|
+      tree[2] = :fastruby_require
+      to_c(tree)
+    }.condition{|*x|
+      tree = x.first; tree.node_type == :call && tree[2] == :require
+    }
+
     TranslatorModules.instance.each_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/") do |path|
       groupname = path.split("/").last.split(".").first.to_sym
       handler_scope(:group => groupname) do
