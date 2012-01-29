@@ -23,7 +23,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   test_binary_operator("*", "STATICX1_3", 10, 20)
   test_binary_operator("/", "STATICX1_4", 10, 5)
 
-  (3..10).each do |i|
+  (3..4).each do |i|
     test_binary_operator(">", "STATICX1_5_#{i}", i, 1)
   end
 
@@ -31,4 +31,11 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     test_binary_operator(">", "STATICX1_6_#{i.to_s.gsub('-','__')}", i, 0)
   end
 
+  (-1..1).each do |i|
+    test_binary_operator("<", "STATICX1_5_#{i.to_s.gsub('-','__')}", i, 1)
+  end
+
+  (2..3).each do |i|
+    test_binary_operator("<", "STATICX1_6_#{i}", i, 0)
+  end
 end
