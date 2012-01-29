@@ -140,8 +140,24 @@ module FastRuby
           inline_block code
         end
         
-      end     
-      
+      end
+           
+      define_translator_for(:and) do |tree, return_var = nil|
+        if return_var
+          "
+            {
+              VALUE op1 = Qnil;
+              VALUE op2 = Qnil;
+              #{to_c tree[1], "op1"};
+              #{to_c tree[2], "op2"};
+              #{return_var} = ((op1) &&(op2));
+            }
+          "
+        else
+          "((#{to_c tree[1]}) && (#{to_c tree[2]}))"
+        end
+        
+      end
     end
 
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
