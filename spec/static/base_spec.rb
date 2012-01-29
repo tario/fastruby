@@ -5,14 +5,14 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   it "should accept _static keyword to compile static C calls" do
     fastruby "
     class STATICX1
-      def foo
+      def foo(a)
         _static {
-           INT2FIX(100)
+           INT2FIX(FIX2INT(a))
         }
       end
     end
     "
     
-    STATICX1.new.foo.should be == 100
+    STATICX1.new.foo(100).should be == 100
   end
 end
