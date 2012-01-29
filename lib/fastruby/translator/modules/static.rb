@@ -79,7 +79,7 @@ module FastRuby
         end
       end
       
-      define_translator_for(:if, :priority => 100) do |tree, result_variable_ = nil|
+      define_translator_for(:if) do |tree, result_variable_ = nil|
         condition_tree = tree[1]
         impl_tree = tree[2]
         else_tree = tree[3]
@@ -107,6 +107,41 @@ module FastRuby
           inline_block code + "; return last_expression;"
         end      
       end
+      
+      define_translator_for(:while) do |tree, result_var = nil|
+        begin_while = "begin_while_"+rand(10000000).to_s
+        end_while = "end_while_"+rand(10000000).to_s
+        aux_varname = "_aux_" + rand(10000000).to_s
+        code = "
+          {
+            VALUE while_condition;
+            VALUE #{aux_varname};
+            
+  #{begin_while}:
+            #{to_c tree[1], "while_condition"};
+            if (!(while_condition)) goto #{end_while}; 
+            #{to_c tree[2], aux_varname};
+            goto #{begin_while};
+  #{end_while}:
+            
+            #{
+            if result_var
+              "#{result_var} = Qnil;"
+            else
+              "return Qnil;"
+            end
+            }
+          }
+        "
+        
+        if result_var
+          code
+        else
+          inline_block code
+        end
+        
+      end     
+      
     end
 
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
