@@ -87,4 +87,18 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   
   test_bool_operator "4 and 4", "STATIC1_14", 40
   test_bool_operator "4 or 4", "STATIC1_15", 40
+  
+  it "should execute boolean operation not" do
+    fastruby "
+      class STATIC1_16
+        def foo
+          _static {
+             INT2FIX((not 4))
+          }
+        end
+      end
+      "
+      
+    STATIC1_16.new.foo.should be == 0
+  end
 end
