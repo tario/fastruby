@@ -33,6 +33,19 @@ module FastRuby
       tree.node_type == :iter && tree[1][2] == :_static
     }
     
+    define_translator_for(:iter, :arity => 1, :priority => 1) { |*x|
+      ret = nil
+      tree = x.first
+      
+      disable_handler_group(:static_call) do
+        ret = x.size == 1 ? to_c(tree[3]) : to_c(tree[3], x.last)
+      end
+      ret
+    }.condition{ |*x|
+      tree = x.first
+      tree.node_type == :iter && tree[1][2] == :_dynamic
+    }
+    
     handler_scope(:group => :static_call, :priority => 1000) do
       define_translator_for(:call) do |tree, result=nil|
         method_name = tree[2].to_s
