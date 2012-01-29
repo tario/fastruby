@@ -29,4 +29,26 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     
     STATICX2.new.foo.should be == 100
   end
+  
+  it "should accept _dynamic to activate ruby sematic inside _static block" do
+    fastruby "
+    class STATICX3
+      def bar(a)
+        a+1
+      end
+      
+      def foo(a)
+        _static {
+           INT2FIX(
+              FIX2INT(
+                  _dynamic{bar(a)}
+              )
+           )
+        }
+      end
+    end
+    "
+    
+    STATICX3.new.foo(100).should be == 101
+  end  
 end
