@@ -76,6 +76,35 @@ module FastRuby
           tree[1].to_s
         end
       end
+      
+      define_translator_for(:if, :priority => 100) do |tree, result_variable_ = nil|
+        condition_tree = tree[1]
+        impl_tree = tree[2]
+        else_tree = tree[3]
+        
+        result_variable = result_variable_ || "last_expression"
+        
+        code = "
+          {
+            VALUE condition_result;
+            #{to_c condition_tree, "condition_result"};
+            if (condition_result) {
+              #{to_c impl_tree, result_variable};
+            }#{else_tree ?
+              " else {
+              #{to_c else_tree, result_variable};
+              }
+              " : ""
+            }
+          }
+        "
+  
+        if result_variable_
+          code
+        else
+          inline_block code + "; return last_expression;"
+        end      
+      end
     end
 
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
