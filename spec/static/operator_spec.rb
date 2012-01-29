@@ -60,4 +60,8 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   (3..5).each do |i|
     test_binary_operator("==", "STATICX1_12_#{i}", i, i == 2 ? 1 : 0)
   end
+  
+  (3..5).each do |i|
+    test_binary_operator("===", "STATICX1_13_#{i}", i, i == 2 ? 1 : 0)
+  end
 end
