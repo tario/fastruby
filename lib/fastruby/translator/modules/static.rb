@@ -49,9 +49,19 @@ module FastRuby
     handler_scope(:group => :static_call, :priority => 1000) do
       define_translator_for(:call) do |tree, result=nil|
         method_name = tree[2].to_s
+        recv_tree = tree[1]
         
-        args = tree[3][1..-1].map(&method(:to_c)).join(",")
-        code = "#{method_name}( #{args} )"
+        if recv_tree
+          if tree[2] == :+
+            code = "( ( #{to_c(tree[1])} )+(#{to_c(tree[3][1])}) )"
+          else
+            raise "invalid static call #{method_name}"
+          end
+        else
+          args = tree[3][1..-1].map(&method(:to_c)).join(",")
+          code = "#{method_name}( #{args} )"
+        end
+
         if result
           "#{result} = #{code};"
         else
