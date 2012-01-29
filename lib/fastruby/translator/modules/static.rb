@@ -52,7 +52,7 @@ module FastRuby
         recv_tree = tree[1]
         
         if recv_tree
-          if (not tree[2].to_s =~ /^[a-zA-Z]/) and tree[2].to_s.size == 1
+          if (not tree[2].to_s =~ /^[a-zA-Z]/) and tree[2].to_s.size <= 2
             code = "( ( #{to_c(tree[1])} )#{tree[2]}(#{to_c(tree[3][1])}) )"
           else
             raise "invalid static call #{method_name}"
