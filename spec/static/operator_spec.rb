@@ -64,4 +64,26 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   (3..5).each do |i|
     test_binary_operator("===", "STATICX1_13_#{i}", i, i == 2 ? 1 : 0)
   end
+  
+  def self.test_bool_operator(code, classname, expected)
+    it "should execute boolean operation #{code} expected:#{expected}}" do
+      fastruby "
+      class #{classname}
+        def foo
+          _static {
+             if (#{code})
+               INT2FIX(40)
+             else
+               INT2FIX(20)
+             end
+          }
+        end
+      end
+      "
+      
+      eval(classname).new.foo.should be == expected
+    end
+  end
+  
+  test_bool_operator "4 and 4", "STATIC1_14", 40
 end
