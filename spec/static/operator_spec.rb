@@ -86,4 +86,5 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   end
   
   test_bool_operator "4 and 4", "STATIC1_14", 40
+  test_bool_operator "4 or 4", "STATIC1_15", 40
 end
