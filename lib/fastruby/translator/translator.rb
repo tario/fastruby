@@ -72,6 +72,8 @@ module FastRuby
     define_method_handler(:to_c, :priority => -10000) do |tree, result_var=nil|
       raise "undefined translator for node type :#{tree.node_type}"
     end
+    
+    define_method_handler(:initialize_to_c){|*x|}.condition{|*x|false}
 
     define_translator_for(:call, :priority => 100){ |tree, result_var=nil|
       tree[2] = :fastruby_require
@@ -88,6 +90,8 @@ module FastRuby
     end
 
     def initialize(common_func = true)
+      initialize_to_c
+      
       @infer_lvar_map = Hash.new
       @no_cache = false
       @extra_code = ""
