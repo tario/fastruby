@@ -3,7 +3,7 @@ require "fastruby"
 describe FastRuby::FastRubySexp, "FastRubySexp" do
 
   def self.test_binary_operator(op, classname, input, expected)
-    it "should accept native operator + with two numbers" do
+    it "should accept native operator #{op} with two numbers input:#{input} expected:#{expected}}" do
       fastruby "
       class #{classname}
         def foo(a)
@@ -22,4 +22,13 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   test_binary_operator("-", "STATICX1_2", 10, 8)
   test_binary_operator("*", "STATICX1_3", 10, 20)
   test_binary_operator("/", "STATICX1_4", 10, 5)
+
+  (3..10).each do |i|
+    test_binary_operator(">", "STATICX1_5_#{i}", i, 1)
+  end
+
+  (-1..2).each do |i|
+    test_binary_operator(">", "STATICX1_6_#{i.to_s.gsub('-','__')}", i, 0)
+  end
+
 end
