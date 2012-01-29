@@ -175,6 +175,21 @@ module FastRuby
         end
         
       end
+      
+      define_translator_for(:not) do |tree, return_var = nil|
+        if return_var
+          "
+            {
+              VALUE op1 = Qnil;
+              #{to_c tree[1], "op1"};
+              #{return_var} = ((op1) ? 0: 1);
+            }
+          "
+        else
+          "((#{to_c tree[1]}) ? 0 : 1)"
+        end
+      end
+          
     end
 
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
