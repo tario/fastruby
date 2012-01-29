@@ -24,31 +24,27 @@ module FastRuby
       ret = nil
       tree = x.first
       
-      enable_handler_group(:static_call) do
+      enable_handler_group(:native_handlers) do
         ret = x.size == 1 ? to_c(tree[3]) : to_c(tree[3], x.last)
       end
       ret
     }.condition{ |*x|
       tree = x.first
-      tree.node_type == :iter && tree[1][2] == :_static
+      tree.node_type == :iter && tree[1][2] == :_native
     }
     
-    handler_scope(:group => :static_call, :priority => 1000) do
-      define_translator_for(:call) do |tree, result=nil|
-        method_name = tree[2].to_s
-        
-        args = tree[3][1..-1].map(&method(:to_c)).join(",")
-        code = "#{method_name}( #{args} )"
+    handler_scope :group => :native_handlers, :priority => 1000 do
+      define_translator_for(:lit) do |tree, result=nil|
         if result
-          "#{result} = #{code};"
+          "#{result} = #{tree[1]};"
         else
-          code
+          tree[1].to_s
         end
       end
     end
-
+    
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
-      disable_handler_group(:static_call, :to_c); false
+      disable_handler_group(:native_handlers, :to_c); false
     end
   end
 end
