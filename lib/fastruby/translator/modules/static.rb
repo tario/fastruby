@@ -68,6 +68,14 @@ module FastRuby
           code
         end
       end
+      
+      define_translator_for(:lit) do |tree, result=nil|
+        if result
+          "#{result} = #{tree[1]};"
+        else
+          tree[1].to_s
+        end
+      end
     end
 
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
