@@ -8,7 +8,7 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
       class #{classname}
         def foo(a)
           _static {
-             INT2FIX(FIX2INT(a)#{op}_native{2})
+             INT2FIX(FIX2INT(a)#{op}2)
           }
         end
       end

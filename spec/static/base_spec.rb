@@ -16,12 +16,12 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
     STATICX1.new.foo(100).should be == 100
   end
   
-  it "should accept _native to accept native C semantic" do
+  it "should allow native inmediates inside static blocks as native C semantic" do
     fastruby "
     class STATICX2
       def foo
         _static {
-           INT2FIX(_native{100})
+           INT2FIX(100)
         }
       end
     end
