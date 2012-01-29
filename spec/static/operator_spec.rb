@@ -2,59 +2,24 @@ require "fastruby"
 
 describe FastRuby::FastRubySexp, "FastRubySexp" do
 
-  it "should accept native operator + with two numbers" do
-    fastruby "
-    class STATICX1_1
-      def foo(a)
-        _static {
-           INT2FIX(FIX2INT(a)+_native{1})
-        }
+  def self.test_binary_operator(op, classname, input, expected)
+    it "should accept native operator + with two numbers" do
+      fastruby "
+      class #{classname}
+        def foo(a)
+          _static {
+             INT2FIX(FIX2INT(a)#{op}_native{2})
+          }
+        end
       end
+      "
+      
+      eval(classname).new.foo(input).should be == expected
     end
-    "
-    
-    STATICX1_1.new.foo(1).should be == 2
   end
   
-  it "should accept native operator - with two numbers" do
-    fastruby "
-    class STATICX1_1
-      def foo(a)
-        _static {
-           INT2FIX(FIX2INT(a)-_native{8})
-        }
-      end
-    end
-    "
-    
-    STATICX1_1.new.foo(10).should be == 2
-  end
-  
-  it "should accept native operator * with two numbers" do
-    fastruby "
-    class STATICX1_1
-      def foo(a)
-        _static {
-           INT2FIX(FIX2INT(a)*_native{3})
-        }
-      end
-    end
-    "
-    
-    STATICX1_1.new.foo(3).should be == 9
-  end
-  
-  it "should accept native operator / with two numbers" do
-    fastruby "
-    class STATICX1_1
-      def foo(a)
-        _static {
-           INT2FIX(FIX2INT(a)/_native{3})
-        }
-      end
-    end
-    "
-    
-    STATICX1_1.new.foo(9).should be == 3
-  end
+  test_binary_operator("+", "STATICX1_1", 10, 12)
+  test_binary_operator("-", "STATICX1_2", 10, 8)
+  test_binary_operator("*", "STATICX1_3", 10, 20)
+  test_binary_operator("/", "STATICX1_4", 10, 5)
 end
