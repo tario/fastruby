@@ -55,4 +55,9 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   (3..4).each do |i|
     test_binary_operator("<=", "STATICX1_11_#{i}", i, 0)
   end
+  
+
+  (3..5).each do |i|
+    test_binary_operator("==", "STATICX1_12_#{i}", i, i == 2 ? 1 : 0)
+  end
 end
