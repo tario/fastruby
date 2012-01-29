@@ -25,4 +25,24 @@ describe FastRuby::FastRubySexp, "FastRubySexp" do
   end
 
   test_static_if false.__id__, true.__id__, nil.__id__, 10, 11
+  
+  it "should allow static while" do
+    fastruby "
+      class STATICFLOW2
+        def foo(a)
+          ret = 0
+          _static do
+            while (FIX2INT(a) > 0)
+              a = INT2FIX(FIX2INT(a) - 1)
+              ret = INT2FIX(FIX2INT(ret) + 1)
+            end
+          end
+          ret
+        end
+      end
+    "
+    
+    STATICFLOW2.new.foo(7).should be == 7
+    STATICFLOW2.new.foo(0).should be == 0
+  end
 end
