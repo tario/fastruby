@@ -40,6 +40,10 @@ module FastRuby
     attr_reader :init_extra
     attr_reader :extra_code
     
+    class Value
+      attr_accessor :value
+      def initialize(v); @value = v; end
+    end
     
     def self.define_translator_for(ntype, options = {}, &blk)
       condition_blk = proc do |*x|
@@ -81,6 +85,10 @@ module FastRuby
     }.condition{|*x|
       tree = x.first; tree.node_type == :call && tree[2] == :require
     }
+    
+    define_method_handler(:infer_value, :priority => -1000) do |tree|
+      nil
+    end
 
     TranslatorModules.instance.each_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/") do |path|
       groupname = path.split("/").last.split(".").first.to_sym

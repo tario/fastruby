@@ -28,25 +28,39 @@ module FastRuby
       
       result_variable = result_variable_ || "last_expression"
       
-      code = "
-        {
-          VALUE condition_result;
-          #{to_c condition_tree, "condition_result"};
-          if (RTEST(condition_result)) {
-            #{to_c impl_tree, result_variable};
-          }#{else_tree ?
-            " else {
-            #{to_c else_tree, result_variable};
+      infered_value = infer_value(condition_tree)
+      unless infered_value
+        
+        code = "
+          {
+            VALUE condition_result;
+            #{to_c condition_tree, "condition_result"};
+            if (RTEST(condition_result)) {
+              #{to_c impl_tree, result_variable};
+            }#{else_tree ?
+              " else {
+              #{to_c else_tree, result_variable};
+              }
+              " : ""
             }
-            " : ""
           }
-        }
-      "
-
-      if result_variable_
-        code
+        "
+  
+        if result_variable_
+          code
+        else
+          inline_block code + "; return last_expression;"
+        end
       else
-        inline_block code + "; return last_expression;"
+        if infered_value.value
+          to_c(impl_tree, result_variable_)
+        else
+          if else_tree
+            to_c(else_tree, result_variable_)
+          else
+            to_c(s(:nil), result_variable_)
+          end
+        end
       end
     end
 

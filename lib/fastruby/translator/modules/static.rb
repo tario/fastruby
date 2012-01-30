@@ -195,5 +195,48 @@ module FastRuby
     define_method_handler(:initialize_to_c){|*x|}.condition do |*x|
       disable_handler_group(:static_call, :to_c); false
     end
+    
+
+    define_method_handler(:infer_value) { |tree|
+      Value.new(eval(tree[1].to_s))
+    }.condition{|tree| tree.node_type == :const}
+    
+    define_method_handler(:infer_value) { |tree|
+      args_tree = tree[3]
+      receiver_tree = tree[1]
+      
+      value_1 = infer_value(receiver_tree)
+      value_2 = infer_value(args_tree[1])
+
+      next false unless (value_1 and value_2)
+      
+      Value.new(value_1.value == value_2.value)
+    }.condition{|tree|
+      next false unless tree.node_type == :call
+      
+      args_tree = tree[3]
+      method_name = tree[2]
+       
+      next false unless method_name == :==
+      next false if args_tree.size < 2
+
+      true
+    }
+    define_method_handler(:infer_value) { |tree|
+      args_tree = tree[3]
+      receiver_tree = tree[1]
+      infered_type = infer_type(receiver_tree)
+
+      if infered_type
+        Value.new(infered_type)
+      else
+        nil
+      end
+    }.condition{|tree|
+      next false unless tree.node_type == :call
+      method_name = tree[2]
+      next false unless method_name == :_class
+      true
+    }
   end
 end
