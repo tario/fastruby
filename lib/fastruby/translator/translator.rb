@@ -1138,22 +1138,31 @@ fastruby_local_next:
       end
       
       pureruby_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
           #{@frame_struct}* pframe = frame;
-          VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-  
+          VALUE method_arguments[3];
+          
+          method_arguments[0] = (VALUE)argc;
+          method_arguments[1] = (VALUE)argv;
+          method_arguments[2] = (VALUE)self;
+          
           return #{
-            protected_block "last_expression = rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+            protected_block "last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", false, "method_arguments"
             };
         }
       "
       }
       
       generic_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame#{strargs_signature}){
+        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
         
           #{@frame_struct}* pframe = frame;
-          VALUE method_arguments[#{args_tree.size+1}] = {#{toprocstrargs},(VALUE)block};
+          VALUE method_arguments[4];
+          
+          method_arguments[0] = (VALUE)argc;
+          method_arguments[1] = (VALUE)argv;
+          method_arguments[2] = (VALUE)self;
+          method_arguments[3] = (VALUE)block;
           
           void* fptr = 0;
           
@@ -1171,40 +1180,30 @@ fastruby_local_next:
           
           fptr = *#{address_name};
           
-          #{
-            if args_tree.size < 25
-            "
             if (fptr == 0) {
               fptr = *#{cfunc_address_name};
               if (fptr != 0) {
-                VALUE params[2] = {self,PTR2NUM(#{args_tree.size-1})};
-                return ( (VALUE(*)(#{value_cast})) (fptr) )((VALUE)params,(VALUE)block,(VALUE)frame#{inprocstrargs});  
+                return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*) ) (fptr) )(self,(VALUE)block,(VALUE)frame, argc, argv);  
               }
             }
-            "
-            end
-          } 
-          
+
           if (fptr == 0) {
             if (block==0) {
               return #{
-                protected_block "last_expression = rb_funcall(((VALUE*)method_arguments)[0], #{intern_num mname.to_sym}, #{args_tree.size-1}#{inprocstrargs});", false, "method_arguments"
+                protected_block "last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", false, "method_arguments"
                 };
 
             } else {
               return #{
                   protected_block "
                         #{@block_struct} *pblock;
-                        pblock = (typeof(pblock))( ((VALUE*)method_arguments)[#{args_tree.size}] );
+                        pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
                         last_expression = rb_iterate(
                         #{anonymous_function{|name|
                           "
                             static VALUE #{name} (VALUE data) {
                               VALUE* method_arguments = (VALUE*)data;
-                              return rb_funcall(
-                                ((VALUE*)method_arguments)[0], 
-                                #{intern_num mname.to_sym}, 
-                                #{args_tree.size-1}#{inprocstrargs});
+                              return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
                             }
                           "
                         }},
@@ -1245,19 +1244,20 @@ fastruby_local_next:
             }
 
           } else {
-            return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*)) (fptr) )(self,(VALUE)block,(VALUE)frame,#{args_tree.size-1},method_arguments+1);  
+            return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*)) (fptr) )(self,(VALUE)block,(VALUE)frame,argc,argv);  
           }
         }
         "
       }
 
 
+      cfuncall1inprocargs = (0..args_tree.size-2).map{|x| "argv[#{x}]"}.join(",")
+      cfuncall1inprocargs = ","+cfuncall1inprocargs if cfuncall1inprocargs != ""
+      
       cfunc_value_cast = (["VALUE"]*args_tree.size).join(",")
       cfunc_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE* params, void* block,void* frame#{strargs_signature}){
-            VALUE self = params[0];
-            VALUE method_arguments[#{args_tree.size}] = {#{toprocstrargs}};
-            return ( (VALUE(*)(#{cfunc_value_cast})) (#{cfunc_real_address_name}) )(self#{inprocstrargs});
+        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
+            return ( (VALUE(*)(#{cfunc_value_cast})) (#{cfunc_real_address_name}) )(self#{cfuncall1inprocargs});
         }
         "
       }
@@ -1266,18 +1266,15 @@ fastruby_local_next:
       strargs_signature = (0..25).map{|x| "VALUE arg#{x}"}.join(",")
 
       cfunc_wrapper_1 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
-            VALUE self = params[0];
-            VALUE method_arguments[26] = {#{toprocstrargs}};
-            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(NUM2ULONG(params[1]),method_arguments,self);
+        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
+            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(argc,argv,self);
         }
         "
       }
 
       cfunc_wrapper_2 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE* params, void* block,void* frame, #{strargs_signature}){
-            VALUE self = params[0];
-            VALUE args = rb_ary_new3(NUM2ULONG(params[1]),#{toprocstrargs});
+        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
+            VALUE args = rb_ary_new3(argc, argv);
             return ( (VALUE(*)(VALUE,VALUE)) (#{cfunc_real_address_name}) )(self,args);
         }
         "

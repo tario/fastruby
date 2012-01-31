@@ -203,11 +203,11 @@ module FastRuby
 
                 #{if result_var
                 "
-                #{result_var} = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe);
+                #{result_var} = ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, 0, (VALUE[]){});
                 "
                 else
                 "
-                ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe);
+                ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, 0, (VALUE[]){});
                 "
                 end
                 }
@@ -216,7 +216,7 @@ module FastRuby
               
                 result_var ? code : inline_block(code)
               else
-                 "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe)"               
+                 "((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, 0, (VALUE[]){})"               
               end          
 
           else
@@ -269,11 +269,11 @@ module FastRuby
 
                 #{if result_var
                 "
-                #{result_var} = ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, #{strargs});
+                #{result_var} = ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, #{args.size-1}, (VALUE[]){#{strargs}});
                 "
                 else
                 "
-                ((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, #{strargs});
+                ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(recv, (VALUE)pblock, (VALUE)pframe, #{args.size-1}, (VALUE[]){#{strargs}});
                 "
                 end
                 }
@@ -284,7 +284,7 @@ module FastRuby
                 result_var ? code : inline_block(code)
               else
                 strargs = args[1..-1].map{|arg| to_c arg}.join(",")
-                "((VALUE(*)(#{value_cast}))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{strargs})"
+                "((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{args.size-1}, (VALUE[]){#{strargs}})"
               end
           end
 

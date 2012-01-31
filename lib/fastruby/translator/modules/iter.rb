@@ -628,10 +628,8 @@ fastruby_local_next:
         encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)
 
         if call_args_tree.size > 1
-          value_cast = ( ["VALUE"]*(call_tree[3].size) ).join(",") + ", VALUE, VALUE"
-          strargs = "," + (0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")
+          strargs = (0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")
         else
-          value_cast = "VALUE,VALUE,VALUE"
           strargs = ""
         end
 
@@ -651,7 +649,7 @@ fastruby_local_next:
                 end
                 } 
 
-                ret = ((VALUE(*)(#{value_cast}))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame #{strargs});
+                ret = ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame, #{call_args_tree.size-1}, (VALUE[]){#{strargs}});
             "
         
         code = "
