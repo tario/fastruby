@@ -55,16 +55,7 @@ class Object
     options_hashes.each do |opt|
       options_hash.merge!(opt)
     end
-
-    objs = Array.new
-
-    unless options_hash[:no_cache]
-      snippet_hash = FastRuby.cache.hash_snippet(argument,options_hash[:validate_lvar_types].to_s + "^" + FastRuby::VERSION)
-      objs = FastRuby.cache.retrieve(snippet_hash)
-    end
-
-    if objs.empty?
-
+    
       tree = nil
 
       require "fastruby/fastruby_sexp"
@@ -81,26 +72,9 @@ class Object
 
       return unless tree
         method_name = "_anonymous_" + rand(100000000000).to_s
-        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), {:main => method_name, :self => self, :snippet_hash => snippet_hash}.merge(options_hash))
+        Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), {:main => method_name, :self => self}.merge(options_hash))
 
-    else
 
-      objs.sort{|x,y|
-          File.new(x).ctime <=> File.new(y).ctime
-        }.each do |obj|
-
-        begin
-          $last_obj_proc = nil
-          require obj
-          if $last_obj_proc
-            FastRuby.cache.register_proc(obj, $last_obj_proc)
-          end
-          FastRuby.cache.execute(obj, self.kind_of?(Class) ? self : Object)
-        rescue Exception => e
-          p e
-        end
-      end
-    end
   end
 
   def self.execute_tree(tree,*options_hashes)
