@@ -24,6 +24,10 @@ require "define_method_handler"
  
 module FastRuby
   class Inliner
+    def inline_local_name(method_name, local_name)
+      "__inlined_#{method_name}_#{local_name}".to_sym
+    end
+    
     define_method_handler(:inline) { |tree|
       recv_tree = tree[1] || fs(:self)
       method_name = tree[2]
@@ -55,6 +59,7 @@ module FastRuby
         
         target_method_tree_block.walk_tree do |subtree|
           if subtree.node_type == :lvar or subtree.node_type == :lasgn
+            subtree[1] = inline_local_name(method_name, subtree[1])
             add_local subtree[1]
           end
         end
@@ -65,9 +70,12 @@ module FastRuby
         
         (1..args_tree.size-1).each do |i|
           itype = infer_type(args_tree[i])
+          inlined_name = inline_local_name(method_name, target_method_tree_args[i])
 
-          self.extra_inferences[target_method_tree_args[i]] = itype if itype
-          newblock << fs(:lasgn, target_method_tree_args[i], args_tree[i])
+          add_local inlined_name
+
+          self.extra_inferences[inlined_name] = itype if itype
+          newblock << fs(:lasgn, inlined_name, args_tree[i])
         end
         
         (1..target_method_tree_block.size-1).each do |i|
