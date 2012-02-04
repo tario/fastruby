@@ -41,8 +41,8 @@ module FastRuby
       }.condition{|tree| tree.node_type == :iter}
     
     define_method_handler(:inline) { |tree|
-
-      next tree if tree.find_tree(:iter)
+      
+      next tree if tree.find_tree(:block_pass)
       
       recv_tree = tree[1] || fs(:self)
       method_name = tree[2]
@@ -67,8 +67,9 @@ module FastRuby
         next tree unless mobject
         
         target_method_tree = mobject.tree
-        
+
         next tree unless target_method_tree
+        next tree if target_method_tree.find_tree(:iter)
         
         target_method_tree_block = target_method_tree.find_tree(:scope)[1].duplicate
         
