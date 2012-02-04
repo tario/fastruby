@@ -40,6 +40,7 @@ module FastRuby
   def self.unset_tree(klass, method_name)
     fastrubym = klass.fastruby_method(method_name)
     fastrubym.tree = nil
+    fastrubym.tree_changed
     nil
   end
 
