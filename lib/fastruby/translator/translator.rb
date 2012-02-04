@@ -357,7 +357,6 @@ module FastRuby
             VALUE newproc = rb_funcall(rb_cObject,#{intern_num :new},0);
             rb_define_singleton_method(newproc, \"call\", main_proc_call, 1);
             rb_gv_set(\"$last_obj_proc\", newproc);
-
             }
           "
       end

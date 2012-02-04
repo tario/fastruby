@@ -23,6 +23,7 @@ require "fastruby/getlocals"
 require "fastruby/method_extension"
 require "fastruby/cache/cache"
 require "fastruby"
+require "digest"
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
@@ -71,7 +72,7 @@ class Object
       end
 
       return unless tree
-        method_name = "_anonymous_" + rand(100000000000).to_s
+        method_name = "_anonymous_" + Digest::SHA1.hexdigest(tree.inspect)
         Object.execute_tree(FastRuby.encapsulate_tree(tree,method_name), {:main => method_name, :self => self}.merge(options_hash))
 
 

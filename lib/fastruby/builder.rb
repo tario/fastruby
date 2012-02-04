@@ -129,21 +129,21 @@ module FastRuby
       code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION)
       paths = FastRuby.cache.retrieve(code_sha1)
 
-      c_code = context.to_c_method(inlined_tree,signature)
+      if paths.empty?
+        c_code = context.to_c_method(inlined_tree,signature)
+   
+        unless options[:main]
+           context.define_method_at_init(@owner,@method_name, args_tree.size+1, signature)
+        end
+  
+        so_name = nil
+  
+        old_class_self = $class_self
+        $class_self = @owner
+        $last_obj_proc = nil
+  
+        begin
 
-      unless options[:main]
-         context.define_method_at_init(@owner,@method_name, args_tree.size+1, signature)
-      end
-
-      so_name = nil
-
-      old_class_self = $class_self
-      $class_self = @owner
-      $last_obj_proc = nil
-
-      begin
-
-        if paths.empty?
           unless $inline_extra_flags
             $inline_extra_flags = true
             
@@ -202,16 +202,21 @@ module FastRuby
           unless no_cache
             FastRuby.cache.insert(code_sha1, so_name)
           end
-          
-          if $last_obj_proc
-            FastRuby.cache.register_proc(code_sha1, $last_obj_proc)
-          end
-        else
-          paths.each do |path|
-            require path
-          end
+        ensure
+          $class_self = old_class_self
         end
-        
+      else
+        paths.each do |path|
+          require path
+        end
+      end
+
+      if $last_obj_proc
+        FastRuby.cache.register_proc(code_sha1, $last_obj_proc)
+      end
+      
+      $class_self = @owner
+      begin
         FastRuby.cache.execute(code_sha1, @owner)
       ensure
         $class_self = old_class_self
