@@ -29,7 +29,13 @@ module FastRuby
       method_name = tree[2]
       args_tree = tree[3]
       
-      next tree if method_name == :lvar_type
+      if method_name == :lvar_type
+        lvar_name = args_tree[1][1] || args_tree[1][2]
+        lvar_type = eval(args_tree[2][1].to_s)
+
+        @infer_lvar_map[lvar_name] = lvar_type
+        next tree
+      end
       
       recvtype = infer_type(recv_tree)
  
@@ -58,6 +64,9 @@ module FastRuby
         newblock = fs(:block)
         
         (1..args_tree.size-1).each do |i|
+          itype = infer_type(args_tree[i])
+
+          self.extra_inferences[target_method_tree_args[i]] = itype if itype
           newblock << s(:lasgn, target_method_tree_args[i], args_tree[i])
         end
         

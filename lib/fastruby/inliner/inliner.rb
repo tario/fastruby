@@ -27,9 +27,11 @@ module FastRuby
     attr_accessor :infer_lvar_map
     attr_accessor :infer_self
     attr_reader :extra_locals
+    attr_reader :extra_inferences
     
     def initialize
       @extra_locals = Set.new
+      @extra_inferences = Hash.new
     end
     
     define_method_handler(:inline, :priority => -1000) do |tree|

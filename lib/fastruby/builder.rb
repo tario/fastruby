@@ -99,6 +99,11 @@ module FastRuby
 
       inlined_tree = inliner.inline(tree)
       context.locals = locals + inliner.extra_locals
+      
+      inliner.extra_inferences.each do |local, itype|
+        context.infer_lvar_map[local] = itype
+      end  
+
       c_code = context.to_c_method(inlined_tree,signature)
 
       unless options[:main]
