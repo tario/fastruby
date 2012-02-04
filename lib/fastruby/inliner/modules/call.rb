@@ -31,13 +31,17 @@ module FastRuby
     define_method_handler(:inline) { |tree|
         ret_tree = fs(:iter)
         ret_tree << tree[1].duplicate
-        ret_tree << inline(tree[2])
+        
+        tree[2..-1].each do |subtree|
+          ret_tree << inline(subtree)
+        end
+        
         ret_tree
         
       }.condition{|tree| tree.node_type == :iter}
     
     define_method_handler(:inline) { |tree|
-      
+
       next tree if tree.find_tree(:iter)
       
       recv_tree = tree[1] || fs(:self)
