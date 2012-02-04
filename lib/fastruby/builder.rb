@@ -241,10 +241,7 @@ module FastRuby
     end
     
     def method_added(method_name)
-      if self.respond_to? :clear_method_hash_addresses
-        FastRuby.unset_tree(self,method_name)
-        self.clear_method_hash_addresses(method_hash(method_name))
-      end
+      FastRuby.unset_tree(self,method_name)
     end
 
     def fastruby_method(mname_)
