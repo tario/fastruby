@@ -363,8 +363,8 @@ module FastRuby
     end
 
     def define_method_at_init(klass,method_name, size, signature)
-      init_extra << "
-        {
+      extra_code << "
+        static VALUE main_proc_call(VALUE self__, VALUE class_self_) {
           VALUE method_name = rb_funcall(
                 #{literal_value FastRuby},
                 #{intern_num :make_str_signature},
@@ -406,8 +406,18 @@ module FastRuby
               PTR2NUM(id),
               PTR2NUM(address)
               );
+              
+              return Qnil;
         }
       "
+      
+      init_extra << "
+            {
+            VALUE newproc = rb_funcall(rb_cObject,#{intern_num :new},0);
+            rb_define_singleton_method(newproc, \"call\", main_proc_call, 1);
+            rb_gv_set(\"$last_obj_proc\", newproc);
+            }
+          "
     end
 
     def to_c_method(tree, signature = nil)
