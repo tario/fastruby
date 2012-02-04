@@ -135,7 +135,7 @@ module FastRuby
         c_code = context.to_c_method(inlined_tree,signature)
    
         unless options[:main]
-           context.define_method_at_init(@owner,@method_name, args_tree.size+1, signature)
+           context.define_method_at_init(@method_name, args_tree.size+1, signature)
         end
   
         so_name = nil

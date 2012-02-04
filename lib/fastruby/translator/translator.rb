@@ -362,7 +362,7 @@ module FastRuby
       end
     end
 
-    def define_method_at_init(klass,method_name, size, signature)
+    def define_method_at_init(method_name, size, signature)
       extra_code << "
         static VALUE main_proc_call(VALUE self__, VALUE class_self_) {
           VALUE method_name = rb_funcall(
@@ -379,12 +379,12 @@ module FastRuby
                 #{literal_value FastRuby},
                 #{intern_num :set_builder_module},
                 1,
-                #{literal_value klass}
+                class_self_
                 );
           
           VALUE rb_method_hash;
           void** address = 0;
-          rb_method_hash = rb_funcall(#{literal_value klass}, #{intern_num :method_hash},1,#{literal_value method_name});
+          rb_method_hash = rb_funcall(class_self_, #{intern_num :method_hash},1,#{literal_value method_name});
 
           if (rb_method_hash != Qnil) {
             VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
@@ -399,7 +399,7 @@ module FastRuby
           *address = #{alt_method_name};
           
           rb_funcall(
-              #{literal_value klass},
+              class_self_,
               #{intern_num :register_method_value}, 
               3,
               #{literal_value method_name},
