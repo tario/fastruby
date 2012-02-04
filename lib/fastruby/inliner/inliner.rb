@@ -26,6 +26,11 @@ module FastRuby
   class Inliner
     attr_accessor :infer_lvar_map
     attr_accessor :infer_self
+    attr_reader :extra_locals
+    
+    def initialize
+      @extra_locals = Set.new
+    end
     
     define_method_handler(:inline, :priority => -1000) do |tree|
       FastRubySexp.from_sexp(tree)
@@ -33,6 +38,10 @@ module FastRuby
     
     Dir.glob(FastRuby.fastruby_load_path + "/fastruby/inliner/modules/**/*.rb").each do |path|
       require path
+    end
+    
+    def add_local(local)
+      @extra_locals << local
     end
     
     def infer_type(recv)

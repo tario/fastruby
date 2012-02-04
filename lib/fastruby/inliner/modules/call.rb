@@ -27,6 +27,7 @@ module FastRuby
     define_method_handler(:inline) { |tree|
       recv_tree = tree[1] || fs(:self)
       method_name = tree[2]
+      args_tree = tree[3]
       
       next tree if method_name == :lvar_type
       
@@ -44,7 +45,27 @@ module FastRuby
         
         next tree unless target_method_tree
         
-        tree
+        target_method_tree_block = target_method_tree.find_tree(:scope)[1].duplicate
+        
+        target_method_tree_block.walk_tree do |subtree|
+          if subtree.node_type == :lvar or subtree.node_type == :lasgn
+            add_local subtree[1]
+          end
+        end
+        
+        target_method_tree_args = target_method_tree[2]
+        
+        newblock = fs(:block)
+        
+        (1..args_tree.size-1).each do |i|
+          newblock << s(:lasgn, target_method_tree_args[i], args_tree[i])
+        end
+        
+        target_method_tree_block[1..-1].each do |subtree|
+          newblock << subtree
+        end
+        
+        newblock
       else
         # nothing to do, we don't know what is the method
         tree

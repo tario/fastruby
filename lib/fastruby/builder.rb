@@ -63,7 +63,6 @@ module FastRuby
       inliner = FastRuby::Inliner.new
 
       context = FastRuby::Context.new
-      context.locals = locals
       context.options = options
 
       args_tree = if tree[0] == :defn
@@ -97,7 +96,10 @@ module FastRuby
       
       inliner.infer_self = context.infer_self
       inliner.infer_lvar_map = context.infer_lvar_map
-      c_code = context.to_c_method(inliner.inline(tree),signature)
+
+      inlined_tree = inliner.inline(tree)
+      context.locals = locals + inliner.extra_locals
+      c_code = context.to_c_method(inlined_tree,signature)
 
       unless options[:main]
          context.define_method_at_init(@owner,@method_name, args_tree.size+1, signature)
