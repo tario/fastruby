@@ -125,6 +125,9 @@ module FastRuby
           rebuild(signature, noreturn)
         end
       end
+      
+      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION)
+      paths = FastRuby.cache.retrieve(code_sha1)
 
       c_code = context.to_c_method(inlined_tree,signature)
 
@@ -140,67 +143,78 @@ module FastRuby
 
       begin
 
-        unless $inline_extra_flags
-          $inline_extra_flags = true
-          
-          ['CFLAGS','CXXFLAGS','OPTFLAGS','cflags','cxxflags','optflags'].each do |name|
-            RbConfig::CONFIG[name].gsub!(/\-O\d/,"-O1") if RbConfig::CONFIG[name]
+        if paths.empty?
+          unless $inline_extra_flags
+            $inline_extra_flags = true
+            
+            ['CFLAGS','CXXFLAGS','OPTFLAGS','cflags','cxxflags','optflags'].each do |name|
+              RbConfig::CONFIG[name].gsub!(/\-O\d/,"-O1") if RbConfig::CONFIG[name]
+            end
+            
+            if RUBY_VERSION =~ /^1\.8/
+              RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_8 -Wno-clobbered"
+            elsif RUBY_VERSION =~ /^1\.9/
+              RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_9 -Wno-clobbered"
+            end
           end
           
-          if RUBY_VERSION =~ /^1\.8/
-            RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_8 -Wno-clobbered"
-          elsif RUBY_VERSION =~ /^1\.9/
-            RbConfig::CONFIG['CFLAGS'] << " -DRUBY_1_9 -Wno-clobbered"
+          @owner.class_eval do
+            inline :C  do |builder|
+              builder.inc << context.extra_code
+              builder.init_extra = context.init_extra
+  
+                def builder.generate_ext
+                  ext = []
+  
+                  @inc.unshift "#include \"ruby.h\""
+  
+                  ext << @inc
+                  ext << nil
+                  ext << @src.join("\n\n")
+                  ext << nil
+                  ext << nil
+                  ext << "#ifdef __cplusplus"
+                  ext << "extern \"C\" {"
+                  ext << "#endif"
+                  ext << "  void Init_#{module_name}() {"
+  
+                  ext << @init_extra.join("\n") unless @init_extra.empty?
+  
+                  ext << nil
+                  ext << "  }"
+                  ext << "#ifdef __cplusplus"
+                  ext << "}"
+                  ext << "#endif"
+                  ext << nil
+  
+                  ext.join "\n"
+                end
+  
+              builder.c c_code
+              so_name = builder.so_name
+            end
+          end
+        
+          unless no_cache
+            no_cache = context.no_cache
+          end
+    
+          unless no_cache
+            FastRuby.cache.insert(code_sha1, so_name)
+          end
+          
+          if $last_obj_proc
+            FastRuby.cache.register_proc(code_sha1, $last_obj_proc)
+          end
+        else
+          paths.each do |path|
+            require path
           end
         end
         
-        @owner.class_eval do
-          inline :C  do |builder|
-            builder.inc << context.extra_code
-            builder.init_extra = context.init_extra
-
-              def builder.generate_ext
-                ext = []
-
-                @inc.unshift "#include \"ruby.h\""
-
-                ext << @inc
-                ext << nil
-                ext << @src.join("\n\n")
-                ext << nil
-                ext << nil
-                ext << "#ifdef __cplusplus"
-                ext << "extern \"C\" {"
-                ext << "#endif"
-                ext << "  void Init_#{module_name}() {"
-
-                ext << @init_extra.join("\n") unless @init_extra.empty?
-
-                ext << nil
-                ext << "  }"
-                ext << "#ifdef __cplusplus"
-                ext << "}"
-                ext << "#endif"
-                ext << nil
-
-                ext.join "\n"
-              end
-
-            builder.c c_code
-            so_name = builder.so_name
-          end
-        end
-
-        if $last_obj_proc
-          $last_obj_proc.call($class_self)
-        end
-
+        FastRuby.cache.execute(code_sha1, @owner)
       ensure
         $class_self = old_class_self
-      end
-
-      unless no_cache
-        no_cache = context.no_cache
       end
     end
   end
