@@ -28,10 +28,12 @@ module FastRuby
     attr_accessor :infer_self
     attr_reader :extra_locals
     attr_reader :extra_inferences
+    attr_reader :inlined_methods
     
     def initialize
       @extra_locals = Set.new
       @extra_inferences = Hash.new
+      @inlined_methods = Array.new
     end
     
     define_method_handler(:inline, :priority => -1000) do |tree|

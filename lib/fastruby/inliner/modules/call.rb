@@ -139,6 +139,7 @@ module FastRuby
           newblock << subtree
         end
         
+        @inlined_methods << mobject
         newblock
       else
         # nothing to do, we don't know what is the method

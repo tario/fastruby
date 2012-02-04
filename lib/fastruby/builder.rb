@@ -35,13 +35,23 @@ module FastRuby
     def initialize(method_name, owner)
       @method_name = method_name
       @owner = owner
+      @observers = Hash.new
+    end
+    
+    def observe(key, &blk)
+      @observers[key] = blk
+    end
+    
+    def tree_changed
+      @observers.values.each do |observer|
+        observer.call(self)
+      end
     end
 
     def build(signature, noreturn = false)
       return nil unless tree
-      
-      no_cache = false
 
+      no_cache = false
       mname = FastRuby.make_str_signature(@method_name, signature)
 
       if @owner.respond_to? :method_hash
@@ -52,8 +62,14 @@ module FastRuby
         end
       end
 
-      FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
+      rebuild(signature, noreturn)
+    end
+    
+    def rebuild(signature, noreturn = false)
+      no_cache = false
+      mname = FastRuby.make_str_signature(@method_name, signature)
 
+      FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
       
       require "fastruby/translator/translator"
       require "rubygems"
@@ -102,7 +118,13 @@ module FastRuby
       
       inliner.extra_inferences.each do |local, itype|
         context.infer_lvar_map[local] = itype
-      end  
+      end
+      
+      inliner.inlined_methods.each do |inlined_method|
+        inlined_method.observe("#{@owner}##{@method_name}") do |imethod|
+          rebuild(signature, noreturn)
+        end
+      end
 
       c_code = context.to_c_method(inlined_tree,signature)
 

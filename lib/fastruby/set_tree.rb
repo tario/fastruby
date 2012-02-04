@@ -65,6 +65,7 @@ module FastRuby
     fastrubym.locals = locals
     fastrubym.options = options
     fastrubym.snippet_hash = snippet_hash
+    fastrubym.tree_changed
 
     nil
   end
