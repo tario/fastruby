@@ -101,7 +101,11 @@ module FastRuby
         target_method_tree_block.walk_tree do |subtree|
           if subtree.node_type == :call
             if subtree[1] == nil
-              subtree[1] = recv_tree.duplicate
+              if subtree[2] == :block_given?
+                subtree[0..-1] = fs(:false)
+              else
+                subtree[1] = recv_tree.duplicate
+              end
             end
           end
           if subtree.node_type == :self
