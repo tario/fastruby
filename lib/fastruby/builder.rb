@@ -126,9 +126,10 @@ module FastRuby
         end
       end
       
-      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION)
+      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-'))
       paths = FastRuby.cache.retrieve(code_sha1)
 
+      $last_obj_proc = nil
       if paths.empty?
         c_code = context.to_c_method(inlined_tree,signature)
    
@@ -140,7 +141,6 @@ module FastRuby
   
         old_class_self = $class_self
         $class_self = @owner
-        $last_obj_proc = nil
   
         begin
 
