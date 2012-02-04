@@ -221,6 +221,12 @@ module FastRuby
       ensure
         $class_self = old_class_self
       end
+      
+      observe("#{@owner}##{@method_name}") do |imethod|
+        if tree
+          rebuild(signature, noreturn)
+        end
+      end
     end
   end
 
