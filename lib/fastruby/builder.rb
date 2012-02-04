@@ -126,7 +126,7 @@ module FastRuby
         end
       end
       
-      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-'))
+      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-') + options.inspect)
       paths = FastRuby.cache.retrieve(code_sha1)
 
       $last_obj_proc = nil
