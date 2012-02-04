@@ -18,47 +18,38 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
+require "set"
+require "sexp"
+require "define_method_handler"
+
 module FastRuby
-  class FastRubySexp < Array
-    alias node_type first
+  class Inliner
+    attr_accessor :infer_lvar_map
+    attr_accessor :infer_self
     
-    def duplicate
-      map { |subtree|
-        if subtree.respond_to?(:node_type)
-          subtree.duplicate
-        else
-          subtree
+    define_method_handler(:inline, :priority => -1000) do |tree|
+      FastRubySexp.from_sexp(tree)
+    end
+    
+    Dir.glob(FastRuby.fastruby_load_path + "/fastruby/inliner/modules/**/*.rb").each do |path|
+      require path
+    end
+    
+    def infer_type(recv)
+      if recv[0] == :call
+        if recv[2] == :infer
+          eval(recv[3].last.last.to_s)
         end
-      }
-    end
-    
-    def map
-      sexp = FastRubySexp.new
-      self.each do |subtree|
-        sexp << yield(subtree)
+      elsif recv[0] == :lvar
+        @infer_lvar_map[recv[1]]
+      elsif recv[0] == :self
+        @infer_self
+      elsif recv[0] == :str or recv[0] == :lit
+        recv[1].class
+      else
+        nil
       end
-      sexp
     end
-    
-    def walk_tree(&block)
-      each do |subtree|
-        if subtree.instance_of? FastRubySexp
-          subtree.walk_tree(&block)
-        end
-      end
-      block.call(self)
-    end
-    
-    def find_tree(ndtype = nil)
-      walk_tree do |subtree|
-        if (not block_given?) || yield(subtree)
-          if (not ndtype) || ndtype == subtree.node_type
-            return subtree
-          end
-        end
-      end
-      
-      return nil
-    end
+
   end
 end

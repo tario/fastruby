@@ -22,6 +22,7 @@ require "fastruby/method_extension"
 require "fastruby/logging"
 require "fastruby/getlocals"
 require "fastruby_load_path"
+require "fastruby/inliner/inliner"
 
 require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
@@ -59,6 +60,8 @@ module FastRuby
       require "inline"
       require "fastruby/inline_extension"
 
+      inliner = FastRuby::Inliner.new
+
       context = FastRuby::Context.new
       context.locals = locals
       context.options = options
@@ -91,7 +94,10 @@ module FastRuby
       end
 
       context.infer_self = signature[0]
-      c_code = context.to_c_method(tree,signature)
+      
+      inliner.infer_self = context.infer_self
+      inliner.infer_lvar_map = context.infer_lvar_map
+      c_code = context.to_c_method(inliner.inline(tree),signature)
 
       unless options[:main]
          context.define_method_at_init(@owner,@method_name, args_tree.size+1, signature)
