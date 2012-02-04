@@ -68,8 +68,6 @@ module FastRuby
     def rebuild(signature, noreturn = false)
       no_cache = false
       mname = FastRuby.make_str_signature(@method_name, signature)
-
-      FastRuby.logger.info "Building #{@owner}::#{@method_name} for signature #{signature.inspect}"
       
       require "fastruby/translator/translator"
       require "rubygems"
@@ -126,11 +124,14 @@ module FastRuby
         end
       end
       
-      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-') + options.inspect)
+      alt_options = options.dup
+      alt_options.delete(:self)
+      code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-') + alt_options.inspect)
       paths = FastRuby.cache.retrieve(code_sha1)
 
       $last_obj_proc = nil
       if paths.empty?
+        FastRuby.logger.info "Compiling #{@owner}::#{@method_name} for signature #{signature.inspect}"
         c_code = context.to_c_method(inlined_tree,signature)
    
         unless options[:main]
