@@ -67,10 +67,29 @@ module FastRuby
           itype = infer_type(args_tree[i])
 
           self.extra_inferences[target_method_tree_args[i]] = itype if itype
-          newblock << s(:lasgn, target_method_tree_args[i], args_tree[i])
+          newblock << fs(:lasgn, target_method_tree_args[i], args_tree[i])
         end
         
-        target_method_tree_block[1..-1].each do |subtree|
+        (1..target_method_tree_block.size-1).each do |i|
+          subtree = target_method_tree_block[i]
+          
+          if subtree.find_tree(:return)
+            if i == target_method_tree_block.size-1
+              if subtree.node_type == :return
+                if subtree[1]
+                  if subtree[1].find_tree(:return)
+                    next tree
+                  end
+                end
+                
+                subtree[0..-1] = subtree[1]
+              end
+            else
+              # methods with return cannot be inlined
+              next tree
+            end
+          end
+          
           newblock << subtree
         end
         
