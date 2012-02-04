@@ -70,7 +70,11 @@ module FastRuby
 
         next tree unless target_method_tree
         next tree if target_method_tree.find_tree(:iter)
+        target_method_tree_args = target_method_tree[2]
         
+        next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
+
+
         target_method_tree_block = target_method_tree.find_tree(:scope)[1].duplicate
         
         target_method_tree_block.walk_tree do |subtree|
@@ -79,8 +83,6 @@ module FastRuby
             add_local subtree[1]
           end
         end
-        
-        target_method_tree_args = target_method_tree[2]
         
         newblock = fs(:block)
         
