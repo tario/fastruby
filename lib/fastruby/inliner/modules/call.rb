@@ -29,6 +29,17 @@ module FastRuby
     end
     
     define_method_handler(:inline) { |tree|
+        ret_tree = fs(:iter)
+        ret_tree << tree[1].duplicate
+        ret_tree << inline(tree[2])
+        ret_tree
+        
+      }.condition{|tree| tree.node_type == :iter}
+    
+    define_method_handler(:inline) { |tree|
+      
+      next tree if tree.find_tree(:iter)
+      
       recv_tree = tree[1] || fs(:self)
       method_name = tree[2]
       args_tree = tree[3]
@@ -75,7 +86,23 @@ module FastRuby
           add_local inlined_name
 
           self.extra_inferences[inlined_name] = itype if itype
-          newblock << fs(:lasgn, inlined_name, args_tree[i])
+          newblock << fs(:lasgn, inlined_name, args_tree[i].duplicate)
+        end
+        
+        inlined_name = inline_local_name(method_name, :self)
+        add_local inlined_name
+        newblock << fs(:lasgn, inlined_name, recv_tree.duplicate)
+        
+        target_method_tree_block.walk_tree do |subtree|
+          if subtree.node_type == :call
+            if subtree[1] == nil
+              subtree[1] = recv_tree.duplicate
+            end
+          end
+          if subtree.node_type == :self
+            subtree[0] = :lvar
+            subtree[1] = inline_local_name(method_name, :self)
+          end
         end
         
         (1..target_method_tree_block.size-1).each do |i|
