@@ -2,68 +2,44 @@ require "rubygems"
 require "fastruby"
 
 class X
-	fastruby "
-		def foo(a,b)
-			return a+b
-		end
-	"
-end
-
-class Y
-	fastruby "
-		def bar(x)
-			i = 1000000
-			
-			lvar_type(i,Fixnum)
-			
-			ret = 0
-			while i > 0
-				ret = x.foo(i,i)
-				i = i - 1
-			end
-			return ret
-		end
-
-	"
-end
-
-class X2
-	def foo(a,b)
+  def foo(a,b)
 		return a+b
 	end
 end
 
-class Y2
-		def bar(x)
-			i = 1000000
-			ret = 0
-			while i > 0
-				ret = x.foo(i,i)
-				i = i - 1
-			end
-			return ret
+class Y
+	def bar(x)
+		i = 1000000
+		
+  	lvar_type(i,Fixnum)
+			
+		ret = 0
+		while i > 0
+			ret = x.foo(i,i)
+			i = i - 1
 		end
-
+		return ret
+	end
 end
 
 
 x = X.new
 y = Y.new
-y2 = Y2.new
-x2 = X2.new
-
-Y.build([Y,X],:bar)
-X.build([X,Fixnum,Fixnum],:foo)
 
 require 'benchmark'
 
 Benchmark::bm(20) do |b|
 
-	b.report("fastruby") do
+	b.report("ruby") do
 		y.bar(x)
 	end
 
-	b.report("ruby") do
-		y2.bar(x2)
+  X.optimize(:foo)
+  Y.optimize(:bar)
+  X.build([X,Fixnum,Fixnum],:foo)
+  Y.build([Y,X],:bar)
+
+	b.report("fastruby") do
+		y.bar(x)
 	end
 end
