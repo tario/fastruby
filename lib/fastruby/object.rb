@@ -24,11 +24,18 @@ require "fastruby/method_extension"
 require "fastruby/cache/cache"
 require "fastruby"
 require "digest"
+require "method_source"
 
 # clean rubyinline cache
 system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 
 $top_level_binding = binding
+
+class Class
+  def optimize(method_name)
+    fastruby instance_method(method_name).source  
+  end
+end
 
 module FastRuby
   def self.encapsulate_tree(tree, method_name)
