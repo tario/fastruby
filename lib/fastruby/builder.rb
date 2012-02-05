@@ -119,7 +119,7 @@ module FastRuby
       end
       
       inliner.inlined_methods.each do |inlined_method|
-        inlined_method.observe("#{@owner}##{@method_name}") do |imethod|
+        inlined_method.observe("#{@owner}##{@method_name}#{mname}") do |imethod|
           rebuild(signature, noreturn)
         end
       end
@@ -224,7 +224,7 @@ module FastRuby
         $class_self = old_class_self
       end
       
-      observe("#{@owner}##{@method_name}") do |imethod|
+      observe("#{@owner}##{@method_name}#{mname}") do |imethod|
         if tree
           rebuild(signature, noreturn)
         end
