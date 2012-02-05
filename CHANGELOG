@@ -1,4 +1,6 @@
-0.0.18  Implemented new cache by syntax tree, more accurate, fixing a few cache bugs and compatible with inlining
+0.0.18  Optimize of exising methods using "optimize" (only pure ruby methods are supported)  
+
+    Implemented new cache by syntax tree, more accurate, fixing a few cache bugs and compatible with inlining
 
     Removed all cache by code string, buggy by design
 
