@@ -63,7 +63,6 @@ class Object
   def infer(a); self; end
   def fastruby(argument, *options_hashes)
     options_hash = {:validate_lvar_types => true}
-    options_hash[:no_cache] = true if ENV['FASTRUBY_NO_CACHE'] == "1"
     options_hashes.each do |opt|
       options_hash.merge!(opt)
     end
