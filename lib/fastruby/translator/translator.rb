@@ -345,7 +345,7 @@ module FastRuby
 
         extra_code << "
           static VALUE #{@alt_method_name}(VALUE self__);
-          static VALUE main_proc_call(VALUE self__, VALUE class_self_) {
+          static VALUE main_proc_call(VALUE self__, VALUE signature, VALUE class_self_) {
             #{@alt_method_name}(class_self_);
             return Qnil;
           }
@@ -355,7 +355,7 @@ module FastRuby
         init_extra << "
             {
             VALUE newproc = rb_funcall(rb_cObject,#{intern_num :new},0);
-            rb_define_singleton_method(newproc, \"call\", main_proc_call, 1);
+            rb_define_singleton_method(newproc, \"call\", main_proc_call, 2);
             rb_gv_set(\"$last_obj_proc\", newproc);
             }
           "
@@ -364,13 +364,13 @@ module FastRuby
 
     def define_method_at_init(method_name, size, signature)
       extra_code << "
-        static VALUE main_proc_call(VALUE self__, VALUE class_self_) {
+        static VALUE main_proc_call(VALUE self__, VALUE signature, VALUE class_self_) {
           VALUE method_name = rb_funcall(
                 #{literal_value FastRuby},
                 #{intern_num :make_str_signature},
                 2,
                 #{literal_value method_name},
-                #{literal_value signature}
+                signature
                 );
 
           ID id = rb_intern(RSTRING_PTR(method_name));
@@ -414,7 +414,7 @@ module FastRuby
       init_extra << "
             {
             VALUE newproc = rb_funcall(rb_cObject,#{intern_num :new},0);
-            rb_define_singleton_method(newproc, \"call\", main_proc_call, 1);
+            rb_define_singleton_method(newproc, \"call\", main_proc_call, 2);
             rb_gv_set(\"$last_obj_proc\", newproc);
             }
           "

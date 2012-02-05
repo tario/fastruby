@@ -127,6 +127,7 @@ module FastRuby
       alt_options = options.dup
       alt_options.delete(:self)
       code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-') + alt_options.inspect)
+      
       paths = FastRuby.cache.retrieve(code_sha1)
 
       $last_obj_proc = nil
@@ -218,7 +219,7 @@ module FastRuby
       
       $class_self = @owner
       begin
-        FastRuby.cache.execute(code_sha1, @owner)
+        FastRuby.cache.execute(code_sha1, signature, @owner)
       ensure
         $class_self = old_class_self
       end

@@ -61,10 +61,10 @@ module FastRuby
       @proc_hash[obj] = value
     end
 
-    def execute(obj, param)
+    def execute(obj, *params)
       @proc_hash = Hash.new unless @proc_hash
       if @proc_hash[obj]
-        @proc_hash[obj].call(param)
+        @proc_hash[obj].call(*params)
       end
     end
 private
