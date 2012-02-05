@@ -98,5 +98,35 @@ describe FastRuby, "fastruby" do
     fastruby code
 
     ::JU4.new.foo.should be == 6
-  end  
+  end
+  
+  
+  it "should allow replaced called method when inlined from many functions" do
+    fastruby "
+      class ::JU5
+        def bar
+          77
+        end
+      end
+      class ::JU6
+        def foo(a,b)
+          b.bar
+        end
+      end
+    "
+    
+    ::JU6.new.foo(0,::JU5.new)
+    ::JU6.new.foo("0",::JU5.new)
+    
+    fastruby "
+       class ::JU5
+        def bar
+          99
+        end
+      end
+    "
+
+    ::JU6.new.foo(0,::JU5.new).should be == 99
+    ::JU6.new.foo("0",::JU5.new).should be == 99
+  end
 end
