@@ -31,6 +31,8 @@ system("rm -fr #{ENV["HOME"]}/.ruby_inline/*")
 
 $top_level_binding = binding
 
+def lvar_type(*x); end
+
 class Class
   def optimize(method_name)
     fastruby instance_method(method_name).source  
@@ -57,6 +59,8 @@ module FastRuby
 end
 
 class Object
+  
+  def infer(a); self; end
   def fastruby(argument, *options_hashes)
     options_hash = {:validate_lvar_types => true}
     options_hash[:no_cache] = true if ENV['FASTRUBY_NO_CACHE'] == "1"
