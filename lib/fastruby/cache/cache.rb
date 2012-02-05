@@ -41,12 +41,16 @@ module FastRuby
     end
 
     def insert(hash,path)
-      create_hash_dir(hash)
-      dest = hash_dir(hash)
-      cp_r path, dest
+      unless ENV['FASTRUBY_NO_CACHE'] == '1'
+        create_hash_dir(hash)
+        dest = hash_dir(hash)
+        cp_r path, dest
+      end
     end
 
     def retrieve(hash)
+      return [] if ENV['FASTRUBY_NO_CACHE'] == '1'
+      
       create_hash_dir(hash)
       dest = hash_dir(hash)
       Dir[dest + "*.so"]
