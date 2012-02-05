@@ -1,3 +1,11 @@
+0.0.18  Implemented new cache by syntax tree, more accurate, fixing a few cache bugs and compatible with inlining
+
+    Removed all cache by code string, buggy by design
+
+    performance: Implemented inlining of method calls (not iter call supported, splat calls nor inline of methods with iter calls)  
+
+    Internal refactor: Changed C translator to use chain of responsability (define_method_handler dependency on Rakefile)
+
 0.0.17  Fixed bug of non-volatile variables on scopes calling setjmp
 
     Fixed bug of native pointers encoding on 32 bits systems
