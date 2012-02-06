@@ -129,4 +129,24 @@ describe FastRuby, "fastruby" do
     ::JU6.new.foo(0,::JU5.new).should be == 99
     ::JU6.new.foo("0",::JU5.new).should be == 99
   end
+
+  it "should allow replace CFUNC methods using ruby after they are called and compiled at runtime (through other method)" do
+    fastruby "
+      class ::JU6
+        def foo(a)
+          a.conj
+        end
+      end
+    "
+    
+    ::JU6.new.foo(0)
+    
+      class Fixnum
+        def conj
+          86
+        end
+      end
+    
+    ::JU6.new.foo(0).should be == 86 
+  end 
 end
