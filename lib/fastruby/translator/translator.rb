@@ -1188,13 +1188,6 @@ fastruby_local_next:
           }
           
           fptr = *#{address_name};
-          
-            if (fptr == 0) {
-              fptr = *#{cfunc_address_name};
-              if (fptr != 0) {
-                return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*) ) (fptr) )(self,(VALUE)block,(VALUE)frame, argc, argv);  
-              }
-            }
 
           if (fptr == 0) {
             if (block==0) {
@@ -1259,36 +1252,6 @@ fastruby_local_next:
         "
       }
 
-
-      cfuncall1inprocargs = (0..args_tree.size-2).map{|x| "argv[#{x}]"}.join(",")
-      cfuncall1inprocargs = ","+cfuncall1inprocargs if cfuncall1inprocargs != ""
-      
-      cfunc_value_cast = (["VALUE"]*args_tree.size).join(",")
-      cfunc_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
-            return ( (VALUE(*)(#{cfunc_value_cast})) (#{cfunc_real_address_name}) )(self#{cfuncall1inprocargs});
-        }
-        "
-      }
-      
-      toprocstrargs = (0..25).map{|x| "arg#{x}"}.join(",")
-      strargs_signature = (0..25).map{|x| "VALUE arg#{x}"}.join(",")
-
-      cfunc_wrapper_1 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
-            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(argc,argv,self);
-        }
-        "
-      }
-
-      cfunc_wrapper_2 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
-            VALUE args = rb_ary_new3(argc, argv);
-            return ( (VALUE(*)(VALUE,VALUE)) (#{cfunc_real_address_name}) )(self,args);
-        }
-        "
-      }
-
       if recvdump and recvtype
         init_extra << "
           {
@@ -1326,62 +1289,6 @@ fastruby_local_next:
               tmp = rb_hash_aref(rb_method_hash, PTR2NUM(default_id));
               if (tmp != Qnil) {
                  default_address = (void*)NUM2PTR(tmp);
-              }
-            }
-            
-            if (default_address==0) {
-              default_address = malloc(sizeof(void*));
-              *default_address = 0;
-
-#ifdef RUBY_1_8
-
-			// this only works with ruby1.8
-
-              NODE* body = rb_method_node(recvtype,#{intern_num mname});
-              if (body != 0) {
-                if (nd_type(body) == NODE_CFUNC) {
-                  if (body->nd_argc == #{args_tree.size-1}) {
-                    *default_address = #{cfunc_wrapper};
-                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                  } else if (body->nd_argc == -1) {
-                    *default_address = #{cfunc_wrapper_1};
-                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                  } else if (body->nd_argc == -2) {
-                    *default_address = #{cfunc_wrapper_2};
-                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                  }
-                }
-              }
-#endif
-#ifdef RUBY_1_9
-              rb_method_entry_t* me = rb_method_entry(recvtype,#{intern_num mname});
-              if (me != 0) {
-                rb_method_definition_t* def = me->def;
-                
-                if (def->type == VM_METHOD_TYPE_CFUNC) {
-                  if (def->body.cfunc.argc == #{args_tree.size-1}) {
-                    *default_address = #{cfunc_wrapper};
-                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
-                  } else if (def->body.cfunc.argc == -1) {
-                    *default_address = #{cfunc_wrapper_1};
-                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
-                  } else if (def->body.cfunc.argc == -2) {
-                    *default_address = #{cfunc_wrapper_2};
-                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
-                  }
-                }
-              }
-#endif
-
-              if (recvtype != Qnil) { 
-                rb_funcall(
-                    recvtype,
-                    #{intern_num :register_method_value}, 
-                    3,
-                    #{literal_value mname},
-                    PTR2NUM(default_id),
-                    PTR2NUM(default_address)
-                    );
               }
             }
 
