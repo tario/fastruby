@@ -1289,6 +1289,73 @@ fastruby_local_next:
         "
       }
 
+      update_cfunc_method = anonymous_function{ |funcname| "
+          static VALUE #{funcname}(){
+                void** default_address = (void**)#{cfunc_address_name};
+                ID default_id = rb_intern(\"default\");
+                VALUE recvtype = #{recvdump};
+
+                if (1) {
+                  *default_address = 0;
+    
+    #ifdef RUBY_1_8
+    
+          // this only works with ruby1.8
+    
+                  NODE* body = rb_method_node(recvtype,#{intern_num mname});
+                  if (body != 0) {
+                    if (nd_type(body) == NODE_CFUNC) {
+                      if (body->nd_argc == #{args_tree.size-1}) {
+                        *default_address = #{cfunc_wrapper};
+                        #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                      } else if (body->nd_argc == -1) {
+                        *default_address = #{cfunc_wrapper_1};
+                        #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                      } else if (body->nd_argc == -2) {
+                        *default_address = #{cfunc_wrapper_2};
+                        #{cfunc_real_address_name} = (void*)body->nd_cfnc;
+                      }
+                    }
+                  }
+    #endif
+    #ifdef RUBY_1_9
+                  rb_method_entry_t* me = rb_method_entry(recvtype,#{intern_num mname});
+                  if (me != 0) {
+                    rb_method_definition_t* def = me->def;
+                    
+                    if (def->type == VM_METHOD_TYPE_CFUNC) {
+                      if (def->body.cfunc.argc == #{args_tree.size-1}) {
+                        *default_address = #{cfunc_wrapper};
+                        #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
+                      } else if (def->body.cfunc.argc == -1) {
+                        *default_address = #{cfunc_wrapper_1};
+                        #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
+                      } else if (def->body.cfunc.argc == -2) {
+                        *default_address = #{cfunc_wrapper_2};
+                        #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
+                      }
+                    }
+                  }
+    #endif
+    
+                  if (recvtype != Qnil) { 
+                    rb_funcall(
+                        recvtype,
+                        #{intern_num :register_method_value}, 
+                        3,
+                        #{literal_value mname},
+                        PTR2NUM(default_id),
+                        PTR2NUM(default_address)
+                        );
+                  }
+                }
+              return Qnil;
+          }
+        "
+      }
+        
+        
+
       if recvdump and recvtype
         init_extra << "
           {
@@ -1332,58 +1399,10 @@ fastruby_local_next:
             if (default_address==0) {
               default_address = malloc(sizeof(void*));
               *default_address = 0;
-
-#ifdef RUBY_1_8
-
-			// this only works with ruby1.8
-
-              NODE* body = rb_method_node(recvtype,#{intern_num mname});
-              if (body != 0) {
-                if (nd_type(body) == NODE_CFUNC) {
-                  if (body->nd_argc == #{args_tree.size-1}) {
-                    *default_address = #{cfunc_wrapper};
-                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                  } else if (body->nd_argc == -1) {
-                    *default_address = #{cfunc_wrapper_1};
-                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                  } else if (body->nd_argc == -2) {
-                    *default_address = #{cfunc_wrapper_2};
-                    #{cfunc_real_address_name} = (void*)body->nd_cfnc;
-                  }
-                }
-              }
-#endif
-#ifdef RUBY_1_9
-              rb_method_entry_t* me = rb_method_entry(recvtype,#{intern_num mname});
-              if (me != 0) {
-                rb_method_definition_t* def = me->def;
-                
-                if (def->type == VM_METHOD_TYPE_CFUNC) {
-                  if (def->body.cfunc.argc == #{args_tree.size-1}) {
-                    *default_address = #{cfunc_wrapper};
-                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
-                  } else if (def->body.cfunc.argc == -1) {
-                    *default_address = #{cfunc_wrapper_1};
-                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
-                  } else if (def->body.cfunc.argc == -2) {
-                    *default_address = #{cfunc_wrapper_2};
-                    #{cfunc_real_address_name} = (void*)def->body.cfunc.func;
-                  }
-                }
-              }
-#endif
-
-              if (recvtype != Qnil) { 
-                rb_funcall(
-                    recvtype,
-                    #{intern_num :register_method_value}, 
-                    3,
-                    #{literal_value mname},
-                    PTR2NUM(default_id),
-                    PTR2NUM(default_address)
-                    );
-              }
             }
+            #{cfunc_address_name} = default_address;
+            
+            #{update_cfunc_method}();
 
             if (address==0) {
               address = malloc(sizeof(void*));
@@ -1403,7 +1422,6 @@ fastruby_local_next:
             }
             
             #{address_name} = address;
-            #{cfunc_address_name} = default_address;
             #{name} = (void*)#{generic_wrapper};
           }
         "
