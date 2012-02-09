@@ -1403,6 +1403,12 @@ fastruby_local_next:
             #{cfunc_address_name} = default_address;
             
             #{update_cfunc_method}();
+            rb_iterate(#{anonymous_function{|funcname|
+              "static VALUE #{funcname}(VALUE recv) {
+                return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value mname});
+              }
+              "
+            }},fastruby_method,#{update_cfunc_method},Qnil);
 
             if (address==0) {
               address = malloc(sizeof(void*));
