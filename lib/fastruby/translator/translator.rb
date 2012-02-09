@@ -1405,7 +1405,7 @@ fastruby_local_next:
             #{update_cfunc_method}();
             rb_iterate(#{anonymous_function{|funcname|
               "static VALUE #{funcname}(VALUE recv) {
-                return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value mname});
+                return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value(alt_method_name + "#" + cfunc_address_name)});
               }
               "
             }},fastruby_method,#{update_cfunc_method},Qnil);
