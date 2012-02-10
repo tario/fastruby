@@ -28,62 +28,32 @@ module FastRuby
       "__inlined_#{method_name}_#{local_name}".to_sym
     end
     
-    define_method_handler(:inline) { |tree|
-        ret_tree = fs(:iter)
-        ret_tree << tree[1].duplicate
-        
-        tree[2..-1].each do |subtree|
-          ret_tree << inline(subtree)
-        end
-        
-        ret_tree
-        
-      }.condition{|tree| tree.node_type == :iter}
+    def method_obj_or_gtfo(klass, method_name)
+      return nil unless klass.respond_to?(:fastruby_method)
+      klass.fastruby_method(method_name)
+    end
     
-    define_method_handler(:inline) { |tree|
-      
-      next tree if tree.find_tree(:block_pass)
-      
-      recv_tree = tree[1] || fs(:self)
-      method_name = tree[2]
-      args_tree = tree[3]
-      
-      if method_name == :lvar_type
-        lvar_name = args_tree[1][1] || args_tree[1][2]
-        lvar_type = eval(args_tree[2][1].to_s)
-
-        @infer_lvar_map[lvar_name] = lvar_type
-        next tree
+    def add_prefix(tree, prefix)
+      tree = tree.duplicate
+      tree.walk_tree do |subtree|
+        if subtree.node_type == :lvar or subtree.node_type == :lasgn
+          subtree[1] = inline_local_name(prefix, subtree[1])
+          add_local subtree[1]
+        end
       end
       
-      recvtype = infer_type(recv_tree)
- 
-      if recvtype
-        # search the tree of target method
-        next tree unless recvtype.respond_to?(:fastruby_method)
-
-        mobject = recvtype.fastruby_method(method_name)
+      tree
+    end
+    
+    def method_tree_to_inlined_block(mobject, call_tree, method_name, block_args_tree = nil, block_tree = nil)
+        args_tree = call_tree[3]
+        recv_tree = call_tree[1] || fs(:self)
         
-        next tree unless mobject
+        target_method_tree = mobject.tree 
         
-        target_method_tree = mobject.tree
-
-        next tree unless target_method_tree
-        next tree if target_method_tree.find_tree(:iter)
+        target_method_tree_block = add_prefix(target_method_tree.find_tree(:scope)[1], method_name)
         target_method_tree_args = target_method_tree[2]
-        
-        next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
 
-
-        target_method_tree_block = target_method_tree.find_tree(:scope)[1].duplicate
-        
-        target_method_tree_block.walk_tree do |subtree|
-          if subtree.node_type == :lvar or subtree.node_type == :lasgn
-            subtree[1] = inline_local_name(method_name, subtree[1])
-            add_local subtree[1]
-          end
-        end
-        
         newblock = fs(:block)
         
         (1..args_tree.size-1).each do |i|
@@ -114,6 +84,32 @@ module FastRuby
             subtree[0] = :lvar
             subtree[1] = inline_local_name(method_name, :self)
           end
+          if subtree.node_type == :yield
+            if block_tree
+              # inline yield
+              yield_call_args = subtree.duplicate
+              
+              subtree[0..-1] = fs(:block)
+              
+              if block_args_tree
+                return nil if block_args_tree[1].size != yield_call_args.size
+                return nil if block_args_tree[1][1..-1].find{|x| x.node_type == :splat}
+                return nil if yield_call_args[1..-1].find{|x| x.node_type == :splat}
+              
+                (1..yield_call_args.size-1).each do |i|
+                  inlined_name = block_args_tree[1][i][1]
+                  add_local inlined_name
+                  subtree << fs(:lasgn, inlined_name, add_prefix(yield_call_args[i],method_name))
+                end
+              else
+                return nil if yield_call_args.size > 1
+              end
+              
+              subtree << block_tree
+            else
+              subtree[0..-1] = fs(:call, fs(:nil), :raise, fs(:arglist, fs(:const, :LocalJumpError), fs(:str, "no block given")))
+            end
+          end
         end
         
         (1..target_method_tree_block.size-1).each do |i|
@@ -140,7 +136,76 @@ module FastRuby
         end
         
         @inlined_methods << mobject
-        newblock
+        newblock      
+    end
+    
+    define_method_handler(:inline) { |tree|
+        ret_tree = fs(:iter)
+        ret_tree << tree[1].duplicate
+        
+        call_tree = tree[1]
+        recv_tree = call_tree[1] || fs(:self)
+        method_name = call_tree[2]
+        args_tree = call_tree[3]
+        block_tree = tree[3] || fs(:nil)
+        block_args_tree = tree[2]
+        
+        tree[2..-1].each do |subtree|
+          ret_tree << inline(subtree)
+        end
+        
+        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:redo) or block_tree.find_tree(:next)
+
+        recvtype = infer_type(recv_tree)
+
+        if recvtype
+          # search the tree of target method
+          mobject = method_obj_or_gtfo(recvtype,method_name)
+  
+          next tree unless mobject
+          next tree unless mobject.tree
+          next tree if mobject.tree.find_tree(:iter)
+          target_method_tree_args = mobject.tree[2]
+          next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
+
+          method_tree_to_inlined_block(mobject, call_tree, method_name, block_args_tree, block_tree) || ret_tree
+  
+        else
+          # nothing to do, we don't know what is the method
+          ret_tree
+        end
+     }.condition{|tree| tree.node_type == :iter}
+    
+    define_method_handler(:inline) { |tree|
+      
+      next tree if tree.find_tree(:block_pass)
+      
+      recv_tree = tree[1] || fs(:self)
+      method_name = tree[2]
+      args_tree = tree[3]
+      
+      if method_name == :lvar_type
+        lvar_name = args_tree[1][1] || args_tree[1][2]
+        lvar_type = eval(args_tree[2][1].to_s)
+
+        @infer_lvar_map[lvar_name] = lvar_type
+        next tree
+      end
+      
+      recvtype = infer_type(recv_tree)
+ 
+      if recvtype
+        # search the tree of target method
+        mobject = method_obj_or_gtfo(recvtype,method_name)
+
+        next tree unless mobject
+        next tree unless mobject.tree
+        next tree if mobject.tree.find_tree(:iter)
+        target_method_tree_args = mobject.tree[2]
+        next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
+
+        method_tree_to_inlined_block(mobject, tree, method_name)
+
       else
         # nothing to do, we don't know what is the method
         tree
