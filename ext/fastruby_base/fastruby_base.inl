@@ -402,6 +402,7 @@ static VALUE fastruby_method_tree_pointer(VALUE self) {
 
 	if (rb_tree_pointer == Qnil) {
 		VALUE* tree_pointer = malloc(sizeof(VALUE*));
+		rb_gc_register_address(tree_pointer);
 		*tree_pointer = Qnil;
 		rb_tree_pointer = LONG2FIX(tree_pointer);
 		rb_ivar_set(self, rb_intern("@tree"), rb_tree_pointer);
@@ -412,7 +413,6 @@ static VALUE fastruby_method_tree_pointer(VALUE self) {
 
 static VALUE fastruby_method_tree_eq(VALUE self, VALUE val) {
 	VALUE* tree_pointer = (VALUE*)FIX2LONG(fastruby_method_tree_pointer(self));
-  rb_ivar_set(self, rb_intern("__current_tree"), val);
 	*tree_pointer = val;
 	return Qnil;
 }
