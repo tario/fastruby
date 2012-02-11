@@ -52,6 +52,11 @@ module FastRuby
         target_method_tree = mobject.tree 
         
         target_method_tree_block = add_prefix(target_method_tree.find_tree(:scope)[1], method_name)
+        
+        if target_method_tree_block[-1].node_type == :return
+          target_method_tree_block[-1] = target_method_tree_block[-1][1]
+        end
+        
         target_method_tree_args = target_method_tree[2]
 
         newblock = fs(:block)
