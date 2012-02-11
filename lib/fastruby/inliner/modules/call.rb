@@ -123,7 +123,10 @@ module FastRuby
         end
         
         @inlined_methods << mobject
-        target_method_tree_block
+        target_method_tree_block[1..-1].each do |subtree|
+          newblock << subtree
+        end
+        newblock
     end
     
     define_method_handler(:inline) { |tree|
