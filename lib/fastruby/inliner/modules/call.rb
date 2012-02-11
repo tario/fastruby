@@ -70,6 +70,8 @@ module FastRuby
         add_local inlined_name
         newblock << fs(:lasgn, inlined_name, recv_tree.duplicate)
         
+        return nil if target_method_tree_block.find_tree(:return)
+        
         target_method_tree_block.walk_tree do |subtree|
           if subtree.node_type == :call
             if subtree[1] == nil
@@ -92,14 +94,22 @@ module FastRuby
               subtree[0..-1] = fs(:block)
               
               if block_args_tree
-                return nil if block_args_tree[1].size != yield_call_args.size
-                return nil if block_args_tree[1][1..-1].find{|x| x.node_type == :splat}
                 return nil if yield_call_args[1..-1].find{|x| x.node_type == :splat}
+                if block_args_tree.node_type == :massgn
+                  return nil if block_args_tree[1].size != yield_call_args.size
+                  return nil if block_args_tree[1][1..-1].find{|x| x.node_type == :splat}
               
-                (1..yield_call_args.size-1).each do |i|
-                  inlined_name = block_args_tree[1][i][1]
+                  (1..yield_call_args.size-1).each do |i|
+                    inlined_name = block_args_tree[1][i][1]
+                    add_local inlined_name
+                    subtree << fs(:lasgn, inlined_name, add_prefix(yield_call_args[i],method_name))
+                  end
+                else
+                  return nil if 2 != yield_call_args.size
+
+                  inlined_name = block_args_tree[1]
                   add_local inlined_name
-                  subtree << fs(:lasgn, inlined_name, add_prefix(yield_call_args[i],method_name))
+                  subtree << fs(:lasgn, inlined_name, add_prefix(yield_call_args[1],method_name))
                 end
               else
                 return nil if yield_call_args.size > 1
@@ -112,31 +122,8 @@ module FastRuby
           end
         end
         
-        (1..target_method_tree_block.size-1).each do |i|
-          subtree = target_method_tree_block[i]
-          
-          if subtree.find_tree(:return)
-            if i == target_method_tree_block.size-1
-              if subtree.node_type == :return
-                if subtree[1]
-                  if subtree[1].find_tree(:return)
-                    next tree
-                  end
-                end
-                
-                subtree[0..-1] = subtree[1]
-              end
-            else
-              # methods with return cannot be inlined
-              next tree
-            end
-          end
-          
-          newblock << subtree
-        end
-        
         @inlined_methods << mobject
-        newblock      
+        target_method_tree_block
     end
     
     define_method_handler(:inline) { |tree|
@@ -154,7 +141,7 @@ module FastRuby
           ret_tree << inline(subtree)
         end
         
-        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:redo) or block_tree.find_tree(:next)
+        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:redo) or block_tree.find_tree(:next) or block_tree.find_tree(:retry)
 
         recvtype = infer_type(recv_tree)
 
@@ -204,7 +191,7 @@ module FastRuby
         target_method_tree_args = mobject.tree[2]
         next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
 
-        method_tree_to_inlined_block(mobject, tree, method_name)
+        method_tree_to_inlined_block(mobject, tree, method_name) || tree
 
       else
         # nothing to do, we don't know what is the method
