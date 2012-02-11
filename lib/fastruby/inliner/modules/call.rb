@@ -53,8 +53,19 @@ module FastRuby
         
         target_method_tree_block = add_prefix(target_method_tree.find_tree(:scope)[1], method_name)
         
-        if target_method_tree_block[-1].node_type == :return
-          target_method_tree_block[-1] = target_method_tree_block[-1][1]
+        if target_method_tree_block.find_tree(:return)
+          inlined_name = inline_local_name(method_name, "main_return_tagname")
+          target_method_tree_block = fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,inlined_name.to_sym))),nil,target_method_tree_block))
+          
+          target_method_tree_block.walk_tree do |subtree|
+            if subtree[0] == :return
+              if subtree[1]
+                subtree[0..-1] = fs(:call, nil, :_throw, fs(:arglist, fs(:lit,inlined_name.to_sym), subtree[1]))
+              else
+                subtree[0..-1] = fs(:call, nil, :_throw, fs(:arglist, fs(:lit,inlined_name.to_sym), fs(:nil)))
+              end
+            end
+          end
         end
         
         target_method_tree_args = target_method_tree[2]

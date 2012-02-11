@@ -139,5 +139,32 @@ module FastRuby
         _raise("rb_eLocalJumpError","illegal next");
       end
     end
+    
+    define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
+
+      call_tree = tree[1]
+"
+#{call_tree[3][1][1].to_s}_start:
+      #{to_c(tree[3],result_var)};
+#{call_tree[3][1][1].to_s}_end:
+ 
+" 
+    }.condition{|tree, result_var = nil| 
+      tree.node_type == :iter && tree[1][2] == :_catch
+    }
+
+    define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
+      code = "
+      #{to_c tree[3][2] || fs(:nil), "last_expression"}
+      goto #{tree[3][1][1].to_s}_end;"
+      if result_var
+        code
+      else
+        inline_block code
+      end
+    }.condition{|tree, result_var = nil| 
+      tree.node_type == :call && tree[2] == :_throw
+    }
+
   end
 end
