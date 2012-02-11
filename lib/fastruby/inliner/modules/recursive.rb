@@ -24,6 +24,11 @@ require "define_method_handler"
 
 module FastRuby
   class Inliner
+    
+    def recursive_inline(tree)
+      tree.map &method(:inline)
+    end
+    
     define_method_handler(:inline, :priority => -100) {|tree|
         tree.map &method(:inline)
       }.condition{|tree| tree.respond_to?(:node_type)}

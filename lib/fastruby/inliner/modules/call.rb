@@ -79,7 +79,7 @@ module FastRuby
           add_local inlined_name
 
           self.extra_inferences[inlined_name] = itype if itype
-          newblock << fs(:lasgn, inlined_name, args_tree[i].duplicate)
+          newblock << fs(:lasgn, inlined_name, recursive_inline(args_tree[i].duplicate))
         end
         
         inlined_name = inline_local_name(method_name, :self)
@@ -131,7 +131,7 @@ module FastRuby
                 return nil if yield_call_args.size > 1
               end
               
-              subtree << block_tree
+              subtree << recursive_inline(block_tree)
             else
               subtree[0..-1] = fs(:call, fs(:nil), :raise, fs(:arglist, fs(:const, :LocalJumpError), fs(:str, "no block given")))
             end
@@ -195,7 +195,7 @@ module FastRuby
         lvar_type = eval(args_tree[2][1].to_s)
 
         @infer_lvar_map[lvar_name] = lvar_type
-        next tree
+        next recursive_inline(tree)
       end
       
       recvtype = infer_type(recv_tree)
@@ -204,17 +204,22 @@ module FastRuby
         # search the tree of target method
         mobject = method_obj_or_gtfo(recvtype,method_name)
 
-        next tree unless mobject
-        next tree unless mobject.tree
-        next tree if mobject.tree.find_tree(:iter)
-        target_method_tree_args = mobject.tree[2]
-        next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
+        next recursive_inline(tree) unless mobject
+        next recursive_inline(tree) unless mobject.tree
+        next recursive_inline(tree) if mobject.tree.find_tree(:iter)
+        target_method_tree_args = if mobject.tree.node_type == :defn
+            mobject.tree[2]
+          else
+            mobject.tree[3]
+          end
+          
+        next recursive_inline(tree) if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
 
-        method_tree_to_inlined_block(mobject, tree, method_name) || tree
+        method_tree_to_inlined_block(mobject, tree, method_name) || recursive_inline(tree)
 
       else
         # nothing to do, we don't know what is the method
-        tree
+        recursive_inline(tree)
       end
     }.condition{|tree| tree.node_type == :call}
   end
