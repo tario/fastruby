@@ -193,8 +193,24 @@ module FastRuby
          #{catch_tag_id.to_s}_start:
                 #{inner_code};
           #{catch_tag_id.to_s}_end:
-
             return last_expression;
+#{@catch_blocks.map { |cb|
+  "#{cb.to_s}_end:
+
+   plocals->return_value = last_expression;
+   plocals->targetted = 1;
+   longjmp(pframe->jmp, #{intern_num( cb.to_s + "_end")});
+    
+   #{cb.to_s}_start:
+  
+   plocals->return_value = last_expression;
+   plocals->targetted = 1;
+   longjmp(pframe->jmp, #{intern_num( cb.to_s + "_start")});
+  
+  "
+
+}.join("\n")
+}
   
             }
           "

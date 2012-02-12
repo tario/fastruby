@@ -26,8 +26,9 @@ module FastRuby
   class Inliner
     
     class BlockProcessing
-      def initialize(inlined_name)
+      def initialize(inlined_name, break_inlined_name)
         @inlined_name = inlined_name
+        @break_inlined_name = break_inlined_name
       end
       
       define_method_handler(:process, :priority => -100) { |tree|
@@ -45,6 +46,14 @@ module FastRuby
           fs(:call, nil, :_throw, fs(:arglist, fs(:lit,@inlined_name.to_sym), fs(:nil)))
         end
       }.condition{|tree| tree.node_type == :next}
+
+      define_method_handler(:process) { |tree|
+        if tree[1]
+          fs(:call, nil, :_throw, fs(:arglist, fs(:lit,@break_inlined_name.to_sym), process(tree[1])))
+        else
+          fs(:call, nil, :_throw, fs(:arglist, fs(:lit,@break_inlined_name.to_sym), fs(:nil)))
+        end
+      }.condition{|tree| tree.node_type == :break and @break_inlined_name}
       
       define_method_handler(:process) { |tree|
         fs(:call, nil, :_loop, fs(:arglist, fs(:lit,@inlined_name.to_sym)))
@@ -122,8 +131,16 @@ module FastRuby
         newblock << fs(:lasgn, inlined_name, recv_tree.duplicate)
         
         return nil if target_method_tree_block.find_tree(:return)
+
+        break_tag = nil
         
-        block_tree = recursive_inline(block_tree) if block_tree
+        if block_tree
+          block_tree = recursive_inline(block_tree)
+          if block_tree.find_tree(:break) # FIXME: discard nested iter calls on finding
+            break_tag =  inline_local_name(method_name, "__break_tag")
+          end
+        end
+         
         block_num = 0
         
         target_method_tree_block.walk_tree do |subtree|
@@ -169,11 +186,11 @@ module FastRuby
                 return nil if yield_call_args.size > 1
               end
               
-              if block_tree.find_tree(:next) or block_tree.find_tree(:redo)
+              if block_tree.find_tree(:next) or block_tree.find_tree(:redo) or break_tag
                 inlined_name = inline_local_name(method_name, "block_block_#{block_num}")
                 block_num = block_num + 1
                 
-                alt_block_tree = BlockProcessing.new(inlined_name).process(block_tree)
+                alt_block_tree = BlockProcessing.new(inlined_name, break_tag).process(block_tree)
                 alt_block_tree = fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,inlined_name.to_sym))),nil,alt_block_tree))
               else
                 alt_block_tree = block_tree.duplicate
@@ -186,8 +203,18 @@ module FastRuby
         end
         
         @inlined_methods << mobject
-        target_method_tree_block[1..-1].each do |subtree|
-          newblock << subtree
+        
+        if break_tag
+          inner_block = fs(:block)
+          target_method_tree_block[1..-1].each do |subtree|
+            inner_block << subtree
+          end
+          
+          newblock << fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,break_tag.to_sym))),nil,inner_block))
+        else
+          target_method_tree_block[1..-1].each do |subtree|
+            newblock << subtree
+          end
         end
         newblock
     end
@@ -207,7 +234,7 @@ module FastRuby
           ret_tree << inline(subtree)
         end
         
-        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:retry)
+        next ret_tree if block_tree.find_tree(:retry)
 
         recvtype = infer_type(recv_tree)
 
