@@ -89,6 +89,10 @@ module FastRuby
       tree
     end
     
+    def catch_block(name,tree)
+      fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,name.to_sym))),nil,tree))
+    end
+    
     def method_tree_to_inlined_block(mobject, call_tree, method_name, block_args_tree = nil, block_tree = nil)
         args_tree = call_tree[3]
         recv_tree = call_tree[1] || fs(:self)
@@ -99,7 +103,7 @@ module FastRuby
         
         if target_method_tree_block.find_tree(:return)
           inlined_name = inline_local_name(method_name, "main_return_tagname")
-          target_method_tree_block = fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,inlined_name.to_sym))),nil,target_method_tree_block))
+          target_method_tree_block = catch_block(inlined_name,target_method_tree_block)
           
           target_method_tree_block.walk_tree do |subtree|
             if subtree[0] == :return
@@ -191,7 +195,7 @@ module FastRuby
                 block_num = block_num + 1
                 
                 alt_block_tree = BlockProcessing.new(inlined_name, break_tag).process(block_tree)
-                alt_block_tree = fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,inlined_name.to_sym))),nil,alt_block_tree))
+                alt_block_tree = catch_block(inlined_name,alt_block_tree)
               else
                 alt_block_tree = block_tree.duplicate
               end
@@ -210,7 +214,7 @@ module FastRuby
             inner_block << subtree
           end
           
-          newblock << fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,break_tag.to_sym))),nil,inner_block))
+          newblock << catch_block(break_tag,inner_block)
         else
           target_method_tree_block[1..-1].each do |subtree|
             newblock << subtree
