@@ -44,9 +44,12 @@ module FastRuby
         else
           fs(:call, nil, :_throw, fs(:arglist, fs(:lit,@inlined_name.to_sym), fs(:nil)))
         end
-        
       }.condition{|tree| tree.node_type == :next}
       
+      define_method_handler(:process) { |tree|
+        fs(:call, nil, :_loop, fs(:arglist, fs(:lit,@inlined_name.to_sym)))
+      }.condition{|tree| tree.node_type == :redo}
+
       define_method_handler(:process) { |tree|
         if tree[3]
           fs(:iter, process(tree[1]), tree[2], tree[3].duplicate)
@@ -166,8 +169,8 @@ module FastRuby
                 return nil if yield_call_args.size > 1
               end
               
-              if block_tree.find_tree(:next)
-                inlined_name = inline_local_name(method_name, "block_next_#{block_num}")
+              if block_tree.find_tree(:next) or block_tree.find_tree(:redo)
+                inlined_name = inline_local_name(method_name, "block_block_#{block_num}")
                 block_num = block_num + 1
                 
                 alt_block_tree = BlockProcessing.new(inlined_name).process(block_tree)
@@ -204,7 +207,7 @@ module FastRuby
           ret_tree << inline(subtree)
         end
         
-        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:redo) or block_tree.find_tree(:retry)
+        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:retry)
 
         recvtype = infer_type(recv_tree)
 

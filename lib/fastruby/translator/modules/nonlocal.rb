@@ -236,6 +236,25 @@ module FastRuby
     }.condition{|tree, result_var = nil| 
       tree.node_type == :call && tree[2] == :_throw
     }
+    
+    define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
+      code = ""
+      
+      code << to_c(tree[3][2] || fs(:nil), "last_expression")
+      if @catch_jmp or (not result_var)
+      code << "pframe->thread_data->accumulator = last_expression;"
+      end
+      
+      code << "goto #{tree[3][1][1].to_s}_start;"
+      
+      if result_var
+        code
+      else
+        inline_block code
+      end
+    }.condition{|tree, result_var = nil| 
+      tree.node_type == :call && tree[2] == :_loop
+    }
 
   end
 end
