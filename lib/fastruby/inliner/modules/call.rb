@@ -24,6 +24,38 @@ require "define_method_handler"
  
 module FastRuby
   class Inliner
+    
+    class BlockProcessing
+      def initialize(inlined_name)
+        @inlined_name = inlined_name
+      end
+      
+      define_method_handler(:process, :priority => -100) { |tree|
+        tree.map &method(:process)
+      }
+
+      define_method_handler(:process, :priority => 1000) { |tree|
+        tree
+      }.condition{|tree| not tree.respond_to?(:node_type) }
+
+      define_method_handler(:process) { |tree|
+        if tree[1]
+          fs(:call, nil, :_throw, fs(:arglist, fs(:lit,@inlined_name.to_sym), process(tree[1])))
+        else
+          fs(:call, nil, :_throw, fs(:arglist, fs(:lit,@inlined_name.to_sym), fs(:nil)))
+        end
+        
+      }.condition{|tree| tree.node_type == :next}
+      
+      define_method_handler(:process) { |tree|
+        if tree[3]
+          fs(:iter, process(tree[1]), tree[2], tree[3].duplicate)
+        else
+          fs(:iter, process(tree[1]), tree[2])
+        end
+      }.condition{|tree| tree.node_type == :iter}
+    end
+    
     def inline_local_name(method_name, local_name)
       "__inlined_#{method_name}_#{local_name}".to_sym
     end
@@ -88,7 +120,7 @@ module FastRuby
         
         return nil if target_method_tree_block.find_tree(:return)
         
-        block_tree = recursive_inline(block_tree)
+        block_tree = recursive_inline(block_tree) if block_tree
         block_num = 0
         
         target_method_tree_block.walk_tree do |subtree|
@@ -134,22 +166,14 @@ module FastRuby
                 return nil if yield_call_args.size > 1
               end
               
-              alt_block_tree = block_tree.duplicate
               if block_tree.find_tree(:next)
                 inlined_name = inline_local_name(method_name, "block_next_#{block_num}")
                 block_num = block_num + 1
                 
+                alt_block_tree = BlockProcessing.new(inlined_name).process(block_tree)
                 alt_block_tree = fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,inlined_name.to_sym))),nil,alt_block_tree))
-                
-                alt_block_tree.walk_tree do |subtree|
-                  if subtree.node_type == :next
-                    if subtree[1]
-                      subtree[0..-1] = fs(:call, nil, :_throw, fs(:arglist, fs(:lit,inlined_name.to_sym), subtree[1]))
-                    else
-                      subtree[0..-1] = fs(:call, nil, :_throw, fs(:arglist, fs(:lit,inlined_name.to_sym), fs(:nil)))
-                    end                    
-                  end
-                end
+              else
+                alt_block_tree = block_tree.duplicate
               end
               subtree << alt_block_tree
             else
