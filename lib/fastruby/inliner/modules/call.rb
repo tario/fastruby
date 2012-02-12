@@ -88,6 +88,9 @@ module FastRuby
         
         return nil if target_method_tree_block.find_tree(:return)
         
+        block_tree = recursive_inline(block_tree)
+        block_num = 0
+        
         target_method_tree_block.walk_tree do |subtree|
           if subtree.node_type == :call
             if subtree[1] == nil
@@ -131,7 +134,24 @@ module FastRuby
                 return nil if yield_call_args.size > 1
               end
               
-              subtree << recursive_inline(block_tree)
+              alt_block_tree = block_tree.duplicate
+              if block_tree.find_tree(:next)
+                inlined_name = inline_local_name(method_name, "block_next_#{block_num}")
+                block_num = block_num + 1
+                
+                alt_block_tree = fs(:block,fs(:iter, fs(:call, nil, :_catch, fs(:arglist, fs(:lit,inlined_name.to_sym))),nil,alt_block_tree))
+                
+                alt_block_tree.walk_tree do |subtree|
+                  if subtree.node_type == :next
+                    if subtree[1]
+                      subtree[0..-1] = fs(:call, nil, :_throw, fs(:arglist, fs(:lit,inlined_name.to_sym), subtree[1]))
+                    else
+                      subtree[0..-1] = fs(:call, nil, :_throw, fs(:arglist, fs(:lit,inlined_name.to_sym), fs(:nil)))
+                    end                    
+                  end
+                end
+              end
+              subtree << alt_block_tree
             else
               subtree[0..-1] = fs(:call, fs(:nil), :raise, fs(:arglist, fs(:const, :LocalJumpError), fs(:str, "no block given")))
             end
@@ -160,7 +180,7 @@ module FastRuby
           ret_tree << inline(subtree)
         end
         
-        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:redo) or block_tree.find_tree(:next) or block_tree.find_tree(:retry)
+        next ret_tree if block_tree.find_tree(:break) or block_tree.find_tree(:redo) or block_tree.find_tree(:retry)
 
         recvtype = infer_type(recv_tree)
 
