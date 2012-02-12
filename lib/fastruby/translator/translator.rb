@@ -96,10 +96,21 @@ module FastRuby
         require path
       end
     end
+    
+    def catch_block(*catchs)
+        old_catch_blocks = @catch_blocks.dup
+      begin
+        catchs.each &@catch_blocks.method(:<<)
+        return yield
+      ensure
+        @catch_blocks = old_catch_blocks
+      end
+    end
 
     def initialize(common_func = true)
       initialize_to_c
       
+      @catch_blocks = []
       @infer_lvar_map = Hash.new
       @no_cache = false
       @extra_code = ""
@@ -856,6 +867,7 @@ end
     end
 
     def inline_block(code, repass_var = nil, nolocals = false)
+      @catch_jmp = true
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
           #{@frame_struct} * volatile pframe = (void*)param;
@@ -866,6 +878,24 @@ end
           #{code}
           return Qnil;
 
+
+#{@catch_blocks.map { |cb|
+  "#{cb.to_s}_end:
+
+   plocals->return_value = last_expression;
+   plocals->targetted = 1;
+   longjmp(pframe->jmp, #{intern_num( cb.to_s + "_end")});
+    
+   #{cb.to_s}_start:
+  
+   plocals->return_value = last_expression;
+   plocals->targetted = 1;
+   longjmp(pframe->jmp, #{intern_num( cb.to_s + "_start")});
+  
+  "
+
+}.join("\n")
+}
           #{unless nolocals
           "
 local_return:
@@ -1442,6 +1472,7 @@ fastruby_local_next:
     end
 
     def intern_num(symbol)
+      symbol = symbol.to_sym
       @intern_num_hash = Hash.new unless @intern_num_hash
       return @intern_num_hash[symbol] if @intern_num_hash[symbol]
 

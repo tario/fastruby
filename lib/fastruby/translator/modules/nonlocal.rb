@@ -143,20 +143,91 @@ module FastRuby
     define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
 
       call_tree = tree[1]
-"
-#{call_tree[3][1][1].to_s}_start:
-      #{to_c(tree[3],result_var)};
-#{call_tree[3][1][1].to_s}_end:
- 
-" 
+      catch_tag_id = call_tree[3][1][1]
+
+      @catch_jmp = false
+      inner_code = catch_block(catch_tag_id) do
+        to_c(tree[3],result_var)
+      end
+      
+      if @catch_jmp
+        new_frame = anonymous_function{ |name| "
+          static VALUE #{name}(VALUE param) {
+            volatile VALUE last_expression = Qnil;
+            #{@frame_struct} frame;
+  
+            typeof(frame)* volatile pframe;
+            typeof(frame)* volatile parent_frame;
+            #{@locals_struct}* volatile plocals;
+  
+            parent_frame = (void*)param;
+  
+            frame.parent_frame = (void*)param;
+            frame.plocals = parent_frame->plocals;
+            frame.rescue = parent_frame->rescue;
+            frame.targetted = 0;
+            frame.thread_data = parent_frame->thread_data;
+            frame.return_value = Qnil;
+            frame.thread_data->accumulator = Qnil;
+            if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
+  
+            plocals = frame.plocals;
+            pframe = &frame;
+  
+            volatile int aux = setjmp(frame.jmp);
+            if (aux != 0) {
+              // restore previous frame
+              typeof(pframe) original_frame = pframe;
+              pframe = parent_frame;
+
+              if (aux == (int)#{intern_num catch_tag_id.to_s + "_end"}) {
+                return frame.thread_data->accumulator;
+              } else if (aux == (int)#{intern_num catch_tag_id.to_s + "_start"}) {
+              } else {
+                longjmp(pframe->jmp,aux);
+              }
+  
+              return last_expression;
+            }
+            
+         #{catch_tag_id.to_s}_start:
+                #{inner_code};
+          #{catch_tag_id.to_s}_end:
+
+            return last_expression;
+  
+            }
+          "
+        } + "((VALUE)pframe)"
+        
+        if result_var
+          "#{result_var} = #{new_frame};"
+        else
+          new_frame
+        end
+      else
+          "
+         #{catch_tag_id.to_s}_start:
+                #{inner_code};
+          #{catch_tag_id.to_s}_end:
+          
+          "
+      end
+
     }.condition{|tree, result_var = nil| 
       tree.node_type == :iter && tree[1][2] == :_catch
     }
 
     define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
-      code = "
-      #{to_c tree[3][2] || fs(:nil), "last_expression"}
-      goto #{tree[3][1][1].to_s}_end;"
+      code = ""
+      
+      code << to_c(tree[3][2] || fs(:nil), "last_expression")
+      if @catch_jmp or (not result_var)
+      code << "pframe->thread_data->accumulator = last_expression;"
+      end
+      
+      code << "goto #{tree[3][1][1].to_s}_end;"
+      
       if result_var
         code
       else
