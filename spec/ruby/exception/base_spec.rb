@@ -61,5 +61,26 @@ ENDSTR
     }.should raise_exception(RuntimeError)
     
   end
-
+  
+  it "should allow return from rescue body" do
+    
+    fastruby <<ENDSTR
+    
+    class EXC3
+      def foo
+        begin
+          return 99
+        rescue
+        end
+      end
+    
+      def bar
+        foo
+      end
+    end
+    
+ENDSTR
+    
+    ::EXC3.new.bar.should be == 99
+  end
 end
