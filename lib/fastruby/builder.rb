@@ -23,6 +23,10 @@ require "fastruby/logging"
 require "fastruby/getlocals"
 require "fastruby_load_path"
 require "fastruby/inliner/inliner"
+require "fastruby/translator/translator"
+require "rubygems"
+require "inline"
+require "fastruby/inline_extension"
 
 require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
@@ -68,11 +72,6 @@ module FastRuby
     def rebuild(signature, noreturn = false)
       no_cache = false
       mname = FastRuby.make_str_signature(@method_name, signature)
-      
-      require "fastruby/translator/translator"
-      require "rubygems"
-      require "inline"
-      require "fastruby/inline_extension"
 
       inliner = FastRuby::Inliner.new
 
