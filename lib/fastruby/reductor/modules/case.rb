@@ -41,7 +41,8 @@ module FastRuby
     end
         
     reduce_for(:case) do |tree|
-      temporal_var_name = "temporal_case_var_#{rand(1000000000)}".to_sym
+      @case_index = (@case_index || 0) + 1
+      temporal_var_name = "temporal_case_var_#{@case_index}".to_sym
       ifs = when_array_to_if(tree[2..-1], temporal_var_name)
       fs(:block, fs(:lasgn, temporal_var_name, tree[1]), ifs)
     end
