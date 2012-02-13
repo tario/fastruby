@@ -160,7 +160,9 @@ module FastRuby
       "
 
       ruby_code = "
-        $LOAD_PATH << #{FastRuby.fastruby_load_path.inspect}
+        unless $LOAD_PATH.include? #{FastRuby.fastruby_load_path.inspect}
+          $LOAD_PATH << #{FastRuby.fastruby_load_path.inspect}
+        end
         require #{FastRuby.fastruby_script_path.inspect}
       "
 
