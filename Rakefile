@@ -17,6 +17,7 @@ spec = Gem::Specification.new do |s|
   s.add_dependency "ruby_parser", ">= 2.0.6"
   s.add_dependency "define_method_handler", ">= 0.0.5"
   s.add_dependency "method_source", ">= 0.6.7"
+  s.add_dependency "ruby2ruby", ">= 1.3.7"
   s.has_rdoc = true
   s.extra_rdoc_files = [ 'README' ]
   s.extensions = FileList["ext/**/extconf.rb"].to_a

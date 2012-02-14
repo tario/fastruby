@@ -32,6 +32,24 @@ module FastRuby
       }
     end
     
+    def to_sexp
+      ret = s()
+      each do |subtree|
+        if subtree.respond_to?(:to_sexp)
+          ret << subtree.to_sexp
+        else
+          ret << subtree
+        end 
+      end
+      
+      ret
+    end
+    
+    def to_ruby
+      require "ruby2ruby"
+      Ruby2Ruby.new.process(to_sexp)
+    end
+    
     def map
       sexp = FastRubySexp.new
       self.each do |subtree|
