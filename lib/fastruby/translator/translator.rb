@@ -868,7 +868,20 @@ end
       }
     end
 
-    def inline_block(code, repass_var = nil, nolocals = false)
+    def inline_block(*args)
+      
+      unless block_given?
+        code = args.first
+        return inline_block(*args[1..-1]) {
+            code
+          }
+      end
+      
+      repass_var = args[0]
+      nolocals = args[1] || false
+
+      code = yield
+      
       @catch_jmp = true
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
