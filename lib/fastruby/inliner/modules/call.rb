@@ -99,7 +99,10 @@ module FastRuby
         
         target_method_tree = mobject.tree 
         
-        target_method_tree_block = add_prefix(target_method_tree.find_tree(:scope)[1], method_name)
+        @method_index = (@method_index || 0) + 1
+        
+        prefix = method_name.to_s + "_" + @method_index.to_s
+        target_method_tree_block = add_prefix(target_method_tree.find_tree(:scope)[1], prefix)
         
         if target_method_tree_block.find_tree(:return)
           inlined_name = inline_local_name(method_name, "main_return_tagname")
@@ -122,7 +125,7 @@ module FastRuby
         
         (1..args_tree.size-1).each do |i|
           itype = infer_type(args_tree[i])
-          inlined_name = inline_local_name(method_name, target_method_tree_args[i])
+          inlined_name = inline_local_name(prefix, target_method_tree_args[i])
 
           add_local inlined_name
 
@@ -130,7 +133,7 @@ module FastRuby
           newblock << fs(:lasgn, inlined_name, recursive_inline(args_tree[i].duplicate))
         end
         
-        inlined_name = inline_local_name(method_name, :self)
+        inlined_name = inline_local_name(prefix, :self)
         add_local inlined_name
         newblock << fs(:lasgn, inlined_name, recv_tree.duplicate)
         
@@ -141,7 +144,7 @@ module FastRuby
         if block_tree
           block_tree = recursive_inline(block_tree)
           if block_tree.find_tree(:break) # FIXME: discard nested iter calls on finding
-            break_tag =  inline_local_name(method_name, "__break_tag")
+            break_tag =  inline_local_name(prefix, "__break_tag")
           end
         end
          
@@ -159,7 +162,7 @@ module FastRuby
           end
           if subtree.node_type == :self
             subtree[0] = :lvar
-            subtree[1] = inline_local_name(method_name, :self)
+            subtree[1] = inline_local_name(prefix, :self)
           end
           if subtree.node_type == :yield
             if block_tree
@@ -177,21 +180,21 @@ module FastRuby
                   (1..yield_call_args.size-1).each do |i|
                     inlined_name = block_args_tree[1][i][1]
                     add_local inlined_name
-                    subtree << fs(:lasgn, inlined_name, add_prefix(yield_call_args[i],method_name))
+                    subtree << fs(:lasgn, inlined_name, yield_call_args[i])
                   end
                 else
                   return nil if 2 != yield_call_args.size
 
                   inlined_name = block_args_tree[1]
                   add_local inlined_name
-                  subtree << fs(:lasgn, inlined_name, add_prefix(yield_call_args[1],method_name))
+                  subtree << fs(:lasgn, inlined_name, yield_call_args[1])
                 end
               else
                 return nil if yield_call_args.size > 1
               end
               
               if block_tree.find_tree(:next) or block_tree.find_tree(:redo) or break_tag
-                inlined_name = inline_local_name(method_name, "block_block_#{block_num}")
+                inlined_name = inline_local_name(prefix, "block_block_#{block_num}")
                 block_num = block_num + 1
                 
                 alt_block_tree = BlockProcessing.new(inlined_name, break_tag).process(block_tree)
@@ -224,6 +227,10 @@ module FastRuby
     end
     
     define_method_handler(:inline) { |tree|
+      tree
+    }.condition{|tree| tree.node_type == :defs}
+    
+    define_method_handler(:inline) { |tree|
         ret_tree = fs(:iter)
         ret_tree << tree[1].duplicate
         
@@ -248,7 +255,21 @@ module FastRuby
   
           next tree unless mobject
           next tree unless mobject.tree
-          next tree if mobject.tree.find_tree(:iter)
+        
+          exit_now = false
+          if block_tree.find_tree(:break) or block_tree.find_tree(:return)
+            mobject.tree.walk_tree do |subtree|
+              if subtree.node_type == :iter
+                if subtree.find_tree(:yield)
+                  exit_now = true
+                  break
+                end
+              end
+            end
+          end
+          
+          next tree if exit_now
+          
           target_method_tree_args = mobject.tree[2]
           next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
 
@@ -284,7 +305,19 @@ module FastRuby
 
         next recursive_inline(tree) unless mobject
         next recursive_inline(tree) unless mobject.tree
-        next recursive_inline(tree) if mobject.tree.find_tree(:iter)
+        
+        exit_now = false
+        mobject.tree.walk_tree do |subtree|
+          if subtree.node_type == :iter
+            if subtree.find_tree(:return)
+              exit_now = true
+              break
+            end
+          end
+        end
+          
+        next recursive_inline(tree) if exit_now
+
         target_method_tree_args = if mobject.tree.node_type == :defn
             mobject.tree[2]
           else
