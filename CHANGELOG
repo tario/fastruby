@@ -1,3 +1,13 @@
+0.0.19  Fixed temporal variable names of case blocks to make it deterministic and allow caching
+
+    Fixed bug of duplicated entries on $LOAD_PATH, significant performance improvement saves 80% of time both with caching and without caching
+
+    Inline of methods with iter calls
+
+    Inline of iter calls
+
+    Use of observer to allow replacement of CFUNC calls (example: Fixnum#+)
+
 0.0.18  Optimize of exising methods using "optimize" (only pure ruby methods are supported)  
 
     Implemented new cache by syntax tree, more accurate, fixing a few cache bugs and compatible with inlining
