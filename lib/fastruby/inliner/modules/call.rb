@@ -173,7 +173,7 @@ module FastRuby
               
               if block_args_tree
                 return nil if yield_call_args[1..-1].find{|x| x.node_type == :splat}
-                if block_args_tree.node_type == :massgn
+                if block_args_tree.node_type == :masgn
                   return nil if block_args_tree[1].size != yield_call_args.size
                   return nil if block_args_tree[1][1..-1].find{|x| x.node_type == :splat}
               
