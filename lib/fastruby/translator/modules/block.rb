@@ -42,55 +42,55 @@ module FastRuby
       }
 
       splat_arg = tree.find{|x| x == :yield ? false : x[0] == :splat}
-      ret = nil      
-      if splat_arg
-        ret = "
-          VALUE splat_array = Qnil;
-          VALUE block_aux = Qnil;
-           #{to_c(splat_arg[1], "splat_array")};
-          
-          if (CLASS_OF(splat_array) == rb_cArray) {
-            VALUE block_args[_RARRAY_LEN(splat_array) + #{tree.size}];
-            int i;
-            #{ 
-              (0..tree.size-3).map{|i|
-                "
-                #{to_c(tree[i+1], "block_aux")};
-                block_args[#{i}] = block_aux;
-                "
-              }.join(";\n")
-            };
+
+      protected_block(false) do
+        if splat_arg
+          "
+            VALUE splat_array = Qnil;
+            VALUE block_aux = Qnil;
+             #{to_c(splat_arg[1], "splat_array")};
             
-            for (i=0; i<_RARRAY_LEN(splat_array); i++) {
-              block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
+            if (CLASS_OF(splat_array) == rb_cArray) {
+              VALUE block_args[_RARRAY_LEN(splat_array) + #{tree.size}];
+              int i;
+              #{ 
+                (0..tree.size-3).map{|i|
+                  "
+                  #{to_c(tree[i+1], "block_aux")};
+                  block_args[#{i}] = block_aux;
+                  "
+                }.join(";\n")
+              };
+              
+              for (i=0; i<_RARRAY_LEN(splat_array); i++) {
+                block_args[i+#{tree.size-2}] = rb_ary_entry(splat_array,i);
+              }
+              
+              last_expression = #{anonymous_function(&block_code)}((VALUE)pframe, block_args, _RARRAY_LEN(splat_array) + #{tree.size-2});
+            } else {
+              VALUE block_args[1+#{tree.size}];
+              #{ 
+                (0..tree.size-3).map{|i|
+                  "
+                  #{to_c(tree[i+1], "block_aux")};
+                  block_args[#{i}] = block_aux;
+                  "
+                }.join(";\n")
+              };
+              
+              block_args[#{tree.size-2}] = splat_array;
+              last_expression = #{anonymous_function(&block_code)}((VALUE)pframe, block_args, #{tree.size-1});
             }
             
-            last_expression = #{anonymous_function(&block_code)}((VALUE)pframe, block_args, _RARRAY_LEN(splat_array) + #{tree.size-2});
-          } else {
-            VALUE block_args[1+#{tree.size}];
-            #{ 
-              (0..tree.size-3).map{|i|
-                "
-                #{to_c(tree[i+1], "block_aux")};
-                block_args[#{i}] = block_aux;
-                "
-              }.join(";\n")
-            };
-            
-            block_args[#{tree.size-2}] = splat_array;
-            last_expression = #{anonymous_function(&block_code)}((VALUE)pframe, block_args, #{tree.size-1});
-          }
-          
-        "
-      else
-        ret = if tree.size > 1
-            "last_expression = " + anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}},#{tree.size-1})"
-          else
-            "last_expression = " + anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){}, #{tree.size-1})"
-          end
+          "
+        else
+          if tree.size > 1
+              "last_expression = " + anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){#{tree[1..-1].map{|subtree| to_c subtree}.join(",")}},#{tree.size-1})"
+            else
+              "last_expression = " + anonymous_function(&block_code)+"((VALUE)pframe, (VALUE[]){}, #{tree.size-1})"
+            end
+        end
       end
-      
-      protected_block(ret, false)
     end
 
     define_translator_for(:block, :method => :to_c_block)
