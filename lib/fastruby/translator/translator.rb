@@ -879,7 +879,6 @@ end
       
       repass_var = args[0]
       nolocals = args[1] || false
-
       code = yield
       
       @catch_jmp = true
@@ -938,7 +937,23 @@ fastruby_local_next:
       "rb_funcall(#{proced.__id__}, #{intern_num :call}, 1, #{parameter})"
     end
 
-    def protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
+    def protected_block(*args)
+      unless block_given?
+        inner_code = args.first
+        return protected_block(*args[1..-1]) {
+          inner_code
+        }
+      end
+      
+      repass_var = args[1]
+      nolocals = args[2] || false
+      
+      inline_block(repass_var, nolocals) do
+        generate_protected_block(yield, *args)
+      end
+    end
+    
+    def generate_protected_block(inner_code, always_rescue = false,repass_var = nil, nolocals = false)
       body = nil
       rescue_args = nil
 
@@ -1038,7 +1053,7 @@ fastruby_local_next:
       rescue_code = "rb_rescue2(#{body}, #{rescue_args}, #{rescue_body}, (VALUE)&str, rb_eException, (VALUE)0)"
 
       if always_rescue
-        inline_block "
+        "
           #{return_err_struct} str;
           
           str.state = 0;
@@ -1050,9 +1065,9 @@ fastruby_local_next:
           #{wrapper_code}
 
           return result;
-        ", repass_var, nolocals
+        "
       else
-        inline_block "
+        "
           VALUE result;
           #{return_err_struct} str;
           
@@ -1071,7 +1086,7 @@ fastruby_local_next:
           }
 
           return result;
-        ", repass_var, nolocals
+        "
       end
     end
 
