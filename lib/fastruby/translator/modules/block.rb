@@ -98,24 +98,30 @@ module FastRuby
       if tree.size == 1
         return inline_block("return Qnil;")
       end
-      
-      str = ""
-      str = tree[1..-2].map{ |subtree|
-        to_c(subtree,"last_expression")
-      }.join(";")
 
-      if tree[-1]
-          str = str + ";#{to_c(tree[-1],"last_expression")};"
-      end
-
-      if result_variable
-        str << "#{result_variable} = last_expression;"
+      code = proc{
+        
+        str = tree[1..-2].map{ |subtree|
+          to_c(subtree,"last_expression")
+        }.join(";")
+  
+        if tree[-1]
+            str = str + ";#{to_c(tree[-1],"last_expression")};"
+        end
+  
+        if result_variable
+          str << "#{result_variable} = last_expression;"
+        else
+          str << "return last_expression;"
+        end
         str
+      }
+  
+      if result_variable
+        code.call
       else
-        str << "return last_expression;"
-        inline_block str
+        inline_block &code
       end
     end
-    
   end
 end

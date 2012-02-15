@@ -86,7 +86,7 @@ module FastRuby
         
         result_variable = result_variable_ || "last_expression"
         
-        code = "
+        code = proc {"
           {
             VALUE condition_result;
             #{to_c condition_tree, "condition_result"};
@@ -99,12 +99,12 @@ module FastRuby
               " : ""
             }
           }
-        "
+        "}
   
         if result_variable_
-          code
+          code.call
         else
-          inline_block code + "; return last_expression;"
+          inline_block(&code) + "; return last_expression;"
         end      
       end
       
@@ -112,7 +112,7 @@ module FastRuby
         begin_while = "begin_while_"+rand(10000000).to_s
         end_while = "end_while_"+rand(10000000).to_s
         aux_varname = "_aux_" + rand(10000000).to_s
-        code = "
+        code = proc {"
           {
             VALUE while_condition;
             VALUE #{aux_varname};
@@ -132,12 +132,12 @@ module FastRuby
             end
             }
           }
-        "
+        "}
         
         if result_var
-          code
+          code.call
         else
-          inline_block code
+          inline_block &code
         end
         
       end

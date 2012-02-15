@@ -32,6 +32,7 @@ module FastRuby
       key_tmp_var = "_key_"+rand(1000000).to_s
       value_tmp_var = "_value_"+rand(1000000).to_s
 
+      code = proc{ 
       hash_aset_code = ""
       (0..(tree.size-3)/2).each do |i|
         strkey = to_c tree[1 + i * 2]
@@ -49,7 +50,7 @@ module FastRuby
         "
       end
       
-        code = "
+          "
           {
           VALUE #{hash_tmp_var} = rb_hash_new();
           #{hash_aset_code};
@@ -61,12 +62,12 @@ module FastRuby
           end
           };
           }
-        "
+        "}
         
       if result_var
-        code
+        code.call
       else
-        inline_block code
+        inline_block &code
       end
     end
 

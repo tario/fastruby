@@ -101,17 +101,17 @@ module FastRuby
       result_var = result_var_ || "value"
       
       if tree[1].instance_of? Symbol
-        code = "
+        code = proc{"
           {
             // set constant #{tree[1].to_s}
             #{to_c tree[2], result_var};
             rb_const_set(rb_cObject, #{intern_num tree[1]}, #{result_var});
           }
-          "
+          "}
       elsif tree[1].instance_of? FastRuby::FastRubySexp
 
         if tree[1].node_type == :colon2
-          code = "
+          code = proc{"
             {
               // set constant #{tree[1].to_s}
               #{to_c tree[2], result_var};
@@ -119,25 +119,25 @@ module FastRuby
               #{to_c tree[1][1], "klass"};
               rb_const_set(klass, #{intern_num tree[1][2]}, #{result_var});
             }
-            "
+            "}
         elsif tree[1].node_type == :colon3
-          code = "
+          code = proc{"
             {
             // set constant #{tree[1].to_s}
             #{to_c tree[2], result_var};
             rb_const_set(rb_cObject, #{intern_num tree[1][1]}, #{result_var});
             }
-            "
-        end
-        
-        if result_var_
-          code
-        else
-           inline_block "VALUE #{result_var} = Qnil;\n" + code + "
-            return #{result_var};
-           "
+            "}
         end
       end
+
+        if result_var_
+          code.call
+        else
+           inline_block{"VALUE #{result_var} = Qnil;\n" + code.call + "
+            return #{result_var};
+           "}
+        end
     end
 
     define_translator_for(:colon3, :method => :to_c_colon3, :arity => 1)
@@ -147,7 +147,7 @@ module FastRuby
    
     define_translator_for(:colon2, :method => :to_c_colon2) 
     def to_c_colon2(tree, result_var = nil)
-      code = "
+      code = proc{ "
         {
         VALUE klass = Qnil;
         
@@ -191,12 +191,12 @@ module FastRuby
             end
             }
         }
-      "
+      "}
       
       if result_var
-        code
+        code.call
       else
-        inline_block code
+        inline_block &code
       end
     end
 

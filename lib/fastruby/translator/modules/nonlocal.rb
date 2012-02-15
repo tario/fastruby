@@ -23,15 +23,16 @@ module FastRuby
     
     define_translator_for(:return, :method => :to_c_return)
     def to_c_return(tree, return_variable = nil)
-      code = "
+      code = proc{"
         #{to_c(tree[1],"last_expression")};
         goto local_return;
         return Qnil;
-        "
+        "}
+        
       if return_variable
-        code
+        code.call
       else
-        inline_block code
+        inline_block &code
       end
     end
 
@@ -40,7 +41,7 @@ module FastRuby
       
         value_tmp_var = "value_" + rand(10000000).to_s
       
-        code = "
+        code = proc{"
 
           {
          VALUE #{value_tmp_var} = Qnil; 
@@ -65,10 +66,10 @@ module FastRuby
          longjmp(pframe->jmp,FASTRUBY_TAG_BREAK);
          
          }
-         "
+         "}
          
          if result_var
-           code
+           code.call
          else
            inline_block code
          end
@@ -117,7 +118,7 @@ module FastRuby
     def to_c_next(tree, result_var = nil)
       tmp_varname = "_acc_" + rand(10000000).to_s
       if @on_block
-       code = "
+       code =proc {"
         {
           last_expression = Qnil;
           
@@ -129,11 +130,12 @@ module FastRuby
         pframe->thread_data->accumulator = last_expression;
         goto fastruby_local_next;
         }
-        "
+        "}
+        
         if result_var
-          code
+          code.call
         else
-          inline_block code
+          inline_block &code
         end
       else
         _raise("rb_eLocalJumpError","illegal next");

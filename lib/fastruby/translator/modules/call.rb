@@ -170,7 +170,7 @@ module FastRuby
 
 
               if block_pass_arg or result_var
-                code = "
+                code = proc{ "
                 {
                 VALUE recv = Qnil;
                 #{to_c recv, "recv"};
@@ -213,8 +213,9 @@ module FastRuby
                 }
                 }
                 "
+                }
               
-                result_var ? code : inline_block(code)
+                result_var ? code.call : inline_block(&code)
               else
                  "((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, 0, (VALUE[]){})"               
               end          
@@ -225,7 +226,7 @@ module FastRuby
 
                 strargs = (0..args_tree.size-2).map{|i| "#{suffix}arg#{i}"}.join(",")
               if block_pass_arg or result_var
-                code = "
+                code = proc{ "
                 {
                 VALUE recv = Qnil;
                 
@@ -281,7 +282,9 @@ module FastRuby
                 
                 }
                 "
-                result_var ? code : inline_block(code)
+                }
+                
+                result_var ? code.call : inline_block(&code)
               else
                 strargs = args[1..-1].map{|arg| to_c arg}.join(",")
                 "((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encode_address(recvtype,signature,mname,tree,inference_complete)})(#{to_c recv}, Qfalse, (VALUE)pframe, #{args.size-1}, (VALUE[]){#{strargs}})"

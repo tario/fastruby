@@ -89,8 +89,8 @@ private
         alt_locals << local
       end
 
+      code = proc{ 
       fun = nil
-
       locals_scope(alt_locals) do
         fun = anonymous_function { |method_name| "static VALUE #{method_name}(VALUE self) {
 
@@ -158,8 +158,8 @@ private
         "
         }
       end
-
-      code = "
+      
+      "
         {
         #{init_code}
 
@@ -168,11 +168,12 @@ private
         #{fun}(tmpklass);
         }
       "
+      }
       
       if result_var
-        code + "\n#{result_var} = Qnil;\n"
+        code.call + "\n#{result_var} = Qnil;\n"
       else  
-        inline_block code + "\nreturn Qnil;\n"
+        inline_block &code + "\nreturn Qnil;\n"
       end
       
     end

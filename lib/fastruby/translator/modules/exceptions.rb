@@ -99,9 +99,9 @@ module FastRuby
         to_c tree[1]
       else
         ensured_code = to_c tree[2]
-        inline_block "
-          #{frame(to_c(tree[1]),ensured_code,ensured_code,1)};
-        "
+        inline_block {
+          "#{frame(to_c(tree[1]),ensured_code,ensured_code,1)};"
+        }
       end
     end
 
