@@ -868,6 +868,18 @@ end
       }
     end
 
+    def catch_on_throw
+      old_catch_jmp_on_throw = @catch_jmp_on_throw || false
+      @catch_jmp_on_throw = true
+      begin
+        ret = yield
+      ensure
+        @catch_jmp_on_throw = old_catch_jmp_on_throw
+      end
+      
+      ret
+    end
+
     def inline_block(*args)
       
       unless block_given?
@@ -879,9 +891,9 @@ end
       
       repass_var = args[0]
       nolocals = args[1] || false
-      code = yield
       
-      @catch_jmp = true
+      code = catch_on_throw{ yield }
+
       anonymous_function{ |name| "
         static VALUE #{name}(VALUE param#{repass_var ? ",void* " + repass_var : "" }) {
           #{@frame_struct} * volatile pframe = (void*)param;

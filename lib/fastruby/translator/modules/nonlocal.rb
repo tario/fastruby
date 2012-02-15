@@ -146,13 +146,21 @@ module FastRuby
 
       call_tree = tree[1]
       catch_tag_id = call_tree[3][1][1]
+      included_catch_jmp = false
 
-      @catch_jmp = false
-      inner_code = catch_block(catch_tag_id) do
-        to_c(tree[3],result_var)
+      @catch_jmp = @catch_jmp || Set.new
+      
+      begin
+        inner_code = catch_block(catch_tag_id) do
+          to_c(tree[3],result_var)
+        end
+        
+        included_catch_jmp = true if @catch_jmp.include?(catch_tag_id) 
+      ensure
+        @catch_jmp.delete(catch_tag_id)
       end
       
-      if @catch_jmp
+      if included_catch_jmp
         new_frame = anonymous_function{ |name| "
           static VALUE #{name}(VALUE param) {
             volatile VALUE last_expression = Qnil;
@@ -239,12 +247,15 @@ module FastRuby
     define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
       code = ""
       
-      code << to_c(tree[3][2] || fs(:nil), "last_expression")
-      if @catch_jmp or (not result_var)
-      code << "pframe->thread_data->accumulator = last_expression;"
+      catch_tag_id = tree[3][1][1]
+      
+      if @catch_jmp_on_throw
+        @catch_jmp << catch_tag_id
       end
       
-      code << "goto #{tree[3][1][1].to_s}_end;"
+      code << to_c(tree[3][2] || fs(:nil), "last_expression")
+      code << "pframe->thread_data->accumulator = last_expression;"
+      code << "goto #{catch_tag_id.to_s}_end;"
       
       if result_var
         code
@@ -258,12 +269,8 @@ module FastRuby
     define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
       code = ""
       
-      code << to_c(tree[3][2] || fs(:nil), "last_expression")
-      if @catch_jmp or (not result_var)
-      code << "pframe->thread_data->accumulator = last_expression;"
-      end
-      
-      code << "goto #{tree[3][1][1].to_s}_start;"
+      catch_tag_id = tree[3][1][1]
+      code << "goto #{catch_tag_id.to_s}_start;"
       
       if result_var
         code

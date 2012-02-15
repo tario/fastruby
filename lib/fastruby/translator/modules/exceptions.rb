@@ -23,73 +23,75 @@ module FastRuby
     
     define_translator_for(:rescue, :method => :to_c_rescue, :arity => 1)
     def to_c_rescue(tree)
-      if tree[1][0] == :resbody
-        else_tree = tree[2]
-
-        if else_tree
-          to_c else_tree
+      catch_on_throw do
+        if tree[1][0] == :resbody
+          else_tree = tree[2]
+  
+          if else_tree
+            to_c else_tree
+          else
+            "Qnil"
+          end
         else
-          "Qnil"
-        end
-      else
-        resbody_tree = tree[2]
-        else_tree = nil
-        if tree[-1]
-          if tree[-1][0] != :resbody
-            else_tree = tree[-1]
-          end
-        end
-
-        catch_condition_array = []
-        lasgn_code = ""
-        resbody_code = to_c(resbody_tree[2])
-
-        rescue_code = ""
-
-        tree[1..-1].each do |resbody_tree|
-          next if resbody_tree[0] != :resbody
-
-          if resbody_tree[1].size == 1
-            resbody_tree[1][1] = s(:const, :Exception)
-          end
-
-          if resbody_tree[1].last[0] == :lasgn
-            lasgn_code = to_c(resbody_tree[1].last)
-          end
-
-          resbody_tree[1][1..-1].each do |xtree|
-            if xtree[0] != :lasgn
-              trapcode = "rb_eException";
-
-              if xtree
-                trapcode = to_c(xtree)
-              end
-
-              catch_condition_array << "(rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)"
+          resbody_tree = tree[2]
+          else_tree = nil
+          if tree[-1]
+            if tree[-1][0] != :resbody
+              else_tree = tree[-1]
             end
           end
-
-          rescue_code << "
-            if (aux == FASTRUBY_TAG_RAISE) {
-              if (#{catch_condition_array.join(" || ")})
-              {
-                // trap exception
-                frame.targetted = 1;
-
-                #{lasgn_code};
-
-                 #{resbody_code};
+  
+          catch_condition_array = []
+          lasgn_code = ""
+          resbody_code = to_c(resbody_tree[2])
+  
+          rescue_code = ""
+  
+          tree[1..-1].each do |resbody_tree|
+            next if resbody_tree[0] != :resbody
+  
+            if resbody_tree[1].size == 1
+              resbody_tree[1][1] = s(:const, :Exception)
+            end
+  
+            if resbody_tree[1].last[0] == :lasgn
+              lasgn_code = to_c(resbody_tree[1].last)
+            end
+  
+            resbody_tree[1][1..-1].each do |xtree|
+              if xtree[0] != :lasgn
+                trapcode = "rb_eException";
+  
+                if xtree
+                  trapcode = to_c(xtree)
+                end
+  
+                catch_condition_array << "(rb_obj_is_kind_of(frame.thread_data->exception,#{trapcode}) == Qtrue)"
+              end
+            end
+  
+            rescue_code << "
+              if (aux == FASTRUBY_TAG_RAISE) {
+                if (#{catch_condition_array.join(" || ")})
+                {
+                  // trap exception
+                  frame.targetted = 1;
+  
+                  #{lasgn_code};
+  
+                   #{resbody_code};
+                }
               }
-            }
-          "
+            "
+          end
+  
+          frame_call(
+            "ret = " + frame(to_c(tree[1])+";","
+              #{rescue_code}
+            ", else_tree ? to_c(else_tree) : nil, 1)
+  
+            )
         end
-
-        frame_call(
-          "ret = " + frame(to_c(tree[1])+";","
-            #{rescue_code}
-          ", else_tree ? to_c(else_tree) : nil, 1)
-
-          )
       end
     end
 
