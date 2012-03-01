@@ -100,7 +100,7 @@ class Object
     self_ = options_hash[:self]
     self_ = self unless self_.instance_of? Class
 
-    FastRuby.set_tree(self_, method_name, tree, options_hash[:snippet_hash], options_hash)
+    FastRuby.set_tree(self_, method_name, tree, options_hash)
 
     class << self
       $metaclass = self

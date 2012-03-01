@@ -48,11 +48,10 @@ module FastRuby
           
           #{global_klass_variable} = plocals->self;
           // set tree
-          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
+          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
                   #{global_klass_variable},
                   rb_str_new2(#{method_name.to_s.inspect}),
                   #{literal_value tree},
-                  #{literal_value snippet_hash},
                   #{literal_value alt_options}
   
                   );
@@ -63,11 +62,10 @@ module FastRuby
           
           #{global_klass_variable} = CLASS_OF(obj);
           // set tree
-          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
+          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
                   #{global_klass_variable},
                   rb_str_new2(#{method_name.to_s.inspect}),
                   #{literal_value tree},
-                  #{literal_value snippet_hash},
                   #{literal_value alt_options}
   
                   );
@@ -109,11 +107,10 @@ module FastRuby
         
         #{global_klass_variable} = CLASS_OF(obj);
         // set tree
-        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 5,
+        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
                 #{global_klass_variable},
                 rb_str_new2(#{method_name.to_s.inspect}),
                 #{literal_value tree},
-                #{literal_value snippet_hash},
                 #{literal_value alt_options}
 
                 );

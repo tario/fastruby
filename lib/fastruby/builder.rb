@@ -34,7 +34,6 @@ module FastRuby
   class Method
     attr_accessor :locals
     attr_accessor :options
-    attr_accessor :snippet_hash
 
     def initialize(method_name, owner)
       @method_name = method_name
@@ -87,7 +86,6 @@ module FastRuby
       end
 
       # create random method name
-      context.snippet_hash = snippet_hash
       context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
 
       (1..signature.size-1).each do |i|

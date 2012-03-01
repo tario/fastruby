@@ -35,7 +35,6 @@ module FastRuby
     attr_accessor :alt_method_name
     attr_accessor :options
     attr_accessor :infer_self
-    attr_accessor :snippet_hash
     attr_reader :no_cache
     attr_reader :init_extra
     attr_reader :extra_code
