@@ -26,6 +26,7 @@ require "fastruby/set_tree"
 require "fastruby/exceptions"
 require "fastruby/translator/translator_modules"
 require "fastruby/translator/scope_mode_helper"
+require "fastruby/modules"
 require "define_method_handler"
 
 module FastRuby
@@ -89,13 +90,8 @@ module FastRuby
     define_method_handler(:infer_value, :priority => -1000) do |tree|
       nil
     end
-
-    TranslatorModules.instance.each_under(FastRuby.fastruby_load_path + "/fastruby/translator/modules/") do |path|
-      groupname = path.split("/").last.split(".").first.to_sym
-      handler_scope(:group => groupname) do
-        require path
-      end
-    end
+    
+    FastRuby::Modules.load_all("translator")
     
     def catch_block(*catchs)
         old_catch_blocks = @catch_blocks.dup

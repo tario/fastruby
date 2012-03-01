@@ -18,21 +18,13 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "set"
-require "sexp"
-require "define_method_handler"
-require "fastruby/modules"
 
 module FastRuby
-  class Reductor
-    def self.reduce_for(ntype, options = {}, &blk)
-      define_method_handler(:reduce, options, &blk).condition{|tree| tree.respond_to?(:node_type) && tree.node_type == ntype}
+  module Modules
+    def self.load_all(name = "")
+      Dir.glob(FastRuby.fastruby_load_path + "/fastruby/modules/#{name}/**/*.rb").each do |path|
+        require path
+      end
     end
-    
-    define_method_handler(:reduce, :priority => -1000) do |tree|
-      FastRubySexp.from_sexp(tree)
-    end
-    
-    FastRuby::Modules.load_all("reductor")
   end
 end

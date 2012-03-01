@@ -21,6 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "set"
 require "sexp"
 require "define_method_handler"
+require "fastruby/modules"
 
 module FastRuby
   class Inliner
@@ -40,10 +41,8 @@ module FastRuby
       FastRubySexp.from_sexp(tree)
     end
     
-    Dir.glob(FastRuby.fastruby_load_path + "/fastruby/inliner/modules/**/*.rb").each do |path|
-      require path
-    end
-    
+    FastRuby::Modules.load_all("inliner")
+
     def add_local(local)
       @extra_locals << local
     end
