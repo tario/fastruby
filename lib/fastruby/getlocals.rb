@@ -61,7 +61,9 @@ module FastRuby
     def self.get_locals(tree)
       processor = GetLocalsProcessor.new
       processor.process(tree)
-      processor.locals
+      ret_locals = processor.locals
+      ret_locals << :self
+      ret_locals
     end
   end
 end
