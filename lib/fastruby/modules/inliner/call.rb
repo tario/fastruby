@@ -82,7 +82,6 @@ module FastRuby
       tree.walk_tree do |subtree|
         if subtree.node_type == :lvar or subtree.node_type == :lasgn
           subtree[1] = inline_local_name(prefix, subtree[1])
-          add_local subtree[1]
         end
       end
       
@@ -127,14 +126,11 @@ module FastRuby
           itype = infer_type(args_tree[i])
           inlined_name = inline_local_name(prefix, target_method_tree_args[i])
 
-          add_local inlined_name
-
           self.extra_inferences[inlined_name] = itype if itype
           newblock << fs(:lasgn, inlined_name, recursive_inline(args_tree[i].duplicate))
         end
         
         inlined_name = inline_local_name(prefix, :self)
-        add_local inlined_name
         newblock << fs(:lasgn, inlined_name, recv_tree.duplicate)
         
         return nil if target_method_tree_block.find_tree(:return)
@@ -179,14 +175,12 @@ module FastRuby
               
                   (1..yield_call_args.size-1).each do |i|
                     inlined_name = block_args_tree[1][i][1]
-                    add_local inlined_name
                     subtree << fs(:lasgn, inlined_name, yield_call_args[i])
                   end
                 else
                   return nil if 2 != yield_call_args.size
 
                   inlined_name = block_args_tree[1]
-                  add_local inlined_name
                   subtree << fs(:lasgn, inlined_name, yield_call_args[1])
                 end
               else

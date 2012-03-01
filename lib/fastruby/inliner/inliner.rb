@@ -27,12 +27,10 @@ module FastRuby
   class Inliner
     attr_accessor :infer_lvar_map
     attr_accessor :infer_self
-    attr_reader :extra_locals
     attr_reader :extra_inferences
     attr_reader :inlined_methods
     
     def initialize
-      @extra_locals = Set.new
       @extra_inferences = Hash.new
       @inlined_methods = Array.new
     end
@@ -43,11 +41,7 @@ module FastRuby
     
     FastRuby::Modules.load_all("inliner")
 
-    def add_local(local)
-      @extra_locals << local
-    end
-    
-    def infer_type(recv)
+   def infer_type(recv)
       if recv[0] == :call
         if recv[2] == :infer
           eval(recv[3].last.last.to_s)
