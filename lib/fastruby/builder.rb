@@ -109,6 +109,7 @@ module FastRuby
       inliner.infer_lvar_map = context.infer_lvar_map
 
       inlined_tree = inliner.inline(tree)
+      context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
       
       inliner.extra_inferences.each do |local, itype|
         context.infer_lvar_map[local] = itype

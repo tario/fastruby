@@ -33,6 +33,7 @@ module FastRuby
   class Context
     attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
+    attr_accessor :locals
     attr_accessor :options
     attr_accessor :infer_self
     attr_reader :no_cache
@@ -90,14 +91,6 @@ module FastRuby
     end
     
     FastRuby::Modules.load_all("translator")
-    
-    def locals(tree)
-      unless @locals
-        @locals = FastRuby::GetLocalsProcessor.get_locals(tree)
-      end
-      
-      @locals
-    end
     
     def catch_block(*catchs)
         old_catch_blocks = @catch_blocks.dup
@@ -436,7 +429,6 @@ module FastRuby
     end
 
     def to_c_method(tree, signature = nil)
-      locals(tree)
       
       if tree[0] == :defn
         method_name = tree[1]
