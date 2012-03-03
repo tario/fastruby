@@ -31,6 +31,7 @@ require "fastruby/builder/inliner"
 require "fastruby/builder/inferencer"
 require "fastruby/builder/lvar_type"
 require "fastruby/builder/pipeline"
+require "fastruby/builder/locals_inference"
 
 require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
@@ -76,11 +77,6 @@ module FastRuby
       no_cache = false
       mname = FastRuby.make_str_signature(@method_name, signature)
 
-      inferencer = Inferencer.new
-
-      context = FastRuby::Context.new(true, inferencer)
-      context.options = options
-
       args_tree = if tree[0] == :defn
          tree[2]
       elsif tree[0] == :defs
@@ -107,28 +103,35 @@ module FastRuby
         end
       end
 
+      inferencer = Inferencer.new
       inferencer.infer_self = signature[0]
-      inferencer.infer_lvar_map = infer_lvar_map
+      
+      context = FastRuby::Context.new(true, inferencer)
+      context.options = options
+
+      locals_inference = LocalsInference.new
+      locals_inference.infer_self = signature[0]
+      locals_inference.infer_lvar_map = infer_lvar_map
       
       inliner = FastRuby::Inliner.new(inferencer)
-      
-      pipeline = Pipeline.new
-      if options[:validate_lvar_types]
-        pipeline << LvarType.new(inferencer)
+      inliner.on_extra_inference do |local, itype|
+        locals_inference.infer_lvar_map[local] = itype
       end
       
-      pipeline << inliner
+      pipeline = Pipeline.new
       
       if options[:validate_lvar_types]
-        pipeline << LvarType.new(inferencer)
+        pipeline << LvarType.new(locals_inference)
+      end
+      pipeline << locals_inference
+      pipeline << inliner
+      pipeline << locals_inference
+      if options[:validate_lvar_types]
+        pipeline << LvarType.new(locals_inference)
       end
 
       inlined_tree = pipeline.call(tree)
       context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
-      
-      inliner.extra_inferences.each do |local, itype|
-        inferencer.infer_lvar_map[local] = itype
-      end
       
       inliner.inlined_methods.each do |inlined_method|
         inlined_method.observe("#{@owner}##{@method_name}#{mname}") do |imethod|

@@ -57,7 +57,6 @@ module FastRuby
             c_op = '==' if tree[2] == :===
             code = "( ( #{to_c(tree[1])} )#{c_op}(#{to_c(tree[3][1])}) )"
           else
-            require "pry"; binding.pry
             raise "invalid static call #{method_name} with recv"
           end
         else

@@ -20,7 +20,6 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 module FastRuby
   class Context
-
     define_translator_for(:call, :method => :to_c_call)
     def to_c_call(tree, result_var = nil)
       repass_var = @repass_var

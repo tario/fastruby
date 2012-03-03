@@ -21,22 +21,22 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "set"
 require "sexp"
 require "define_method_handler"
- 
-module FastRuby
-  class Inferencer
-    attr_accessor :infer_self
-    
-    define_infer_for(:lit) do |tree|
-      [ tree[1].class ]
-    end
+require "fastruby/modules"
 
-    define_infer_for(:str) do |tree|
-      [ String ]
+module FastRuby
+  class LocalsInference
+    define_method_handler(:inline, :priority => -1000) do |tree|
+      FastRubySexp.from_sexp(tree)
     end
     
-    define_infer_for(:self) do |tree|
-      next [] unless @infer_self
-      [ @infer_self ]
+    def self.define_process_for(node_type, &blk)
+      define_method_handler(:process, &blk).condition{|tree| tree.node_type == node_type}
     end
+    
+    def call(tree)
+      process tree
+    end
+    
+    FastRuby::Modules.load_all("locals_inference")
   end
 end

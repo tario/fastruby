@@ -126,7 +126,7 @@ module FastRuby
           itype = infer_type(args_tree[i])
           inlined_name = inline_local_name(prefix, target_method_tree_args[i])
 
-          self.extra_inferences[inlined_name] = itype if itype
+          add_extra_inference(inlined_name, itype) if itype
           newblock << fs(:lasgn, inlined_name, recursive_inline(args_tree[i].duplicate))
         end
         

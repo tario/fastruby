@@ -18,25 +18,12 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "set"
-require "sexp"
 require "define_method_handler"
  
 module FastRuby
-  class Inferencer
-    attr_accessor :infer_self
-    
-    define_infer_for(:lit) do |tree|
-      [ tree[1].class ]
-    end
-
-    define_infer_for(:str) do |tree|
-      [ String ]
-    end
-    
-    define_infer_for(:self) do |tree|
-      next [] unless @infer_self
-      [ @infer_self ]
-    end
+  class LocalsInference
+    define_method_handler(:process, :priority => 100) {|tree|
+        tree
+      }.condition{|tree| tree && tree.node_type == :iter && tree[1][2] == :_static}
   end
 end

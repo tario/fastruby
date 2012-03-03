@@ -19,22 +19,25 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
 require "define_method_handler"
- 
+
 module FastRuby
-  class Inferencer
-    attr_accessor :infer_self
-    attr_accessor :infer_lvar_map
-    
-    define_infer_for(:lvar) do |tree|
-      next [] unless @infer_lvar_map
-      
-      [@infer_lvar_map[tree[1]]] || []
+  class Pipeline
+    def initialize
+      @array = Array.new
     end
     
-    define_infer_for(:self) do |tree|
-      next [] unless @infer_self
+    def << (object)
+      @array << object
+    end
+    
+    def call(arg)
       
-      [@infer_self] || []
+      last_result = arg 
+      @array.each do |processor|
+        last_result = processor.call(last_result)
+      end
+      
+      last_result
     end
   end
 end

@@ -222,7 +222,13 @@ module FastRuby
 
     define_translator_for(:defined, :method => :to_c_defined, :arity => 1)
     def to_c_defined(tree)
-      nt = tree[1].node_type
+      obj_tree = tree[1] 
+      
+      if obj_tree[0] == :call && obj_tree[2] == :infer
+        obj_tree = obj_tree[1]
+      end
+      
+      nt = obj_tree.node_type
 
       if nt == :self
       'rb_str_new2("self")'
@@ -235,19 +241,19 @@ module FastRuby
       elsif nt == :lvar
       'rb_str_new2("local-variable")'
       elsif nt == :gvar
-      "rb_gvar_defined((struct global_entry*)#{global_entry(tree[1][1])}) ? #{literal_value "global-variable"} : Qnil"
+      "rb_gvar_defined((struct global_entry*)#{global_entry(obj_tree[1])}) ? #{literal_value "global-variable"} : Qnil"
       elsif nt == :const
-      "rb_const_defined(rb_cObject, #{intern_num tree[1][1]}) ? #{literal_value "constant"} : Qnil"
+      "rb_const_defined(rb_cObject, #{intern_num obj_tree[1]}) ? #{literal_value "constant"} : Qnil"
       elsif nt == :call
         if RUBY_VERSION =~ /^1\.8/
-        "rb_method_node(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
+        "rb_method_node(CLASS_OF(#{to_c obj_tree[1]}), #{intern_num obj_tree[2]}) ? #{literal_value "method"} : Qnil"
         else
-        "rb_method_entry(CLASS_OF(#{to_c tree[1][1]}), #{intern_num tree[1][2]}) ? #{literal_value "method"} : Qnil"
+        "rb_method_entry(CLASS_OF(#{to_c obj_tree[1]}), #{intern_num obj_tree[2]}) ? #{literal_value "method"} : Qnil"
         end
       elsif nt == :yield
         "rb_block_given_p() ? #{literal_value "yield"} : Qnil"
       elsif nt == :ivar
-      "rb_ivar_defined(plocals->self,#{intern_num tree[1][1]}) ? #{literal_value "instance-variable"} : Qnil"
+      "rb_ivar_defined(plocals->self,#{intern_num obj_tree[1]}) ? #{literal_value "instance-variable"} : Qnil"
       elsif nt == :attrset or
             nt == :op_asgn1 or
             nt == :op_asgn2 or
