@@ -27,6 +27,7 @@ require "fastruby/translator/translator"
 require "rubygems"
 require "inline"
 require "fastruby/inline_extension"
+require "fastruby/inferencer"
 
 require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
@@ -72,9 +73,11 @@ module FastRuby
       no_cache = false
       mname = FastRuby.make_str_signature(@method_name, signature)
 
-      inliner = FastRuby::Inliner.new
+      inferencer = Inferencer.new
 
-      context = FastRuby::Context.new
+      inliner = FastRuby::Inliner.new(inferencer)
+
+      context = FastRuby::Context.new(true, inferencer)
       context.options = options
 
       args_tree = if tree[0] == :defn
@@ -88,6 +91,8 @@ module FastRuby
       # create random method name
       context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
 
+      infer_lvar_map = Hash.new
+
       (1..signature.size-1).each do |i|
         arg = args_tree[i]
         
@@ -95,24 +100,22 @@ module FastRuby
           
           if arg
             if arg.to_s.match(/\*/)
-              context.infer_lvar_map[arg.to_s.gsub("*","").to_sym] = Array
+              infer_lvar_map[arg.to_s.gsub("*","").to_sym] = Array
             else
-              context.infer_lvar_map[arg.to_sym] = signature[i]
+              infer_lvar_map[arg.to_sym] = signature[i]
             end
           end
         end
       end
 
-      context.infer_self = signature[0]
-      
-      inliner.infer_self = context.infer_self
-      inliner.infer_lvar_map = context.infer_lvar_map
+      inferencer.infer_self = signature[0]
+      inferencer.infer_lvar_map = infer_lvar_map
 
       inlined_tree = inliner.inline(tree)
       context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
       
       inliner.extra_inferences.each do |local, itype|
-        context.infer_lvar_map[local] = itype
+        inferencer.infer_lvar_map[local] = itype
       end
       
       inliner.inlined_methods.each do |inlined_method|

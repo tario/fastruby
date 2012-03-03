@@ -24,30 +24,15 @@ require "define_method_handler"
 require "fastruby/modules"
 
 module FastRuby
-  class Inliner
-    attr_reader :extra_inferences
-    attr_reader :inlined_methods
-    
-    def initialize(inferencer)
-      @extra_inferences = Hash.new
-      @inlined_methods = Array.new
-      @inferencer = inferencer
-    end
-    
+  class Inferencer
     define_method_handler(:inline, :priority => -1000) do |tree|
       FastRubySexp.from_sexp(tree)
     end
     
-    FastRuby::Modules.load_all("inliner")
-
-    def infer_type(recv)
-      array = @inferencer.infer(recv).to_a
-      
-      if array.size == 1
-        array[0]
-      else
-        nil
-      end
+    def self.define_infer_for(node_type, &blk)
+      define_method_handler(:infer, &blk).condition{|tree| tree.node_type == node_type}
     end
+    
+    FastRuby::Modules.load_all("inferencer")
   end
 end

@@ -31,11 +31,9 @@ require "define_method_handler"
 
 module FastRuby
   class Context
-    attr_accessor :infer_lvar_map
     attr_accessor :alt_method_name
     attr_accessor :locals
     attr_accessor :options
-    attr_accessor :infer_self
     attr_reader :no_cache
     attr_reader :init_extra
     attr_reader :extra_code
@@ -102,9 +100,10 @@ module FastRuby
       end
     end
 
-    def initialize(common_func = true)
+    def initialize(common_func = true, inferencer = nil)
       initialize_to_c
       
+      @inferencer = inferencer
       @catch_blocks = []
       @infer_lvar_map = Hash.new
       @no_cache = false
@@ -778,16 +777,10 @@ end
     end
 
     def infer_type(recv)
-      if recv[0] == :call
-        if recv[2] == :infer
-          eval(recv[3].last.last.to_s)
-        end
-      elsif recv[0] == :lvar
-        @infer_lvar_map[recv[1]]
-      elsif recv[0] == :self
-        @infer_self
-      elsif recv[0] == :str or recv[0] == :lit
-        recv[1].class
+      array = @inferencer.infer(recv).to_a
+      
+      if array.size == 1
+        array[0]
       else
         nil
       end

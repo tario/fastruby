@@ -21,33 +21,15 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "set"
 require "sexp"
 require "define_method_handler"
-require "fastruby/modules"
-
+ 
 module FastRuby
-  class Inliner
-    attr_reader :extra_inferences
-    attr_reader :inlined_methods
-    
-    def initialize(inferencer)
-      @extra_inferences = Hash.new
-      @inlined_methods = Array.new
-      @inferencer = inferencer
+  class Inferencer
+    define_infer_for(:lit) do |tree|
+      [ tree[1].class ]
     end
-    
-    define_method_handler(:inline, :priority => -1000) do |tree|
-      FastRubySexp.from_sexp(tree)
-    end
-    
-    FastRuby::Modules.load_all("inliner")
 
-    def infer_type(recv)
-      array = @inferencer.infer(recv).to_a
-      
-      if array.size == 1
-        array[0]
-      else
-        nil
-      end
+    define_infer_for(:str) do |tree|
+      [ String ]
     end
   end
 end

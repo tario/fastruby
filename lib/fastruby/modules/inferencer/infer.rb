@@ -18,36 +18,14 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "set"
-require "sexp"
 require "define_method_handler"
-require "fastruby/modules"
-
+ 
 module FastRuby
-  class Inliner
-    attr_reader :extra_inferences
-    attr_reader :inlined_methods
-    
-    def initialize(inferencer)
-      @extra_inferences = Hash.new
-      @inlined_methods = Array.new
-      @inferencer = inferencer
-    end
-    
-    define_method_handler(:inline, :priority => -1000) do |tree|
-      FastRubySexp.from_sexp(tree)
-    end
-    
-    FastRuby::Modules.load_all("inliner")
-
-    def infer_type(recv)
-      array = @inferencer.infer(recv).to_a
-      
-      if array.size == 1
-        array[0]
-      else
-        nil
-      end
-    end
+  class Inferencer
+    define_method_handler(:infer, :priority => 100) {|tree|
+        [ eval(tree[3].last.last.to_s) ]
+      }.condition{|tree|
+          tree.node_type == :call && tree[2] == :infer
+        }
   end
 end

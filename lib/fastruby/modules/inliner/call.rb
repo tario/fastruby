@@ -284,11 +284,7 @@ module FastRuby
       args_tree = tree[3]
       
       if method_name == :lvar_type
-        lvar_name = args_tree[1][1] || args_tree[1][2]
-        lvar_type = eval(args_tree[2][1].to_s)
-
-        @infer_lvar_map[lvar_name] = lvar_type
-        next recursive_inline(tree)
+        next tree
       end
       
       recvtype = infer_type(recv_tree)
