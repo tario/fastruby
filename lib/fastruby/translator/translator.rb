@@ -105,7 +105,6 @@ module FastRuby
       
       @inferencer = inferencer
       @catch_blocks = []
-      @infer_lvar_map = Hash.new
       @no_cache = false
       @extra_code = ""
       @options = {}
@@ -801,12 +800,6 @@ end
 
       if mname == :infer
         return to_c(recv)
-      elsif mname == :lvar_type
-        lvar_name = args[1][1] || args[1][2]
-        lvar_type = eval(args[2][1].to_s)
-
-        @infer_lvar_map[lvar_name] = lvar_type
-        return "Qnil"
       elsif mname == :block_given?
         return "plocals->block_function_address == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c

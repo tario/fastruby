@@ -210,45 +210,9 @@ module FastRuby
            "
 
       if result_var
-        if options[:validate_lvar_types]
-          klass = @infer_lvar_map[tree[1]]
-          if klass
-            "
-            {
-              #{to_c tree[2], result_var};
-              if (CLASS_OF(#{result_var})!=#{literal_value klass}) {
-                #{_raise(literal_value(FastRuby::TypeMismatchAssignmentException), "Illegal assignment at runtime (type mismatch)")};
-              }
-              #{locals_accessor}#{tree[1]} = #{result_var};
-            }
-           "
-          else
-            code
-          end
-        else
-          code
-        end
+        code
       else
-        if options[:validate_lvar_types]
-          klass = @infer_lvar_map[tree[1]]
-          if klass
-            verify_type_function = proc { |name| "
-              static VALUE #{name}(VALUE arg, void* pframe ) {
-                if (CLASS_OF(arg)!=#{literal_value klass}) {
-                  #{_raise(literal_value(FastRuby::TypeMismatchAssignmentException), "Illegal assignment at runtime (type mismatch)")};
-                }
-                return arg;
-              }
-            "
-            }
-            
-            "_lvar_assing(&#{locals_accessor}#{tree[1]}, #{anonymous_function(&verify_type_function)}(#{to_c tree[2]},pframe))"
-          else
-            "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
-          end
-        else
-          "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
-        end
+        "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
       end
     end
     
