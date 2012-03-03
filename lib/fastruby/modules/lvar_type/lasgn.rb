@@ -41,8 +41,7 @@ module FastRuby
         
        fs(:block,
             fs(:lasgn, varname, tree[2]),
-            fs(:if, class_condition, tree, fs("raise FastRuby::TypeMismatchAssignmentException") ),
-            fs(:lasgn, tree[1], fs(:lvar, varname.to_sym))
+            fs(:if, class_condition, fs(:lasgn, tree[1], fs(:lvar, varname.to_sym)), fs("raise FastRuby::TypeMismatchAssignmentException") )
             )
       }.condition{|tree| tree && 
         tree.node_type == :lasgn && 

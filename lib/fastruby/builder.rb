@@ -113,13 +113,18 @@ module FastRuby
       inferencer.infer_self = signature[0]
       inferencer.infer_lvar_map = infer_lvar_map
       
+      inlined_tree = tree
+      
       if options[:validate_lvar_types]
-        inlined_tree = LvarType.new(inferencer).process(tree)
-      else
-        inlined_tree = tree
+        inlined_tree = LvarType.new(inferencer).process(inlined_tree)
       end
 
       inlined_tree = inliner.inline(inlined_tree)
+
+      if options[:validate_lvar_types]
+        inlined_tree = LvarType.new(inferencer).process(inlined_tree)
+      end
+
       context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
       
       inliner.extra_inferences.each do |local, itype|
