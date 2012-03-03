@@ -51,13 +51,14 @@ module FastRuby
         method_name = tree[2].to_s
         recv_tree = tree[1]
         
-        if recv_tree
+        if recv_tree and recv_tree.node_type != :self
           if (not tree[2].to_s =~ /^[a-zA-Z]/) and tree[2].to_s.size <= 3
             c_op = tree[2].to_s
             c_op = '==' if tree[2] == :===
             code = "( ( #{to_c(tree[1])} )#{c_op}(#{to_c(tree[3][1])}) )"
           else
-            raise "invalid static call #{method_name}"
+            require "pry"; binding.pry
+            raise "invalid static call #{method_name} with recv"
           end
         else
           args = tree[3][1..-1].map(&method(:to_c)).join(",")

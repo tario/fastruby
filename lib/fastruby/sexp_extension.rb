@@ -30,9 +30,13 @@ class Object
 end
 
 def fs(*args)
-  sexp = FastRuby::FastRubySexp.new
-  args.each &sexp.method(:<<)
-  sexp
+  if String === args.first
+    tree = FastRuby::FastRubySexp.parse(args.first)
+  else
+    sexp = FastRuby::FastRubySexp.new
+    args.each &sexp.method(:<<)
+    sexp
+  end
 end
 
 module FastRuby
@@ -102,7 +106,6 @@ module FastRuby
 
     def transform(&blk)
       ret = FastRuby::FastRubySexp.from_sexp( blk.call(self) )
-
       unless ret
         ret = FastRuby::FastRubySexp.new
         each{|st2|
