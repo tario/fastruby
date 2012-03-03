@@ -38,6 +38,10 @@ module FastRuby
       FastRubySexp.from_sexp(tree)
     end
     
+    def call(*args)
+      inline *args
+    end
+    
     FastRuby::Modules.load_all("inliner")
 
     def infer_type(recv)

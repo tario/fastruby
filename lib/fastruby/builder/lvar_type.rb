@@ -29,6 +29,10 @@ module FastRuby
       @infer_lvar_map = Hash.new
       @inferencer = inferencer
     end
+
+    def call(*args)
+      process *args
+    end
     
     FastRuby::Modules.load_all("lvar_type")
   end

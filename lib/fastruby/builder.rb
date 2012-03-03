@@ -30,6 +30,7 @@ require "fastruby/builder/reductor"
 require "fastruby/builder/inliner"
 require "fastruby/builder/inferencer"
 require "fastruby/builder/lvar_type"
+require "fastruby/builder/pipeline"
 
 require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
@@ -77,8 +78,6 @@ module FastRuby
 
       inferencer = Inferencer.new
 
-      inliner = FastRuby::Inliner.new(inferencer)
-
       context = FastRuby::Context.new(true, inferencer)
       context.options = options
 
@@ -111,18 +110,20 @@ module FastRuby
       inferencer.infer_self = signature[0]
       inferencer.infer_lvar_map = infer_lvar_map
       
-      inlined_tree = tree
+      inliner = FastRuby::Inliner.new(inferencer)
+      
+      pipeline = Pipeline.new
+      if options[:validate_lvar_types]
+        pipeline << LvarType.new(inferencer)
+      end
+      
+      pipeline << inliner
       
       if options[:validate_lvar_types]
-        inlined_tree = LvarType.new(inferencer).process(inlined_tree)
+        pipeline << LvarType.new(inferencer)
       end
 
-      inlined_tree = inliner.inline(inlined_tree)
-
-      if options[:validate_lvar_types]
-        inlined_tree = LvarType.new(inferencer).process(inlined_tree)
-      end
-
+      inlined_tree = pipeline.call(tree)
       context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
       
       inliner.extra_inferences.each do |local, itype|

@@ -29,6 +29,10 @@ module FastRuby
       define_method_handler(:reduce, options, &blk).condition{|tree| tree.respond_to?(:node_type) && tree.node_type == ntype}
     end
     
+    def call(*args)
+      reduce *args
+    end
+    
     define_method_handler(:reduce, :priority => -1000) do |tree|
       FastRubySexp.from_sexp(tree)
     end
