@@ -31,7 +31,6 @@ require "define_method_handler"
 
 module FastRuby
   class Context
-    attr_accessor :alt_method_name
     attr_accessor :locals
     attr_accessor :options
     attr_reader :no_cache
@@ -402,7 +401,7 @@ module FastRuby
           if (address == 0) {
             address = malloc(sizeof(void*));
           }
-          *address = #{alt_method_name};
+          *address = #{@alt_method_name};
           
           rb_funcall(
               class_self_,
@@ -439,6 +438,8 @@ module FastRuby
         block_argument = tree[3].find{|x| x.to_s[0] == ?&}
         impl_tree = tree[4][1]
       end
+      
+      @alt_method_name = "_" + method_name.to_s + "_" + rand(10000000000).to_s
       
       args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
@@ -739,7 +740,7 @@ end
         extra_code << ret
       
       "
-        static VALUE dummy_#{method_name}_#{alt_method_name}_#{rand(1000000000000000000000000000000000)}(VALUE a) {
+        static VALUE dummy_#{method_name}_#{@alt_method_name}_#{rand(1000000000000000000000000000000000)}(VALUE a) {
           return Qnil;
         }
       "
@@ -1458,7 +1459,7 @@ fastruby_local_next:
             #{update_cfunc_method}();
             rb_iterate(#{anonymous_function{|funcname|
               "static VALUE #{funcname}(VALUE recv) {
-                return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value(alt_method_name + "#" + cfunc_address_name)});
+                return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value(@alt_method_name + "#" + cfunc_address_name)});
               }
               "
             }},fastruby_method,#{update_cfunc_method},Qnil);

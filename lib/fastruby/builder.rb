@@ -91,8 +91,6 @@ module FastRuby
       end
 
       # create random method name
-      context.alt_method_name = "_" + @method_name.to_s + "_" + rand(10000000000).to_s
-
       infer_lvar_map = Hash.new
 
       (1..signature.size-1).each do |i|
