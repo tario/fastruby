@@ -27,7 +27,7 @@ module FastRuby
           tree
         else
           old = @process_defn_disabled
-          @process_defn_disabled = old
+          @process_defn_disabled = true
           begin
             tree.map &method(:process)
           ensure

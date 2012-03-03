@@ -26,12 +26,14 @@ module FastRuby
     attr_accessor :infer_lvar_map
     
     define_infer_for(:lvar) do |tree|
-      next [] if @infer_lvar_map
+      next [] unless @infer_lvar_map
       
       [@infer_lvar_map[tree[1]]] || []
     end
     
     define_infer_for(:self) do |tree|
+      next [] unless @infer_self
+      
       [@infer_self] || []
     end
   end
