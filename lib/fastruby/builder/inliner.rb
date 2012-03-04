@@ -37,7 +37,11 @@ module FastRuby
     end
     
     def call(*args)
-      inline *args
+      if args.first.find_tree{|tree| tree.node_type == :call && infer_type(tree[1] || fs(:self))}
+        inline *args
+      else
+        args.first
+      end
     end
     
     FastRuby::Modules.load_all("inliner")
