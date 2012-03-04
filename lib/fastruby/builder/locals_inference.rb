@@ -18,29 +18,36 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "set"
-require "sexp"
-require "define_method_handler"
-require "fastruby/modules"
-
 module FastRuby
   class LocalsInference
-    define_method_handler(:inline, :priority => -1000) do |tree|
-      FastRubySexp.from_sexp(tree)
-    end
+    attr_accessor :infer_self
+    attr_accessor :infer_lvar_map
     
-    def self.define_process_for(node_type, &blk)
-      define_method_handler(:process, &blk).condition{|tree| tree.node_type == node_type}
-    end
-    
-    def call(tree)
-      if tree.find_tree{|subtree| subtree.node_type == :lvar && @infer_lvar_map[subtree[1]]}
-        process tree
+    def call(arg)
+      if arg.find_tree{|subtree| subtree.node_type == :lvar && @infer_lvar_map[subtree[1]]}
+        transform_block = proc do |tree|
+          if tree.node_type == :lvar
+            next tree unless @infer_lvar_map
+            lvar_type = @infer_lvar_map[tree[1]]
+            next tree unless lvar_type
+            fs(:call, tree, :infer, fs(:arglist, fs(:const, lvar_type.to_s.to_sym)))
+          elsif tree.node_type == :iter
+            if tree[1][2] == :_static
+              tree
+            end
+          elsif tree.node_type == :call
+            if tree[2] == :infer
+              tree[1]
+            end
+          else
+            nil
+          end
+        end
+        
+        arg.transform &transform_block
       else      
-        tree
+        arg
       end
     end
-    
-    FastRuby::Modules.load_all("locals_inference")
   end
 end
