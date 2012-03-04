@@ -34,7 +34,11 @@ module FastRuby
     end
     
     def call(tree)
-      process tree
+      if tree.find_tree{|subtree| subtree.node_type == :lvar && @infer_lvar_map[subtree[1]]}
+        process tree
+      else      
+        tree
+      end
     end
     
     FastRuby::Modules.load_all("locals_inference")
