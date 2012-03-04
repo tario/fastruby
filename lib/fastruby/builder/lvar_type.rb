@@ -31,7 +31,11 @@ module FastRuby
     end
 
     def call(*args)
-      process *args
+      if args.first.find_tree{|tree| tree.node_type == :call && tree[2] == :lvar_type}
+        process *args
+      else
+        args.first
+      end
     end
     
     FastRuby::Modules.load_all("lvar_type")
