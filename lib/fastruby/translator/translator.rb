@@ -587,7 +587,14 @@ module FastRuby
         end
 
         require "fastruby/sexp_extension"       
-        scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(tree)
+        evaluate_tree = tree.transform{|tree| 
+            if tree.node_type == :call and tree[2] == :infer
+              tree[1]
+            else
+              nil
+            end
+          }
+        scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
 
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
