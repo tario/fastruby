@@ -25,8 +25,8 @@ require "fastruby/modules"
 
 module FastRuby
   class Inferencer
-    define_method_handler(:inline, :priority => -1000) do |tree|
-      FastRubySexp.from_sexp(tree)
+    define_method_handler(:infer, :priority => -1000) do |tree|
+      []
     end
     
     def self.define_infer_for(node_type, &blk)
