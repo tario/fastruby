@@ -37,7 +37,7 @@ module FastRuby
     end
     
     def call(*args)
-      if args.first.find_tree{|tree| tree.node_type == :call && infer_type(tree[1] || fs(:self))}
+      if args.first.find_tree{|tree| tree.node_type == :call && tree[2] != :infer && infer_type(tree[1] || fs(:self))}
         inline *args
       else
         args.first
