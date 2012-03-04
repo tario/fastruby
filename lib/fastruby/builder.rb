@@ -114,10 +114,6 @@ module FastRuby
       locals_inference.infer_lvar_map = infer_lvar_map
       
       inliner = FastRuby::Inliner.new(inferencer)
-      inliner.on_extra_inference do |local, itype|
-        locals_inference.infer_lvar_map[local] = itype
-      end
-      
       pipeline = Pipeline.new
       
       if options[:validate_lvar_types]
@@ -125,7 +121,7 @@ module FastRuby
       end
       pipeline << locals_inference
       pipeline << inliner
-      pipeline << locals_inference
+
       if options[:validate_lvar_types]
         pipeline << LvarType.new(locals_inference)
       end

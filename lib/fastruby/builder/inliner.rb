@@ -28,7 +28,6 @@ module FastRuby
     attr_reader :inlined_methods
 
     def initialize(inferencer)
-      @extra_inferences = Hash.new
       @inlined_methods = Array.new
       @inferencer = inferencer
     end
@@ -42,16 +41,6 @@ module FastRuby
     end
     
     FastRuby::Modules.load_all("inliner")
-
-    def on_extra_inference(&blk)
-      @on_extra_inference = blk
-    end
-    
-    def add_extra_inference(name, itype)
-      if @on_extra_inference
-        @on_extra_inference.call(name, itype)
-      end
-    end
 
     def infer_type(recv)
       array = @inferencer.infer(recv).to_a
