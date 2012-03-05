@@ -32,6 +32,25 @@ end
 def fs(*args)
   if String === args.first
     tree = FastRuby::FastRubySexp.parse(args.first)
+
+    if args.size > 1
+      replacement_hash = {}
+      args[1..-1].each do |arg|
+        replacement_hash.merge!(arg)
+      end
+
+      tree = tree.transform{|subtree|
+        if subtree.node_type == :call
+          next replacement_hash[subtree[2]]
+        elsif subtree.node_type == :lvar
+          next replacement_hash[subtree[1]]
+        else
+          next nil
+        end
+      }    
+    end 
+    
+    tree
   else
     sexp = FastRuby::FastRubySexp.new
     args.each &sexp.method(:<<)
