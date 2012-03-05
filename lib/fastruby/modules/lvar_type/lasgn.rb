@@ -28,7 +28,7 @@ module FastRuby
         @current_index = (@current_index || 1) + 1
         varname = "lvar_type_tmp_#{@current_index}".to_sym
         
-        class_condition = fs("_static{CLASS_OF(111) == #{@infer_lvar_map[tree[1]].to_s} }")
+        class_condition = fs("_static{CLASS_OF(111) == ::#{@infer_lvar_map[tree[1]].to_s}._invariant }")
         class_condition = class_condition.transform do |subtree|
           if subtree.node_type == :lit
             if subtree[1] == 111

@@ -56,6 +56,15 @@ module FastRuby
             c_op = tree[2].to_s
             c_op = '==' if tree[2] == :===
             code = "( ( #{to_c(tree[1])} )#{c_op}(#{to_c(tree[3][1])}) )"
+          elsif tree[2] == :_invariant
+            name = self.add_global_name("VALUE", "Qnil");
+            
+            init_extra << "
+                #{name} = #{to_c tree[1]};
+                rb_funcall(#{name},#{intern_num :gc_register_object},0);
+              "
+              
+            code = name;
           else
             raise "invalid static call #{method_name} with recv"
           end
