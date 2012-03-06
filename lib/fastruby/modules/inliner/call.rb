@@ -245,8 +245,8 @@ module FastRuby
           # search the tree of target method
           mobject = method_obj_or_gtfo(recvtype,method_name)
   
-          next tree unless mobject
-          next tree unless mobject.tree
+          next ret_tree unless mobject
+          next ret_tree unless mobject.tree
         
           exit_now = false
           if block_tree.find_tree(:break) or block_tree.find_tree(:return)
@@ -260,10 +260,10 @@ module FastRuby
             end
           end
           
-          next tree if exit_now
+          next ret_tree if exit_now
           
           target_method_tree_args = mobject.tree[2]
-          next tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
+          next ret_tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
 
           method_tree_to_inlined_block(mobject, call_tree, method_name, block_args_tree, block_tree) || ret_tree
   
