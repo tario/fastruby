@@ -123,15 +123,22 @@ module FastRuby
         pipeline << LvarType.new(locals_inference)
       end
       pipeline << locals_inference
+      
       pipeline << inliner
-
       if options[:validate_lvar_types]
         pipeline << LvarType.new(locals_inference)
       end
-      
+
+      pipeline << inference_updater
+      pipeline << inliner
+      if options[:validate_lvar_types]
+        pipeline << LvarType.new(locals_inference)
+      end
+
       pipeline << inference_updater
 
       inlined_tree = pipeline.call(tree)
+
       context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
       
       inliner.inlined_methods.each do |inlined_method|
