@@ -21,7 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
-require "fastruby/reductor/reductor"
+require "fastruby/builder/reductor"
 
 module FastRuby
 

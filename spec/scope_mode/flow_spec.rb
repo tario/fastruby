@@ -2,7 +2,7 @@ require "fastruby"
 require "sexp"
 require "ruby_parser"
 require "fastruby/translator/scope_mode_helper"
-require "fastruby/reductor/reductor"
+require "fastruby/builder/reductor"
 
 $parser = RubyParser.new
 

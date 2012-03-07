@@ -1,5 +1,5 @@
 require "fastruby"
-require "fastruby/reductor/reductor"
+require "fastruby/builder/reductor"
 require "fastruby/sexp_extension"
 require "ruby_parser"
 

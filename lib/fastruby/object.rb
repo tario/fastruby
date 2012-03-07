@@ -59,6 +59,12 @@ module FastRuby
 end
 
 class Object
+  def fastruby?
+    false
+  end
+end
+
+class Object
   
   def infer(a); self; end
   def fastruby(argument, *options_hashes)
