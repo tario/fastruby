@@ -69,7 +69,7 @@ module FastRuby
     end
     
     def inline_local_name(method_name, local_name)
-      "__inlined_#{method_name}_#{local_name}".to_sym
+      "__inlined_#{method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" }}_#{local_name}".to_sym
     end
     
     def method_obj_or_gtfo(klass, method_name)
