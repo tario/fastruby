@@ -44,7 +44,11 @@ module FastRuby
       
       
         if (rb_obj_is_kind_of(plocals->self, rb_cClass) || rb_obj_is_kind_of(plocals->self, rb_cModule)) {
-          rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);
+
+          #{unless options[:fastruby_only]
+           "rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);"
+          end
+          }
           
           #{global_klass_variable} = plocals->self;
           // set tree
