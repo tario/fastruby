@@ -25,4 +25,23 @@ describe FastRuby, "FastRuby" do
     }.should raise_error(NoMethodError)
   end
 
+  it "should accept fastruby_only option, methods defined with that option should be callable from fastruby" do
+    fastruby "
+    class FRONLY3
+      def foo
+        100
+      end
+    end
+    ", :fastruby_only => true
+
+    fastruby "
+    class FRONLY3
+      def bar
+        foo
+      end
+    end
+    "
+    
+    FRONLY3.new.bar.should be == 100
+  end
 end
