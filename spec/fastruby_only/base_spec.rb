@@ -44,4 +44,31 @@ describe FastRuby, "FastRuby" do
     
     FRONLY3.new.bar.should be == 100
   end
+  
+  it "should accept fastruby_only option, and two versions of the same method" do
+    class FRONLY4
+      def foo
+        200
+      end
+    end
+
+    fastruby "
+    class FRONLY4
+      def foo
+        100
+      end
+    end
+    ", :fastruby_only => true
+
+    fastruby "
+    class FRONLY4
+      def bar
+        foo
+      end
+    end
+    "
+    
+    FRONLY4.new.bar.should be == 100
+    FRONLY4.new.foo.should be == 200
+  end
 end
