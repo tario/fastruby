@@ -67,7 +67,28 @@ end
 class Object
   
   def infer(a); self; end
-  def fastruby(argument, *options_hashes)
+  def fastruby(*arguments, &blk)
+    if blk
+      method_container = Class.new
+      class << method_container 
+        attr_accessor :_self
+      end
+      
+      method_container._self = self
+      
+      def method_container.method_added(mname)
+        m = instance_method(mname)
+        @_self.fastruby m.source
+      end
+            
+      method_container.class_eval(&blk)
+
+      return nil
+    end
+    
+    options_hashes = arguments[1..-1]
+    argument = arguments.first
+    
     options_hash = {:validate_lvar_types => true}
     options_hashes.each do |opt|
       options_hash.merge!(opt)
