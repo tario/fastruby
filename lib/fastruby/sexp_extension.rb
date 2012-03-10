@@ -79,14 +79,14 @@ module FastRuby
       @vertexes << orig
       @vertexes << dest
 
-      @vertex_output[orig] ||= Set.new
-      @vertex_output[orig] << dest
+      @vertex_output[orig.object_id] ||= Set.new
+      @vertex_output[orig.object_id] << dest
 
       @edges << [orig,dest]
     end
 
     def each_vertex_output(vertex,&blk)
-      outputs = @vertex_output[vertex]
+      outputs = @vertex_output[vertex.object_id]
       if outputs
         blk ? outputs.each(&blk) : outputs
       else
