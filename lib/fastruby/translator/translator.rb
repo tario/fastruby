@@ -28,6 +28,7 @@ require "fastruby/translator/translator_modules"
 require "fastruby/translator/scope_mode_helper"
 require "fastruby/modules"
 require "define_method_handler"
+require "base64"
 
 module FastRuby
   class Context
@@ -1155,8 +1156,6 @@ fastruby_local_next:
           "
         else
           
-          require "base64"
-
           init_extra << "
           
             {
