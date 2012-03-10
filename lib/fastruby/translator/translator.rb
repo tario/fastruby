@@ -595,6 +595,7 @@ module FastRuby
               mmname = tree[2]
               next trs.call(tree[1]) || tree[1] if mmname == :infer
               next fs(:nil) if mmname == :_throw or mmname == :_loop or mmname == :_raise
+              next fs(:nil) if mmname == :== and infer_value(tree)
             elsif tree.node_type == :iter
               mmname = tree[1][2]
               next fs(:nil) if mmname == :_static
@@ -607,7 +608,6 @@ module FastRuby
         evaluate_tree = tree.transform &trs
         
         scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
-        
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
 
