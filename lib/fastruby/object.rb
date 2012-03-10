@@ -80,7 +80,12 @@ class Object
       
       def method_container.method_added(mname)
         m = instance_method(mname)
-        @_self.fastruby m.source, fastruby_options
+        if fastruby_options[:fastruby_only]
+          tree = FastRuby::FastRubySexp.parse m.source
+          FastRuby.set_tree(_self, tree[1], tree, fastruby_options)
+        else
+          @_self.fastruby m.source, fastruby_options
+        end
       end
             
       method_container.class_eval(&blk)
