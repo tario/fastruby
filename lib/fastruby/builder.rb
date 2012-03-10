@@ -22,7 +22,6 @@ require "fastruby/method_extension"
 require "fastruby/logging"
 require "fastruby/getlocals"
 require "fastruby_load_path"
-require "fastruby/inline_extension"
 require "fastruby/builder/inliner"
 require "fastruby/builder/inferencer"
 require "fastruby/builder/lvar_type"
@@ -149,6 +148,7 @@ module FastRuby
       if paths.empty?
         require "rubygems"
         require "inline"
+        require "fastruby/inline_extension"
         require "fastruby/translator/translator"
 
         context = FastRuby::Context.new(true, inferencer)
