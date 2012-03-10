@@ -594,7 +594,7 @@ module FastRuby
             elsif tree.node_type == :call
               mmname = tree[2]
               next trs.call(tree[1]) || tree[1] if mmname == :infer
-              next fs(:nil) if mmname == :_throw or mmname == :_loop
+              next fs(:nil) if mmname == :_throw or mmname == :_loop or mmname == :_raise
             elsif tree.node_type == :iter
               mmname = tree[1][2]
               next fs(:nil) if mmname == :_static
