@@ -22,7 +22,6 @@ require "fastruby/method_extension"
 require "fastruby/logging"
 require "fastruby/getlocals"
 require "fastruby_load_path"
-require "fastruby/translator/translator"
 require "rubygems"
 require "inline"
 require "fastruby/inline_extension"
@@ -107,9 +106,6 @@ module FastRuby
       inferencer = Inferencer.new
       inferencer.infer_self = signature[0]
       
-      context = FastRuby::Context.new(true, inferencer)
-      context.options = options
-
       locals_inference = LocalsInference.new
       locals_inference.infer_self = signature[0]
       locals_inference.infer_lvar_map = infer_lvar_map
@@ -139,8 +135,6 @@ module FastRuby
 
       inlined_tree = pipeline.call(tree)
 
-      context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
-      
       inliner.inlined_methods.each do |inlined_method|
         inlined_method.observe("#{@owner}##{@method_name}#{mname}") do |imethod|
           rebuild(signature, noreturn)
@@ -157,6 +151,12 @@ module FastRuby
 
       $last_obj_proc = nil
       if paths.empty?
+        require "fastruby/translator/translator"
+
+        context = FastRuby::Context.new(true, inferencer)
+        context.options = options
+        context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)
+      
         FastRuby.logger.info "Compiling #{@owner}::#{@method_name} for signature #{signature.inspect}"
         c_code = context.to_c_method(inlined_tree,signature)
    
