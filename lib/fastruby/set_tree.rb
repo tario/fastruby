@@ -21,7 +21,6 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
-require "fastruby/builder/reductor"
 
 module FastRuby
 
@@ -45,7 +44,10 @@ module FastRuby
   end
 
   def self.set_tree(klass, method_name, tree, options = {})
-    tree = Reductor.new.reduce(tree) unless options[:skip_reduce]
+    unless options[:skip_reduce]
+      require "fastruby/builder/reductor"
+      tree = Reductor.new.reduce(tree)
+    end
 
     klass.class_eval do
       class << self

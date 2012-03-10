@@ -18,11 +18,11 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-require "logger"
-
 module FastRuby
   module SingletonLogger
     def logger
+      require "logger"
+
       unless @logger
         @logger = Logger.new(ENV['FASTRUBY_LOG'] || "/dev/stdout")
         @logger.level = (ENV['FASTRUBY_LOG_LEVEL']||"2").to_i
