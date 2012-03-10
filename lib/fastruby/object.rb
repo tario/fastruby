@@ -72,13 +72,15 @@ class Object
       method_container = Class.new
       class << method_container 
         attr_accessor :_self
+        attr_accessor :fastruby_options
       end
       
       method_container._self = self
+      method_container.fastruby_options = arguments.inject({},&:merge)
       
       def method_container.method_added(mname)
         m = instance_method(mname)
-        @_self.fastruby m.source
+        @_self.fastruby m.source, fastruby_options
       end
             
       method_container.class_eval(&blk)
