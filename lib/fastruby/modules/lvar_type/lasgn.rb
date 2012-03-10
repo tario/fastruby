@@ -31,7 +31,7 @@ module FastRuby
         class_condition = fs("_static{CLASS_OF(_a) == ::#{@infer_lvar_map[tree[1]].to_s}._invariant }", :_a => fs(:lvar,varname))
        fs(:block,
             fs(:lasgn, varname, tree[2]),
-            fs(:if, class_condition, fs(:lasgn, tree[1], fs(:lvar, varname.to_sym)), fs("raise FastRuby::TypeMismatchAssignmentException") )
+            fs(:if, class_condition, fs(:lasgn, tree[1], fs(:lvar, varname.to_sym)), fs('_raise(FastRuby::TypeMismatchAssignmentException, "")') )
             )
       }.condition{|tree| tree && 
         tree.node_type == :lasgn && 

@@ -29,6 +29,21 @@ module FastRuby
       args = tree[3]
       args_tree = tree[3]
       
+      if mname == :_raise
+        if result_var
+          return "
+            #{_raise(to_c(args_tree[1]), "")};
+            #{result_var} = Qnil;
+          "
+        else
+          return inline_block lambda{"
+            #{_raise(to_c(args_tree[1]), "")};
+            return Qnil;
+          "}
+        end
+      end
+        
+ 
       # search block_pass on arguments
       block_pass_arg = args.find{|arg| if arg == :arglist
             false
