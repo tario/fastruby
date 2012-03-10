@@ -66,7 +66,8 @@ module FastRuby
               
             code = name;
           else
-            raise "invalid static call #{method_name} with recv"
+            args = tree[3][1..-1].map(&method(:to_c)).join(",")
+            code = "#{method_name}( #{args} )"
           end
         else
           args = tree[3][1..-1].map(&method(:to_c)).join(",")
