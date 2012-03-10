@@ -45,7 +45,10 @@ module FastRuby
 
   def self.set_tree(klass, method_name, tree, options = {})
     unless options[:skip_reduce]
-      require "fastruby/builder/reductor"
+      unless defined? Reductor
+        require "fastruby/builder/reductor"
+      end
+      
       tree = Reductor.new.reduce(tree)
     end
 

@@ -22,6 +22,7 @@ require "fastruby/builder"
 require "fastruby/getlocals"
 require "fastruby/method_extension"
 require "fastruby/cache/cache"
+require "fastruby/sexp_extension"
 require "fastruby"
 require "digest"
 require "method_source"
@@ -103,13 +104,14 @@ class Object
     
       tree = nil
 
-      require "fastruby/fastruby_sexp"
+      require "fastruby/fastruby_sexp" unless defined? FastRuby::FastRubySexp
       if argument.instance_of? FastRuby::FastRubySexp
         tree = argument
       elsif argument.instance_of? String
-        require "rubygems"
-        require "ruby_parser"
-        require "fastruby/sexp_extension"
+        unless defined? RubyParser
+          require "rubygems"
+          require "ruby_parser"
+        end
         tree = RubyParser.new.parse(argument).to_fastruby_sexp
       else
         raise ArgumentError

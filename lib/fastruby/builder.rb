@@ -146,11 +146,16 @@ module FastRuby
 
       $last_obj_proc = nil
       if paths.empty?
-        require "rubygems"
-        require "inline"
-        require "fastruby/inline_extension"
-        require "fastruby/translator/translator"
-
+        unless Object.respond_to? :inline
+          require "rubygems"
+          require "inline"
+          require "fastruby/inline_extension"
+        end
+        
+        unless defined? FastRuby::Context
+          require "fastruby/translator/translator"
+        end
+        
         context = FastRuby::Context.new(true, inferencer)
         context.options = options
         context.locals = FastRuby::GetLocalsProcessor.get_locals(inlined_tree)

@@ -21,7 +21,7 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   module SingletonLogger
     def logger
-      require "logger"
+      require "logger" unless defined? Logger
 
       unless @logger
         @logger = Logger.new(ENV['FASTRUBY_LOG'] || "/dev/stdout")
