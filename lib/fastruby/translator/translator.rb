@@ -439,7 +439,7 @@ module FastRuby
         impl_tree = tree[4][1]
       end
       
-      @alt_method_name = "_" + method_name.to_s + "_" + rand(10000000000).to_s
+      @alt_method_name = "_" + method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" } + "_" + rand(10000000000).to_s
       
       args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
@@ -759,7 +759,7 @@ end
         extra_code << ret
       
       "
-        static VALUE dummy_#{method_name}_#{@alt_method_name}_#{rand(1000000000000000000000000000000000)}(VALUE a) {
+        static VALUE dummy_#{@alt_method_name}_#{rand(1000000000000000000000000000000000)}(VALUE a) {
           return Qnil;
         }
       "

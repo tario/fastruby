@@ -118,6 +118,14 @@ module FastRuby
         end      
       end
       
+      define_translator_for(:const) do |tree, result_var = nil|
+        if result_var
+          "#{result_var} = #{tree[1].to_s};"
+        else
+          "#{tree[1].to_s}"
+        end
+      end
+      
       define_translator_for(:while) do |tree, result_var = nil|
         begin_while = "begin_while_"+rand(10000000).to_s
         end_while = "end_while_"+rand(10000000).to_s

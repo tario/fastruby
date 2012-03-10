@@ -29,6 +29,14 @@ module FastRuby
       args = tree[3]
       args_tree = tree[3]
       
+      if mname == :_class
+        if result_var
+          return "#{result_var} = CLASS_OF(#{to_c(recv)});"
+        else
+          return "CLASS_OF(#{to_c(recv)})"
+        end
+      end
+      
       if mname == :_raise
         if result_var
           return "
