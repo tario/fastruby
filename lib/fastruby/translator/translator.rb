@@ -586,16 +586,28 @@ module FastRuby
 
         end
 
-        require "fastruby/sexp_extension"       
-        evaluate_tree = tree.transform{|tree| 
-            if tree.node_type == :call and tree[2] == :infer
-              tree[1]
-            else
-              nil
+        require "fastruby/sexp_extension"
+        
+        trs = lambda{|tree| 
+            if not tree.respond_to? :node_type 
+              next tree
+            elsif tree.node_type == :call
+              mmname = tree[2]
+              next trs.call(tree[1]) || tree[1] if mmname == :infer
+              next fs(:nil) if mmname == :_throw or mmname == :_loop
+            elsif tree.node_type == :iter
+              mmname = tree[1][2]
+              next fs(:nil) if mmname == :_static
+              next fs(:block, trs.call(tree[3]) || tree[3]) if mmname == :_catch
             end
-          }
-        scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
 
+            tree.map &trs
+          }
+          
+        evaluate_tree = tree.transform &trs
+        
+        scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
+        
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
 
