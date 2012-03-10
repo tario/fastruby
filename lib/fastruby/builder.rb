@@ -22,8 +22,6 @@ require "fastruby/method_extension"
 require "fastruby/logging"
 require "fastruby/getlocals"
 require "fastruby_load_path"
-require "rubygems"
-require "inline"
 require "fastruby/inline_extension"
 require "fastruby/builder/reductor"
 require "fastruby/builder/inliner"
@@ -150,6 +148,8 @@ module FastRuby
 
       $last_obj_proc = nil
       if paths.empty?
+        require "rubygems"
+        require "inline"
         require "fastruby/translator/translator"
 
         context = FastRuby::Context.new(true, inferencer)
