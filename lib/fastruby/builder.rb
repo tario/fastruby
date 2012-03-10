@@ -37,7 +37,6 @@ require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 
 module FastRuby
   class Method
-    attr_accessor :locals
     attr_accessor :options
 
     def initialize(method_name, owner)

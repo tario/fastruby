@@ -18,8 +18,10 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
+require "fastruby/sexp_extension"
+
 class Fixnum
-  fastruby(:fastruby_only => true) do
+  fastruby(:fastruby_only => true, :skip_reduce => true) do
     def +(b)
       if b._class == Fixnum
         _static{LONG2NUM(FIX2LONG(self)+FIX2LONG(b))}

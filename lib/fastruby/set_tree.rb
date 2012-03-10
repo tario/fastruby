@@ -45,14 +45,7 @@ module FastRuby
   end
 
   def self.set_tree(klass, method_name, tree, options = {})
-    locals = Set.new
-    locals << :self
-    
-    tree = Reductor.new.reduce tree
-    
-    FastRuby::GetLocalsProcessor.get_locals(tree).each do |local|
-      locals << local
-    end
+    tree = Reductor.new.reduce(tree) unless options[:skip_reduce]
 
     klass.class_eval do
       class << self
@@ -63,7 +56,6 @@ module FastRuby
     fastrubym = klass.fastruby_method(method_name)
     
     fastrubym.tree = tree
-    fastrubym.locals = locals
     fastrubym.options = options
     fastrubym.tree_changed
 
