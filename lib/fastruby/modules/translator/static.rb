@@ -51,6 +51,16 @@ module FastRuby
         method_name = tree[2].to_s
         recv_tree = tree[1]
         
+        if method_name == "inline_c"
+          arg = tree[3][1]
+          
+          if arg.node_type != :str
+            raise RuntimeError, "invalid node for inline_c directive #{arg}"
+          end
+
+          next arg[1]
+        end
+        
         if recv_tree and recv_tree.node_type != :self
           if (not tree[2].to_s =~ /^[a-zA-Z]/) and tree[2].to_s.size <= 3
             c_op = tree[2].to_s

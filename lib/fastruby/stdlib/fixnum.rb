@@ -30,7 +30,7 @@ class Fixnum
       elsif b._class == Float
         _static{DBL2NUM(FIX2LONG(self) + RFLOAT_VALUE(b))}
       else
-        _static{rb_num_coerce_bin(self, b, '+')}
+        _static{rb_num_coerce_bin(self, b, inline_c("'+'"))}
       end
     end
 
@@ -42,7 +42,7 @@ class Fixnum
       elsif b._class == Float
         _static{DBL2NUM(FIX2LONG(self) - RFLOAT_VALUE(b))}
       else
-        _static{rb_num_coerce_bin(self, b, '-')}
+        _static{rb_num_coerce_bin(self, b, inline_c("'-'"))}
       end
     end
 
@@ -54,7 +54,7 @@ class Fixnum
       elsif y._class == Float
         _static{FIX2LONG(self) > RFLOAT_VALUE(y) ? true : false}
       else
-        _static{rb_num_coerce_relop(self, y, '>')}
+        _static{rb_num_coerce_relop(self, y, inline_c("'>'"))}
       end
     end
     
@@ -66,7 +66,7 @@ class Fixnum
       elsif y._class == Float
         _static{FIX2LONG(self) < RFLOAT_VALUE(y) ? true : false}
       else
-        _static{rb_num_coerce_relop(self, y, '<')}
+        _static{rb_num_coerce_relop(self, y, inline_c("'<'"))}
       end
     end    
   end
