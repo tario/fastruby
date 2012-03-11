@@ -1,3 +1,11 @@
+0.0.20  Fastruby implementation of some fixnum methods allowing inline it 
+
+    Improve and bug fixing on inline
+  
+    Syntantic sugar for fastruby method definitions (see README)
+
+    Internal design improvements, builder pipeline and translator decoupling
+
 0.0.19  Fixed temporal variable names of case blocks to make it deterministic and allow caching
 
     Fixed bug of duplicated entries on $LOAD_PATH, significant performance improvement saves 80% of time both with caching and without caching
