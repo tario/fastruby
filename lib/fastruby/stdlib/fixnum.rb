@@ -42,7 +42,7 @@ class Fixnum
       elsif b._class == Float
         _static{DBL2NUM(FIX2LONG(self) - RFLOAT_VALUE(b))}
       else
-        _static{rb_num_coerce_bin(self, b, '+')}
+        _static{rb_num_coerce_bin(self, b, '-')}
       end
     end
 
