@@ -24,7 +24,7 @@ require "define_method_handler"
  
 module FastRuby
   class Inliner
-    handler_scope :group => :def do
+    handler_scope :group => :def, :priority => 1000 do
       define_method_handler(:inline) { |tree|
         disable_handler_group(:def) do
           inline(tree)

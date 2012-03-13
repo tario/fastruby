@@ -295,8 +295,9 @@ module FastRuby
       @method_hash = Hash.new unless @method_hash
       @method_hash[method_name]
     end
-    
+
     def method_added(method_name)
+      clear_method_hash_addresses(@method_hash[method_name]) if @method_hash and @method_hash[method_name]
       FastRuby.unset_tree(self,method_name)
     end
 

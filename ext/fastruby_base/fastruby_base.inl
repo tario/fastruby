@@ -351,16 +351,16 @@ static void init_stack_chunk() {
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
 	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
 }
-
+# define NUM2PTR(x)   ((void*)(NUM2ULONG(x)))
 static VALUE clear_method_hash_addresses(VALUE klass,VALUE rb_method_hash) {
-
   if (rb_method_hash != Qnil) {
 	  VALUE rb_values = rb_funcall(rb_method_hash, rb_intern("values"),0);
 	  void** address;
 	  int i;
+
 	  for (i = 0; i < _RARRAY_LEN(rb_values); i++) {
-	  	address = (void**)FIX2LONG(rb_ary_entry(rb_values,i));
-	  	*address = 0;
+	  	address = (void**)NUM2PTR(rb_ary_entry(rb_values,i));
+      *address = 0;
 	  }
   }
   
