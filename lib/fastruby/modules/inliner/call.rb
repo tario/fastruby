@@ -219,10 +219,6 @@ module FastRuby
     end
     
     define_method_handler(:inline) { |tree|
-      tree
-    }.condition{|tree| tree.node_type == :defs}
-    
-    define_method_handler(:inline) { |tree|
         ret_tree = fs(:iter)
         ret_tree << tree[1].duplicate
         
