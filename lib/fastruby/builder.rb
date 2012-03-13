@@ -68,6 +68,18 @@ module FastRuby
       rebuild(signature, noreturn)
     end
     
+    def has_loops?(tree)
+      if tree.respond_to? :node_type
+        nt = tree.node_type
+        return false if nt == :defn or nt == :defs
+        return true if nt == :for or nt == :iter or nt == :while or nt == :retry
+        tree.each do |subtree|
+          return true if has_loops? subtree
+        end
+      end
+      false
+    end
+    
     def rebuild(signature, noreturn = false)
       no_cache = false
       mname = FastRuby.make_str_signature(@method_name, signature)
@@ -78,6 +90,12 @@ module FastRuby
          tree[3]
       else
         raise ArgumentError, "unknown type of method definition #{tree[0]}"
+      end
+      
+      impl_tree = if tree[0] == :defn
+        tree[3]
+      elsif tree[0] == :defs
+        tree[4]
       end
 
       # create random method name
@@ -115,19 +133,21 @@ module FastRuby
       end
       pipeline << locals_inference
       
-      pipeline << inliner
-      if options[:validate_lvar_types]
-        pipeline << LvarType.new(locals_inference)
+      if has_loops?(impl_tree)
+        pipeline << inliner
+        if options[:validate_lvar_types]
+          pipeline << LvarType.new(locals_inference)
+        end
+  
+        pipeline << inference_updater
+        pipeline << inliner
+        if options[:validate_lvar_types]
+          pipeline << LvarType.new(locals_inference)
+        end
+  
+        pipeline << inference_updater
       end
-
-      pipeline << inference_updater
-      pipeline << inliner
-      if options[:validate_lvar_types]
-        pipeline << LvarType.new(locals_inference)
-      end
-
-      pipeline << inference_updater
-
+      
       inlined_tree = pipeline.call(tree)
 
       inliner.inlined_methods.each do |inlined_method|
