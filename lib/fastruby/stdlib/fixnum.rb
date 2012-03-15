@@ -60,7 +60,7 @@ class Fixnum
     
     def <(y)
       if y._class == Fixnum
-        _static{FIX2LONG(self)<FIX2LONG2(y) ? true: false }
+        _static{FIX2LONG(self)<FIX2LONG(y) ? true: false }
       elsif y._class == Bignum
         _static{FIX2INT(rb_big_cmp(rb_int2big(FIX2LONG(self)), y)) < 0 ? true : false}
       elsif y._class == Float
