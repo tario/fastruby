@@ -45,14 +45,9 @@ describe FastRuby, "fastruby fixnum stdlib" do
 
   
   class CustomValue
-    def +(x)
+    def method_missing(m,x)
       42
-    end
-
-    def -(x)
-      32
-    end
-    
+    end    
     def <(x)
       true
     end
@@ -66,10 +61,18 @@ describe FastRuby, "fastruby fixnum stdlib" do
     end
   end
 
-  [:+, :-, :<, :>].each do |op|
+  [:+, :-, :<, :>, :/,:div,:%,:modulo,:divmod,:fdiv,:**,:==,:===,:<=>,:>=,:<=].each do |op|
     [1,1.1,10**10,CustomValue.new].each do |value|
       test_op_with_type(1,op,value)
       test_op(1,op,value)
     end
   end
+
+  [:&,:|,:^,:[],:<<,:>>].each do |op|
+    [1,2,3].each do |value|
+      test_op_with_type(1,op,value)
+      test_op(1,op,value)
+    end
+  end
+
 end
