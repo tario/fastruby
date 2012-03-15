@@ -33,6 +33,12 @@ direct calls instead of normal and expensive ruby calls.
 
 The currently implementation only can infer types for method and block arguments, and for literals
 
+=== Method inlining
+
+Type information is used to inline methods by replacing calls with the implementation of method being called. This greatly increase the performance WITHOUT
+breaking the expected dynamics of ruby code (e.g. allow replace an inlined method), many of corelib methods was reimplemented with ruby to allow inline them
+and increase the performance of code using corelib methods (e.g. Fixnum methods)
+
 === Customization through build directives and API
 
 To compensate for the described limitations, fastruby suport a few build directives to allow the programmer help the inference.
@@ -61,7 +67,6 @@ I will stabilize the API and document it for next releases. I promise
 * fastruby on ruby1.8 is faster than ruby1.8 on a few cases (see benchmarks) but is slower than ruby1.9
 * callcc is not supported, it works but using it may result in unexpected behaviour
 * calls with blocks to ruby or cruby methods are almost as slow as normal ruby (if the called method is defined by fastruby, the call is pretty fast)
-* replacement of methods using identical code strings will work, but it will generate duplicated objects on the cache each time te snippet run
 
 == Usage
 
