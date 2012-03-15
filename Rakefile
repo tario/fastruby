@@ -19,11 +19,11 @@ spec = Gem::Specification.new do |s|
   s.add_dependency "method_source", ">= 0.6.7"
   s.add_dependency "ruby2ruby", ">= 1.3.1"
   s.has_rdoc = true
-  s.extra_rdoc_files = [ 'README.md' ]
+  s.extra_rdoc_files = [ 'README.rdoc' ]
   s.extensions = FileList["ext/**/extconf.rb"].to_a
-#  s.rdoc_options << '--main' << 'README.md'
+#  s.rdoc_options << '--main' << 'README.rdoc'
   s.files = Dir.glob("{benchmarks,examples,lib,spec}/**/*") + Dir.glob("ext/**/*.inl")+ Dir.glob("ext/**/*.c") + Dir.glob("ext/**/*.h") + Dir.glob("ext/**/extconf.rb") +
-    [ 'LICENSE', 'AUTHORS', 'README.md', 'Rakefile', 'TODO', 'CHANGELOG' ]
+    [ 'LICENSE', 'AUTHORS', 'README.rdoc', 'Rakefile', 'TODO', 'CHANGELOG' ]
 end
 
 desc 'Run tests'
@@ -35,8 +35,8 @@ end
 desc 'Generate RDoc'
 Rake::RDocTask.new :rdoc do |rd|
   rd.rdoc_dir = 'doc'
-  rd.rdoc_files.add 'lib', 'README.md'
-  rd.main = 'README.md'
+  rd.rdoc_files.add 'lib', 'README.rdoc'
+  rd.main = 'README.rdoc'
 end
 
 desc 'Build Gem'
