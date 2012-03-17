@@ -48,7 +48,7 @@ class Integer
       if self._class == Fixnum
         if x._class == Fixnum
           i = self
-          while _static{FIX2LONG(i) < FIX2LONG(x)}
+          while _static{FIX2LONG(i) <= FIX2LONG(x)}
             yield(i)
             i = _static{LONG2FIX(FIX2LONG(i)+1)}
           end
@@ -57,8 +57,8 @@ class Integer
         end
       end
       
-      i = 0
-      while i < x
+      i = self
+      while i <= x
         yield(i)
         i = i + 1
       end
@@ -74,7 +74,7 @@ class Integer
       if self._class == Fixnum
         if x._class == Fixnum
           i = self
-          while _static{FIX2LONG(i) > FIX2LONG(x)}
+          while _static{FIX2LONG(i) >= FIX2LONG(x)}
             yield(i)
             i = _static{LONG2FIX(FIX2LONG(i)-1)}
           end
@@ -83,8 +83,8 @@ class Integer
         end
       end
       
-      i = 0
-      while i > x
+      i = self
+      while i >= x
         yield(i)
         i = i - 1
       end
