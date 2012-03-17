@@ -160,4 +160,13 @@ describe FastRuby, "fastruby fixnum stdlib" do
   test_op_block(77, :downto, 60)
   test_op_enumerator(77, :upto, 90)
   test_op_enumerator(77, :downto, 60)
+  
+  it "1.upto(3).to_a should be [1,2,3]" do
+    1.upto(3).to_a.should be == [1,2,3]
+  end
+
+  it "3.downto(1).to_a should be [3,2,1]" do
+    3.downto(1).to_a.should be == [3,2,1]
+  end
+
 end
