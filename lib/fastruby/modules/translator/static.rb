@@ -51,6 +51,11 @@ module FastRuby
         method_name = tree[2].to_s
         recv_tree = tree[1]
         
+        if method_name == "c_address_of"
+          arg = tree[3][1]
+          return "&"+to_c(arg)
+        end
+        
         if method_name == "inline_c"
           arg = tree[3][1]
           
