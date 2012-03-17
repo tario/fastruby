@@ -22,11 +22,7 @@ class Integer
   fastruby(:skip_reduce => true) do
     def times
       unless block_given?
-        if self._class == Fixnum
-          return (0.._static{LONG2FIX(FIX2LONG(self)-1)})
-        else
-          return (0..self-1)
-        end
+        return _static{rb_enumeratorize(self, _dynamic{:times}, inline_c("0"), inline_c("0") ) }
       end
       
       if self._class == Fixnum
