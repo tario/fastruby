@@ -65,5 +65,32 @@ class Integer
       
       self
     end
+
+    def downto(x)
+      unless block_given?
+        return _static{rb_enumeratorize(self, _dynamic{:downto}, inline_c("1"), c_address_of(x)) }
+      end
+      
+      if self._class == Fixnum
+        if x._class == Fixnum
+          i = self
+          while _static{FIX2LONG(i) > FIX2LONG(x)}
+            yield(i)
+            i = _static{LONG2FIX(FIX2LONG(i)-1)}
+          end
+      
+          return self  
+        end
+      end
+      
+      i = 0
+      while i > x
+        yield(i)
+        i = i - 1
+      end
+      
+      self
+    end
+
   end
 end
