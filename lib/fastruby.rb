@@ -35,4 +35,4 @@ module FastRuby
   VERSION = "0.0.19" unless defined? FastRuby::VERSION
 end
 
-require "fastruby/stdlib"
+require "fastruby/corelib"

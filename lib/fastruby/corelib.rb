@@ -18,6 +18,6 @@ you should have received a copy of the gnu general public license
 along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 
 =end
-Dir.glob(FastRuby.fastruby_load_path + "/fastruby/stdlib/**/*.rb").each do |path|
+Dir.glob(FastRuby.fastruby_load_path + "/fastruby/corelib/**/*.rb").each do |path|
   require path
 end

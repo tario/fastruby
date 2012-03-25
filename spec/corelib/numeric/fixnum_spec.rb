@@ -1,6 +1,6 @@
 require "fastruby"
 
-describe FastRuby, "fastruby fixnum stdlib" do
+describe FastRuby, "fastruby fixnum corelib" do
   
   $fixnum_class_num = 0
   def self.test_op_with_type(recv, op, parameter, expected = recv.send(op, parameter))
