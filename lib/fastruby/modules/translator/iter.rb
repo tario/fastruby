@@ -625,7 +625,7 @@ fastruby_local_next:
           funcall_call_code
         end
       else
-        encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name)
+        encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name, true)
 
         if call_args_tree.size > 1
           strargs = (0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")

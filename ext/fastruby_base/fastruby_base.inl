@@ -143,6 +143,10 @@ struct METHOD {
     NODE *body;
 };
 
+        
+RUBY_EXTERN void* ruby_current_thread;
+
+
 static inline void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	// initialize pointers with zeros
 	memset(sc->pages, 0, sizeof(sc->pages));
