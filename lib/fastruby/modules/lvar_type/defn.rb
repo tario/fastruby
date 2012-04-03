@@ -34,6 +34,8 @@ module FastRuby
             @process_defn_disabled = old
           end
         end
+        
+        tree
       }.condition{|tree| tree.node_type == :defn or tree.node_type == :defs}
       
   end
