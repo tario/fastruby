@@ -34,7 +34,8 @@ module FastRuby
             fs(:if, class_condition, fs(:lasgn, tree[1], fs(:lvar, varname.to_sym)), fs('_raise(FastRuby::TypeMismatchAssignmentException, "")') )
             )
       }.condition{|tree| tree && 
-        tree.node_type == :lasgn && 
+        tree.node_type == :lasgn &&
+        tree.size == 3 &&
         @infer_lvar_map[tree[1]] }
   end
 end
