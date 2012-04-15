@@ -107,7 +107,9 @@ module FastRuby
       end
     end
 
-    define_translator_for(:call, :priority => 100){ |tree, result_var=nil|
+    define_translator_for(:call, :priority => 100){ |*x|
+      tree, result_var = x
+
       # raise code
       args = tree[3]
       _raise(args[1],args[2])

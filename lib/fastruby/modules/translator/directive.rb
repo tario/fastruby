@@ -21,7 +21,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class Context
 
-    define_translator_for(:call, :priority => 100){ |tree, result_var=nil|
+    define_translator_for(:call, :priority => 100){ |*x|
+      tree, result_var = x
+
       directive_code = directive(tree)
 
       if result_var

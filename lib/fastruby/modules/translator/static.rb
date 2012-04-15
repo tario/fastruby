@@ -47,7 +47,9 @@ module FastRuby
     }
     
     handler_scope(:group => :static_call, :priority => 1000) do
-      define_translator_for(:call) do |tree, result=nil|
+      define_translator_for(:call) do |*x|
+      tree, result = x
+
         method_name = tree[2].to_s
         recv_tree = tree[1]
         
@@ -96,7 +98,9 @@ module FastRuby
         end
       end
       
-      define_translator_for(:lit) do |tree, result=nil|
+      define_translator_for(:lit) do |*x|
+      tree, result = x
+
         if result
           "#{result} = #{tree[1]};"
         else
@@ -104,7 +108,9 @@ module FastRuby
         end
       end
       
-      define_translator_for(:if) do |tree, result_variable_ = nil|
+      define_translator_for(:if) do |*x|
+      tree, result_variable_  = x
+
         condition_tree = tree[1]
         impl_tree = tree[2]
         else_tree = tree[3]
@@ -133,7 +139,9 @@ module FastRuby
         end      
       end
       
-      define_translator_for(:const) do |tree, result_var = nil|
+      define_translator_for(:const) do |*x|
+      tree, result_var  = x
+
         if result_var
           "#{result_var} = #{tree[1].to_s};"
         else
@@ -141,7 +149,9 @@ module FastRuby
         end
       end
       
-      define_translator_for(:while) do |tree, result_var = nil|
+      define_translator_for(:while) do |*x|
+      tree, result_var  = x
+
         begin_while = "begin_while_"+rand(10000000).to_s
         end_while = "end_while_"+rand(10000000).to_s
         aux_varname = "_aux_" + rand(10000000).to_s
@@ -175,7 +185,9 @@ module FastRuby
         
       end
            
-      define_translator_for(:and) do |tree, return_var = nil|
+      define_translator_for(:and) do |*x|
+      tree, return_var  = x
+
         if return_var
           "
             {
@@ -192,7 +204,9 @@ module FastRuby
         
       end
       
-      define_translator_for(:or) do |tree, return_var = nil|
+      define_translator_for(:or) do |*x|
+      tree, return_var  = x
+
         if return_var
           "
             {
@@ -209,7 +223,9 @@ module FastRuby
         
       end
       
-      define_translator_for(:not) do |tree, return_var = nil|
+      define_translator_for(:not) do |*x|
+      tree, return_var  = x
+
         if return_var
           "
             {

@@ -142,7 +142,9 @@ module FastRuby
       end
     end
     
-    define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
+    define_method_handler(:to_c, :priority => 100) { |*x|
+      tree, result_var  = x
+
 
       call_tree = tree[1]
       catch_tag_id = call_tree[3][1][1]
@@ -240,11 +242,15 @@ module FastRuby
           "
       end
 
-    }.condition{|tree, result_var = nil| 
+    }.condition{|*x|
+      tree, result_var  = x
+ 
       tree.node_type == :iter && tree[1][2] == :_catch
     }
 
-    define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
+    define_method_handler(:to_c, :priority => 100) { |*x|
+      tree, result_var  = x
+
       code = ""
       
       catch_tag_id = tree[3][1][1]
@@ -262,11 +268,15 @@ module FastRuby
       else
         inline_block code
       end
-    }.condition{|tree, result_var = nil| 
+    }.condition{|*x|
+      tree, result_var  = x
+ 
       tree.node_type == :call && tree[2] == :_throw
     }
     
-    define_method_handler(:to_c, :priority => 100) { |tree, result_var = nil|
+    define_method_handler(:to_c, :priority => 100) { |*x|
+      tree, result_var  = x
+
       code = ""
       
       catch_tag_id = tree[3][1][1]
@@ -277,7 +287,9 @@ module FastRuby
       else
         inline_block code
       end
-    }.condition{|tree, result_var = nil| 
+    }.condition{|*x|
+      tree, result_var  = x
+ 
       tree.node_type == :call && tree[2] == :_loop
     }
 

@@ -20,9 +20,13 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 =end
 module FastRuby
   class Reductor
-    define_method_handler(:reduce, :priority => 100) { |tree, result_var = nil|
+    define_method_handler(:reduce, :priority => 100) { |*x|
+      tree, result_var  = x
+
       fs(:true)
-    }.condition{|tree, result_var = nil| 
+    }.condition{|*x|
+      tree, result_var  = x
+ 
         tree.respond_to? :node_type and tree.node_type == :call and tree[2] == :fastruby? and tree[1] == nil
       }
   end

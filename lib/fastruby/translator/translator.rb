@@ -71,13 +71,17 @@ module FastRuby
       "#{result_var} = #{to_c(tree)};"
     }.condition{|*x| x.size == 2 }
     
-    define_method_handler(:to_c, :priority => -10000) do |tree, result_var=nil|
+    define_method_handler(:to_c, :priority => -10000) do |*x|
+      tree, result_var = x
+
       raise "undefined translator for node type :#{tree.node_type}"
     end
     
     define_method_handler(:initialize_to_c){|*x|}.condition{|*x|false}
 
-    define_translator_for(:call, :priority => 100){ |tree, result_var=nil|
+    define_translator_for(:call, :priority => 100){ |*x|
+      tree, result_var = x
+
       tree[2] = :fastruby_require
       to_c(tree)
     }.condition{|*x|
