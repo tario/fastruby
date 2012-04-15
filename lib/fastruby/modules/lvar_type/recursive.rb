@@ -23,7 +23,7 @@ require "define_method_handler"
 module FastRuby
   class LvarType
     define_method_handler(:process, :priority => -100) {|tree|
-        tree.map &method(:process)
+        tree.map {|subtree| process subtree}
       }.condition{|tree| tree.respond_to?(:node_type)}
       
     define_method_handler(:process, :priority => 1000) {|tree|

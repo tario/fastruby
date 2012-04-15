@@ -32,7 +32,7 @@ module FastRuby
       end
       
       define_method_handler(:process, :priority => -100) { |tree|
-        tree.map &method(:process)
+        tree.map {|subtree| process subtree}
       }
 
       define_method_handler(:process, :priority => 1000) { |tree|

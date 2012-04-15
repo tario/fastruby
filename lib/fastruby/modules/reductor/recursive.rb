@@ -25,7 +25,7 @@ require "define_method_handler"
 module FastRuby
   class Reductor
     define_method_handler(:reduce, :priority => -100) {|tree|
-        tree.map &method(:reduce)
+        tree.map{|subtree| reduce subtree}
       }.condition{|tree| tree.respond_to?(:node_type)}
   end
 end

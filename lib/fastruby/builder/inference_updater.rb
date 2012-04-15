@@ -28,7 +28,7 @@ module FastRuby
         }.condition{|tree| (tree.node_type == :iter and tree[1][2] == :_static) or (tree.node_type == :call and tree[2] == :infer) }
         
       define_method_handler(:process, :priority => -1) {|tree|
-          tree.map &method(:process)
+          tree.map{|subtree| process subtree}
         }.condition{|tree| tree.respond_to?(:node_type) }
 
       define_method_handler(:process, :priority => 1) {|tree|

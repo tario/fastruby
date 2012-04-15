@@ -26,11 +26,11 @@ module FastRuby
   class Inliner
     
     def recursive_inline(tree)
-      tree.map &method(:inline)
+      tree.map{|subtree| inline subtree}
     end
     
     define_method_handler(:inline, :priority => -100) {|tree|
-        tree.map &method(:inline)
+        tree.map{|subtree| inline subtree}
       }.condition{|tree| tree.respond_to?(:node_type)}
 
     define_method_handler(:inline, :priority => 1000) {|tree|

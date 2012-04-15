@@ -29,7 +29,7 @@ module FastRuby
           old = @process_defn_disabled
           @process_defn_disabled = true
           begin
-            next tree.map &method(:process)
+            next tree.map{|subtree| process subtree}
           ensure
             @process_defn_disabled = old
           end

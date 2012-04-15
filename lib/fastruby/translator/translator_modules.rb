@@ -41,7 +41,9 @@ module FastRuby
     end
 
     def load_under(dir)
-      each_under(dir, &method(:require))
+      each_under(dir) do |path|
+        require path
+      end
     end
   end
 end
