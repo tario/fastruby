@@ -246,11 +246,11 @@ module FastRuby
     end
     
 
-    define_method_handler(:infer_value) { |tree|
+    define_method_handler(:infer_value) { |*x| tree = x.first; 
       Value.new(eval(tree[1].to_s))
-    }.condition{|tree| tree.node_type == :const}
+    }.condition{|*x| tree = x.first;  tree.node_type == :const}
     
-    define_method_handler(:infer_value) { |tree|
+    define_method_handler(:infer_value) { |*x| tree = x.first; 
       args_tree = tree[3]
       receiver_tree = tree[1]
       
@@ -260,7 +260,7 @@ module FastRuby
       next false unless (value_1 and value_2)
       
       Value.new(value_1.value == value_2.value)
-    }.condition{|tree|
+    }.condition{|*x| tree = x.first; 
       next false unless tree.node_type == :call
       
       args_tree = tree[3]
@@ -271,7 +271,7 @@ module FastRuby
 
       true
     }
-    define_method_handler(:infer_value) { |tree|
+    define_method_handler(:infer_value) { |*x| tree = x.first; 
       args_tree = tree[3]
       receiver_tree = tree[1]
       infered_type = infer_type(receiver_tree)
@@ -281,7 +281,7 @@ module FastRuby
       else
         nil
       end
-    }.condition{|tree|
+    }.condition{|*x| tree = x.first; 
       next false unless tree.node_type == :call
       method_name = tree[2]
       next false unless method_name == :_class

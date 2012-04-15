@@ -91,7 +91,7 @@ module FastRuby
       end
     end
 
-    define_translator_for(:const, :arity => 1) do |tree|
+    define_translator_for(:const, :arity => 1) do |*x| tree = x.first;
       "rb_const_get(CLASS_OF(plocals->self), #{intern_num(tree[1])})"
     end
     
@@ -216,7 +216,7 @@ module FastRuby
       end
     end
     
-    define_translator_for(:lvar, :arity => 1) do |tree|
+    define_translator_for(:lvar, :arity => 1) do |*x| tree = x.first;
       locals_accessor + tree[1].to_s
     end
 

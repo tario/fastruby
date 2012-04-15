@@ -21,9 +21,9 @@ along with fastruby.  if not, see <http://www.gnu.org/licenses/>.
 module FastRuby
   class Context
     
-    define_translator_for(:lit, :arity => 1){|tree| literal_value tree[1]}
-    define_translator_for(:nil, :arity => 1){|tree| "Qnil"}
-    define_translator_for(:str, :arity => 1){|tree| literal_value tree[1]}
+    define_translator_for(:lit, :arity => 1){|*x| tree = x.first; literal_value tree[1]}
+    define_translator_for(:nil, :arity => 1){|*x| tree = x.first; "Qnil"}
+    define_translator_for(:str, :arity => 1){|*x| tree = x.first; literal_value tree[1]}
 
     define_translator_for(:hash, :method => :to_c_hash)
     def to_c_hash(tree, result_var = nil)
@@ -106,9 +106,9 @@ module FastRuby
       end
     end
 
-    define_translator_for(:self, :arity => 1){|tree| locals_accessor + "self"}
-    define_translator_for(:false, :arity => 1){|tree| "Qfalse"}
-    define_translator_for(:true, :arity => 1){|tree| "Qtrue"}
+    define_translator_for(:self, :arity => 1){|*x| tree = x.first; locals_accessor + "self"}
+    define_translator_for(:false, :arity => 1){|*x| "Qfalse"}
+    define_translator_for(:true, :arity => 1){|*x| "Qtrue"}
 
     define_translator_for(:dot2, :method => :to_c_dot2)
     def to_c_dot2(tree, result_var = nil)
