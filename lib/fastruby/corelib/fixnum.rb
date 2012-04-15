@@ -22,52 +22,55 @@ require "fastruby/sexp_extension"
 
 class Fixnum
   fastruby(:fastruby_only => true, :skip_reduce => true) do
-    def +(b)
-      if b._class == Fixnum
-        _static{LONG2NUM(FIX2LONG(self)+FIX2LONG(b))}
-      elsif b._class == Bignum
-        _static{rb_big_plus(b,self)}
-      elsif b._class == Float
-        _static{DBL2NUM(FIX2LONG(self) + RFLOAT_VALUE(b))}
-      else
-        _static{rb_num_coerce_bin(self, b, inline_c("'+'"))}
-      end
-    end
 
-    def -(b)
-      if b._class == Fixnum
-        _static{LONG2NUM(FIX2LONG(self)-FIX2LONG(b))}
-      elsif b._class == Bignum
-        _static{rb_big_minus(rb_int2big(FIX2LONG(self)),b)}
-      elsif b._class == Float
-        _static{DBL2NUM(FIX2LONG(self) - RFLOAT_VALUE(b))}
-      else
-        _static{rb_num_coerce_bin(self, b, inline_c("'-'"))}
+    if RUBY_VERSION =~ /^1\\.9/
+      def +(b)
+        if b._class == Fixnum
+          _static{LONG2NUM(FIX2LONG(self)+FIX2LONG(b))}
+        elsif b._class == Bignum
+          _static{rb_big_plus(b,self)}
+        elsif b._class == Float
+          _static{DBL2NUM(FIX2LONG(self) + RFLOAT_VALUE(b))}
+        else
+          _static{rb_num_coerce_bin(self, b, inline_c("'+'"))}
+        end
       end
-    end
 
-    def >(y)
-      if y._class == Fixnum
-        _static{FIX2LONG(self)>FIX2LONG(y) ? true: false }
-      elsif y._class == Bignum
-        _static{FIX2INT(rb_big_cmp(rb_int2big(FIX2LONG(self)), y)) > 0 ? true : false}
-      elsif y._class == Float
-        _static{FIX2LONG(self) > RFLOAT_VALUE(y) ? true : false}
-      else
-        _static{rb_num_coerce_relop(self, y, inline_c("'>'"))}
+      def -(b)
+        if b._class == Fixnum
+          _static{LONG2NUM(FIX2LONG(self)-FIX2LONG(b))}
+        elsif b._class == Bignum
+          _static{rb_big_minus(rb_int2big(FIX2LONG(self)),b)}
+        elsif b._class == Float
+          _static{DBL2NUM(FIX2LONG(self) - RFLOAT_VALUE(b))}
+        else
+          _static{rb_num_coerce_bin(self, b, inline_c("'-'"))}
+        end
       end
+
+      def >(y)
+        if y._class == Fixnum
+          _static{FIX2LONG(self)>FIX2LONG(y) ? true: false }
+        elsif y._class == Bignum
+          _static{FIX2INT(rb_big_cmp(rb_int2big(FIX2LONG(self)), y)) > 0 ? true : false}
+        elsif y._class == Float
+          _static{FIX2LONG(self) > RFLOAT_VALUE(y) ? true : false}
+        else
+          _static{rb_num_coerce_relop(self, y, inline_c("'>'"))}
+        end
+      end
+      
+      def <(y)
+        if y._class == Fixnum
+          _static{FIX2LONG(self)<FIX2LONG(y) ? true: false }
+        elsif y._class == Bignum
+          _static{FIX2INT(rb_big_cmp(rb_int2big(FIX2LONG(self)), y)) < 0 ? true : false}
+        elsif y._class == Float
+          _static{FIX2LONG(self) < RFLOAT_VALUE(y) ? true : false}
+        else
+          _static{rb_num_coerce_relop(self, y, inline_c("'<'"))}
+        end
+      end    
     end
-    
-    def <(y)
-      if y._class == Fixnum
-        _static{FIX2LONG(self)<FIX2LONG(y) ? true: false }
-      elsif y._class == Bignum
-        _static{FIX2INT(rb_big_cmp(rb_int2big(FIX2LONG(self)), y)) < 0 ? true : false}
-      elsif y._class == Float
-        _static{FIX2LONG(self) < RFLOAT_VALUE(y) ? true : false}
-      else
-        _static{rb_num_coerce_relop(self, y, inline_c("'<'"))}
-      end
-    end    
   end
 end
