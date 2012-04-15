@@ -444,8 +444,12 @@ module FastRuby
         impl_tree = tree[4][1]
       end
       
-      @alt_method_name = "_" + method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" } + "_" + rand(10000000000).to_s
-      
+      if "0".respond_to?(:ord)
+        @alt_method_name = "_" + method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" } + "_" + rand(10000000000).to_s
+      else
+        @alt_method_name = "_" + method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x[0]}" } + "_" + rand(10000000000).to_s
+      end
+
       args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
         initialize_method_structs(original_args_tree)

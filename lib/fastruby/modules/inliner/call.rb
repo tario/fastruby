@@ -68,8 +68,14 @@ module FastRuby
       }.condition{|tree| tree.node_type == :iter}
     end
     
-    def inline_local_name(method_name, local_name)
-      "__inlined_#{method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" }}_#{local_name}".to_sym
+    if "1".respond_to?(:ord)
+      def inline_local_name(method_name, local_name)
+        "__inlined_#{method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" }}_#{local_name}".to_sym
+      end
+    else
+      def inline_local_name(method_name, local_name)
+        "__inlined_#{method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x[0]}" }}_#{local_name}".to_sym
+      end
     end
     
     def method_obj_or_gtfo(klass, method_name)
