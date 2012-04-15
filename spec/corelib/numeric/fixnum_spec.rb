@@ -80,7 +80,13 @@ describe FastRuby, "fastruby fixnum corelib" do
     end
   end
   
-  [:-@, :abs, :magnitude, :to_f, :size, :zero?, :odd?, :even?, :succ].each do |op|
+
+  test_methods = [:-@, :abs, :to_f, :size, :zero?, :odd?, :even?, :succ]
+  if RUBY_VERSION =~ /^1\\.9/
+    test_methods << :magnitude
+  end  
+
+  test_methods.each do |op|
     test_unary_op(31,op)
     test_unary_op(-31,op)
   end
