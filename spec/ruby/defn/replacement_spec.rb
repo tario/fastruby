@@ -131,22 +131,34 @@ describe FastRuby, "fastruby" do
   end
 
   it "should allow replace CFUNC methods using ruby after they are called and compiled at runtime (through other method)" do
-    fastruby "
-      class ::JU6
-        def foo(a)
-          a.conj
-        end
-      end
-    "
-    
-    ::JU6.new.foo(0)
-    
+    begin
+
       class Fixnum
-        def conj
-          86
-        end
+        alias original_round round
       end
-    
-    ::JU6.new.foo(0).should be == 86 
+      
+      fastruby "
+        class ::JU6
+          def foo(a)
+            a.round
+          end
+        end
+      "
+      
+      ::JU6.new.foo(0)
+      
+        class Fixnum
+          def round
+            86
+          end
+        end
+      
+      ::JU6.new.foo(0).should be == 86 
+
+    ensure
+      class Fixnum
+        alias round original_round
+      end
+    end
   end 
 end
