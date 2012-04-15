@@ -83,11 +83,11 @@ module FastRuby
               
             code = name;
           else
-            args = tree[3][1..-1].map(&method(:to_c)).join(",")
+            args = tree[3][1..-1].map{|st| to_c(st)}.join(",")
             code = "#{method_name}( #{args} )"
           end
         else
-          args = tree[3][1..-1].map(&method(:to_c)).join(",")
+          args = tree[3][1..-1].map{|st| to_c(st)}.join(",")
           code = "#{method_name}( #{args} )"
         end
 
