@@ -23,8 +23,7 @@ module FastRuby
     define_translator_for(:iter, :arity => 1, :priority => 1) { |*x|
       ret = nil
       tree = x.first
-      
-      enable_handler_group(:static_call) do
+      enable_handler_group(:static_call, :to_c) do
         ret = x.size == 1 ? to_c(tree[3]) : to_c(tree[3], x.last)
       end
       ret
@@ -37,7 +36,7 @@ module FastRuby
       ret = nil
       tree = x.first
       
-      disable_handler_group(:static_call) do
+      disable_handler_group(:static_call, :to_c) do
         ret = x.size == 1 ? to_c(tree[3]) : to_c(tree[3], x.last)
       end
       ret
