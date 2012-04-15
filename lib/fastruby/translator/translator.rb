@@ -1289,9 +1289,9 @@ fastruby_local_next:
                         #{@block_struct} *pblock;
                         pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
                         last_expression = rb_iterate(
-                        #{anonymous_function{|name|
+                        #{anonymous_function{|name_|
                           "
-                            static VALUE #{name} (VALUE data) {
+                            static VALUE #{name_} (VALUE data) {
                               VALUE* method_arguments = (VALUE*)data;
                               return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
                             }
@@ -1299,9 +1299,9 @@ fastruby_local_next:
                         }},
                           (VALUE)method_arguments,
                           
-                        #{anonymous_function{|name|
+                        #{anonymous_function{|name_|
                           "
-                            static VALUE #{name} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
+                            static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
 
            VALUE arg;
             #{
