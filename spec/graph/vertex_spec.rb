@@ -1,8 +1,9 @@
 require "fastruby"
 require "fastruby/sexp_extension"
 
+include FastRuby  
+
 describe FastRuby::Graph, "fastruby sexp graph" do
-  include FastRuby  
   it "should allow read vertex from empty graph" do
     graph = Graph.new 
     graph.vertexes

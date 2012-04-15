@@ -1,9 +1,9 @@
 require "fastruby"
 require "fastruby/sexp_extension"
 
-describe FastRuby::Graph, "fastruby sexp graph" do
-  include FastRuby  
+include FastRuby  
 
+describe FastRuby::Graph, "fastruby sexp graph" do
   def self.assert_graph_paths(origin, paths, graph_hash) 
     it "should read paths #{paths.inspect} for graph #{graph_hash} from #{origin}" do
       graph = Graph.new graph_hash
