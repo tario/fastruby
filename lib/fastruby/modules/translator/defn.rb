@@ -156,11 +156,11 @@ private
           method_name[1] = 0;
 
           sprintf(method_name+1, \"#{method_name}\");
-          sprintf(method_name+strlen(method_name), \"%lu\", (unsigned long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
+          sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
           
                       int i;
                       for (i=0; i<argc_; i++) {
-                        sprintf(method_name+strlen(method_name), \"%lu\", (unsigned long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
+                        sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
                       }
 
           void** address = 0;
