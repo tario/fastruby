@@ -53,7 +53,7 @@ def fs(*args)
     tree
   else
     sexp = FastRuby::FastRubySexp.new
-    args.each &sexp.method(:<<)
+    args.each {|subtree| sexp << subtree}
     sexp
   end
 end

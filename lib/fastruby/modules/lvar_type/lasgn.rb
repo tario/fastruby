@@ -25,11 +25,11 @@ module FastRuby
     
     
     define_method_handler(:process) {|tree|
-        @current_index = (@current_index || 1) + 1
-        varname = "lvar_type_tmp_#{@current_index}".to_sym
-        
-        class_condition = fs("_static{CLASS_OF(_a) == ::#{@infer_lvar_map[tree[1]].to_s}._invariant }", :_a => fs(:lvar,varname))
-       fs(:block,
+      @current_index = (@current_index || 1) + 1
+      varname = "lvar_type_tmp_#{@current_index}".to_sym
+      class_condition = fs("_static{CLASS_OF(_a) == ::#{@infer_lvar_map[tree[1]].to_s}._invariant }", :_a => fs(:lvar,varname))
+
+      fs(:block,
             fs(:lasgn, varname, tree[2]),
             fs(:if, class_condition, fs(:lasgn, tree[1], fs(:lvar, varname.to_sym)), fs('_raise(FastRuby::TypeMismatchAssignmentException, "")') )
             )
