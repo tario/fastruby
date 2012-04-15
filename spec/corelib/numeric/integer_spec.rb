@@ -32,8 +32,10 @@ describe FastRuby, "fastruby integer corelib" do
     it "receiver #{recv}.#{op} should return #{expected} #{expected.class}" do
     fastruby(
       "class #{_classname}
-          def foo(argument, &blk)
-            #{recv}.#{op}(argument.call, &blk)
+          def foo(argument)
+            #{recv}.#{op}(argument.call) do |x|
+              yield(x)
+            end
           end
         end
       "
@@ -85,8 +87,8 @@ describe FastRuby, "fastruby integer corelib" do
     it "receiver #{recv}.#{op} should return #{expected} #{expected.class}" do
     fastruby(
       "class #{_classname}
-          def foo(&blk)
-            #{recv}.#{op}(&blk)
+          def foo
+            #{recv}.#{op} do |x| yield(x) end
           end
         end
       "
@@ -94,8 +96,7 @@ describe FastRuby, "fastruby integer corelib" do
     )
     
       returned = Array.new
-      eval(_classname).new.foo(&returned.method(:<<))
-      
+      eval(_classname).new.foo do |x| returned << x end
       returned.should be == expected
     end
     $fixnum_class_num = $fixnum_class_num + 1
