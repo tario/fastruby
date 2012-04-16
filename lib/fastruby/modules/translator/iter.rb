@@ -313,7 +313,17 @@ if call_type == :lambda
 
                 } else if (aux == FASTRUBY_TAG_BREAK) {
                   last_expression = frame.return_value;
-                  goto fastruby_local_next;
+                  typeof(pframe) target_frame_ = (void*)plocals->call_frame;
+                  
+                  if (target_frame_ == 0) {
+                    goto fastruby_local_next;
+                  } else {
+                    if (target_frame_->targetted == 1) {
+                      goto fastruby_local_next;
+                    } else {
+                      #{_raise("rb_eLocalJumpError","illegal break")};
+                    }
+                  }
 "
 end
 }
