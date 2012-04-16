@@ -154,7 +154,7 @@ module FastRuby
           if subtree.node_type == :call
             if subtree[1] == nil
               if subtree[2] == :block_given?
-                subtree[0..-1] = fs(:false)
+                subtree[0..-1] = block_tree ? fs(:true) : fs(:false)
               else
                 subtree[1] = recv_tree.duplicate
               end
