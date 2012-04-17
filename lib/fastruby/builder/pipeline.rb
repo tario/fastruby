@@ -29,24 +29,12 @@ module FastRuby
     def << (object)
       @array << object
     end
-
-    def remove_array(tree)
-      if tree.class == Array or tree.class == FastRubySexp
-        sexp = FastRubySexp.new
-        tree.each do |subtree|
-          sexp << remove_array(subtree)
-        end
-        sexp
-      else
-        tree
-      end
-    end
-    
+      
     def call(arg)
       
       last_result = arg 
       @array.each do |processor|
-        last_result = remove_array processor.call(last_result)
+        last_result = processor.call(last_result)
       end
       
       last_result
