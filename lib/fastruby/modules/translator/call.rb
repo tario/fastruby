@@ -79,7 +79,7 @@ module FastRuby
       recvtype = infer_type(recv)
       
       if args.size > 1
-        if (not recvtype) or args.last[0] == :splat
+        if (not recvtype) or args.last[0] == :splat or (not RUBY_VERSION =~ /^1\\.9/)
           if block_pass_arg
             call_tree = tree.dup
             call_tree[3] = args.select{|arg| if arg == :arglist 
@@ -96,7 +96,6 @@ module FastRuby
                 s(:lasgn, :__x_proc, s(:call, block_pass_arg[1], :to_proc, s(:arglist))),
                 s(:iter, call_tree, block_arguments_tree, block_tree)
                 ).to_fastruby_sexp
-          
             if result_var  
               return to_c(replace_iter_tree,result_var)
             else
