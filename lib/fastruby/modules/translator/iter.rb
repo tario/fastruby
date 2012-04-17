@@ -71,8 +71,7 @@ module FastRuby
 
       str_lvar_initialization = "#{@frame_struct} *pframe;
                                  #{@locals_struct} *plocals;
-                                pframe = (void*)param;
-                                plocals = (void*)pframe->plocals;
+
                                 "
 
       str_arg_initialization = ""
@@ -150,8 +149,11 @@ module FastRuby
               static VALUE #{name}(VALUE param) {
                 // call to #{call_tree[2]}
                  VALUE last_expression = Qnil;
+                 VALUE* args_array = (VALUE*)param;
   
                 #{str_lvar_initialization}
+                pframe = (void*)args_array[0];
+                plocals = (void*)pframe->plocals;
                 #{str_evaluate_args};
                 
               VALUE ret = rb_funcall(#{str_recv}, #{intern_num call_tree[2]}, #{call_args_tree.size-1} #{strargs});
@@ -193,40 +195,16 @@ module FastRuby
                 static VALUE #{name}(VALUE param) {
                   // call to #{call_tree[2]}
   
+                  VALUE* args_array = (VALUE*)param;
+                  int argc = args_array[1];
+                  VALUE* argv = (VALUE*)args_array[2];
+
                   VALUE last_expression = Qnil;
                   #{str_lvar_initialization}
-                  
-                  VALUE array = Qnil;
-                  
-                  #{to_c call_args_tree.last[1], "array"};
-                  
-                  if (TYPE(array) != T_ARRAY) {
-                    array = rb_ary_new4(1,&array);
-                  }
-                  
-                  int argc = #{call_args_tree.size-2};
-                  VALUE argv[#{call_args_tree.size} + _RARRAY_LEN(array)];
-                  
-                  VALUE aux_ = Qnil;;
-                  #{
-                    i = -1
-                    call_args_tree[1..-2].map {|arg|
-                      i = i + 1
-                      "
-                      #{to_c arg, "aux_"};
-                      argv[#{i}] = aux_;
-                      "
-                    }.join(";\n")
-                  };
-                  
-                  int array_len = _RARRAY_LEN(array);
-                  
-                  int i;
-                  for (i=0; i<array_len;i++) {
-                    argv[argc] = rb_ary_entry(array,i);
-                    argc++; 
-                  }
-                  
+
+                  pframe = (void*)args_array[0];
+                  plocals = (void*)pframe->plocals;
+
                   return rb_funcall2(#{str_recv}, #{intern_num call_tree[2]}, argc, argv);
                 }
               "
@@ -235,15 +213,10 @@ module FastRuby
               str_evaluate_args = "
                   #{
                     (0..call_args_tree.size-2).map{|i|
-                      "VALUE arg#{i} = Qnil;"
+                      "VALUE arg#{i} = args_array[#{i+1}];"
                     }.join("\n")
                   }
-                  
-                  #{
-                    (0..call_args_tree.size-2).map{|i|
-                      to_c(call_args_tree[i+1], "arg#{i}")+";"
-                    }.join("\n")
-                  }
+
               "
             end
           end
@@ -596,12 +569,73 @@ fastruby_local_next:
               }
               
 
+#{if call_args_tree.size > 1 and call_args_tree.last[0] == :splat
+"              
+                  VALUE args_array[3];
+                  VALUE array = Qnil;
+                  
+                  #{to_c call_args_tree.last[1], "array"};
+                  
+                  if (TYPE(array) != T_ARRAY) {
+                    array = rb_ary_new4(1,&array);
+                  }
+                  
+                  int argc = #{call_args_tree.size-2};
+                  VALUE argv[#{call_args_tree.size} + _RARRAY_LEN(array)];
+                  
+                  VALUE aux_ = Qnil;;
+                  #{
+                    i = -1
+                    call_args_tree[1..-2].map {|arg|
+                      i = i + 1
+                      "
+                      #{to_c arg, "aux_"};
+                      argv[#{i}] = aux_;
+                      "
+                    }.join(";\n")
+                  };
+                  
+                  int array_len = _RARRAY_LEN(array);
+                  
+                  int i;
+                  for (i=0; i<array_len;i++) {
+                    argv[argc] = rb_ary_entry(array,i);
+                    argc++; 
+                  }
+
+                args_array[0] = (VALUE)pframe;
+                args_array[1] = (VALUE)argc;
+                args_array[2] = (VALUE)argv;
+
               last_expression = rb_iterate(
                 caller_func,
-                (VALUE)pframe,
+                (VALUE)args_array,
                 block_func,
                 (VALUE)plocals);
 
+"
+else
+"                 
+
+              VALUE args_array[#{call_args_tree.size+2}];
+              VALUE aux___ = Qnil;
+              args_array[0] = (VALUE)pframe;
+                  
+              #{
+                (0..call_args_tree.size-2).map{|i|
+                  to_c(call_args_tree[i+1], "aux___")+";"+
+                  "args_array[#{i+1}] = aux___;"
+                }.join("\n")
+              }              
+
+              last_expression = rb_iterate(
+                caller_func,
+                (VALUE)args_array,
+                block_func,
+                (VALUE)plocals);
+"
+end
+}
               if (node == #{@callcc_node_gvar}) {
   
                 // remove active flags of abandoned stack
@@ -645,10 +679,21 @@ fastruby_local_next:
 
         fastruby_call_code = "
                 // call to #{call_tree[2]}
-                #{
-                if call_args_tree.size > 1
-                  str_evaluate_args
-                end
+              #{
+              if call_args_tree.size > 1
+"                   #{
+                   (0..call_args_tree.size-2).map{|i|
+                      "VALUE arg#{i} = Qnil;"
+                    }.join("\n")
+                  }
+                  
+                  #{
+                    (0..call_args_tree.size-2).map{|i|
+                      to_c(call_args_tree[i+1], "arg#{i}")+";"
+                     }.join("\n")
+                   }
+"
+               end
                 };
                 
                 VALUE recv = plocals->self;
