@@ -7,7 +7,7 @@ require "rspec/core/rake_task"
 
 spec = Gem::Specification.new do |s|
   s.name = 'fastruby'
-  s.version = '0.0.19'
+  s.version = '0.0.20'
   s.author = 'Dario Seminara'
   s.email = 'robertodarioseminara@gmail.com'
   s.platform = Gem::Platform::RUBY
@@ -15,7 +15,7 @@ spec = Gem::Specification.new do |s|
   s.homepage = "http://github.com/tario/fastruby"
   s.add_dependency "RubyInline", "= 3.11.0"
   s.add_dependency "ruby_parser", ">= 2.0.6"
-  s.add_dependency "define_method_handler", ">= 0.0.5"
+  s.add_dependency "define_method_handler", ">= 0.0.6"
   s.add_dependency "method_source", ">= 0.6.7"
   s.add_dependency "ruby2ruby", ">= 1.3.1"
   s.has_rdoc = true
