@@ -32,7 +32,7 @@ class Object
 end
 
 module FastRuby
-  VERSION = "0.0.20" unless defined? FastRuby::VERSION
+  VERSION = "0.0.21" unless defined? FastRuby::VERSION
 end
 
 require "fastruby/corelib"
