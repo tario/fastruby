@@ -82,7 +82,7 @@ describe FastRuby, "fastruby fixnum corelib" do
   
 
   test_methods = [:-@, :abs, :to_f, :size, :zero?, :odd?, :even?, :succ]
-  if RUBY_VERSION =~ /^1\\.9/
+  if RUBY_VERSION =~ /^1\.9/
     test_methods << :magnitude
   end  
 

@@ -22,7 +22,7 @@ require "fastruby/sexp_extension"
 
 class Fixnum
   fastruby(:fastruby_only => true, :skip_reduce => true) do
-    if RUBY_VERSION =~ /^1\\.9/
+    if RUBY_VERSION =~ /^1\.9/
       def +(b)
         if b._class == Fixnum
           _static{LONG2NUM(FIX2LONG(self)+FIX2LONG(b))}
