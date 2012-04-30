@@ -189,12 +189,10 @@ module FastRuby
       @callcc_node_gvar = add_global_name("void*", 0);
       
       init_extra << "
-        #{@lambda_node_gvar} = rb_method_entry(rb_cObject, #{intern_num :lambda})->def;
-        #{@proc_node_gvar} = rb_method_entry(rb_mKernel, #{intern_num :proc})->def;
-        #{@procnew_node_gvar} = rb_method_entry(CLASS_OF(rb_const_get(rb_cObject, #{intern_num :Proc})), #{intern_num :new})->def;
-        if (rb_method_entry(rb_mKernel, #{intern_num :callcc})) {
-          #{@callcc_node_gvar} = rb_method_entry(rb_mKernel, #{intern_num :callcc})->def;
-        }
+        #{@lambda_node_gvar} = rb_method_entry(rb_cObject, #{intern_num :lambda});
+        #{@proc_node_gvar} = rb_method_entry(rb_cObject, #{intern_num :proc});
+        #{@procnew_node_gvar} = rb_method_entry(CLASS_OF(rb_const_get(rb_cObject, #{intern_num :Proc})), #{intern_num :new});
+        #{@callcc_node_gvar} = rb_method_entry(rb_mKernel, #{intern_num :callcc});
       "
 	   end
 

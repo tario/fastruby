@@ -547,7 +547,7 @@ fastruby_local_next:
               NODE* node = rb_method_node(CLASS_OF(pframe->next_recv), #{intern_num mname});
 #endif
 #ifdef RUBY_1_9
-              void* node = rb_method_entry(CLASS_OF(pframe->next_recv), #{intern_num mname})->def;
+              void* node = rb_method_entry(CLASS_OF(pframe->next_recv), #{intern_num mname});
 #endif
 
               if (
