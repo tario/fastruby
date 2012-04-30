@@ -23,6 +23,7 @@ require "fastruby/object"
 require "fastruby/exceptions"
 require "fastruby/custom_require"
 require "fastruby/set_tree"
+require "continuation" if RUBY_VERSION =~ /^1\.9/
 require "base64"
 
 class Object
