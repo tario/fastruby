@@ -1188,6 +1188,153 @@ fastruby_local_next:
 
       name
     end
+    
+    # returns a anonymous function who made a dynamic call
+    def dynamic_call(signature, mname)
+      anonymous_function{|funcname| "
+        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
+
+          VALUE klass = CLASS_OF(self);
+          char method_name[argc*40+64];
+
+          method_name[0] = '_';
+          method_name[1] = 0;
+
+          sprintf(method_name+1, \"#{mname}\");
+          sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
+          
+                      int i;
+                      for (i=0; i<argc; i++) {
+                        sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
+                      }
+
+          void** address = 0;
+          void* fptr = 0;
+          ID id;
+          VALUE rb_method_hash;
+
+          id = rb_intern(method_name);
+          
+          if (rb_respond_to(klass, #{intern_num :method_hash})) {
+            rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
+            
+            if (rb_method_hash != Qnil) {
+              VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
+              if (tmp != Qnil) {
+                  address = (void**)NUM2PTR(tmp);
+                  fptr = *address;
+              }
+            }
+            
+            if (fptr == 0) {
+              VALUE fastruby_method = rb_funcall(klass, #{intern_num :fastruby_method}, 1, #{literal_value mname});
+              VALUE tree = rb_funcall(fastruby_method, #{intern_num :tree}, 0,0);
+  
+              if (RTEST(tree)) {
+              
+                VALUE argv_class[argc+1];
+                              
+                argv_class[0] = CLASS_OF(self); 
+                for (i=0; i<argc; i++) {
+                argv_class[i+1] = CLASS_OF(argv[i]);
+                }
+                              
+                VALUE signature = rb_ary_new4(argc+1,argv_class);
+                
+                rb_funcall(klass, #{intern_num :build}, 2, signature,rb_str_new2(#{mname.to_s.inspect}));
+      
+                id = rb_intern(method_name);
+                rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
+                
+                if (rb_method_hash != Qnil) {
+                  VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
+                  if (tmp != Qnil) {
+                      address = (void**)NUM2PTR(tmp);
+                      fptr = *address;
+                  }
+                }
+                
+                if (fptr == 0) {
+                  rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
+                }
+              }
+            }
+          }
+          
+          if (fptr != 0) {
+            return ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))fptr)(self,(VALUE)block,(VALUE)frame, argc, argv);
+          }
+
+
+       
+          #{@frame_struct}* pframe = frame;
+          VALUE method_arguments[4];
+          
+          method_arguments[0] = (VALUE)argc;
+          method_arguments[1] = (VALUE)argv;
+          method_arguments[2] = (VALUE)self;
+          method_arguments[3] = (VALUE)block;
+            
+            if (block == 0) {
+              return #{
+                protected_block "
+                  last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", false, "method_arguments"
+                };
+          
+            } else {
+              return #{
+                  protected_block "
+                        #{@block_struct} *pblock;
+                        pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
+                        last_expression = rb_iterate(
+                        #{anonymous_function{|name_|
+                          "
+                            static VALUE #{name_} (VALUE data) {
+                              VALUE* method_arguments = (VALUE*)data;
+                              return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
+                            }
+                          "
+                        }},
+                          (VALUE)method_arguments,
+                          
+                        #{anonymous_function{|name_|
+                          "
+                            static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
+
+           VALUE arg;
+            #{
+            # TODO: access directly to argc and argv for optimal execution
+            if RUBY_VERSION =~ /^1\.9/ 
+              "
+                if (TYPE(arg_) == T_ARRAY) {
+                  if (_RARRAY_LEN(arg_) <= 1) {
+                    arg = rb_ary_new4(argc,argv);
+                  } else {
+                    arg = arg_;
+                  }
+                } else {
+                  arg = rb_ary_new4(argc,argv);
+                }
+              "
+            else
+              "arg = arg_;"
+            end
+            }
+        
+                              return rb_proc_call(param, arg);
+                            }
+                          "
+                        }},
+                          pblock->proc
+                        );
+                ", false, "method_arguments"
+                };
+            }
+
+        }
+        "
+      }
+    end
 
     def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil, is_block_call = false)
       name = self.add_global_name("void*", 0);
