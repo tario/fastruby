@@ -1280,7 +1280,7 @@ fastruby_local_next:
             if (block == 0) {
               return #{
                 protected_block "
-                  last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", false, "method_arguments"
+                  last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", true, "method_arguments"
                 };
           
             } else {
@@ -1329,7 +1329,7 @@ fastruby_local_next:
                         }},
                           pblock->proc
                         );
-                ", false, "method_arguments"
+                ", true, "method_arguments"
                 };
             }
 
