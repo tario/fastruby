@@ -1202,7 +1202,7 @@ fastruby_local_next:
           method_name[0] = '_';
           method_name[1] = 0;
 
-          sprintf(method_name+1, \"#{mname}\");
+          strncpy(method_name+1, \"#{mname}\",sizeof(method_name)-4);
           sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
           
                       int i;
