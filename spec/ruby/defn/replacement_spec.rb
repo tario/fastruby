@@ -160,5 +160,33 @@ describe FastRuby, "fastruby" do
         alias round original_round
       end
     end
-  end 
+  end
+
+  it "should allow replace methods when receiver types are not inferenced" do
+    fastruby "
+      class ::JU7
+        def foo
+          77
+        end
+      end
+    "
+
+    fastruby "
+      class ::JU8
+        def bar(l)
+          l.call.foo
+        end
+      end
+    "
+
+    ::JU8.new.bar(lambda{::JU7.new}).should be == 77
+
+      class ::JU7
+        def foo
+          99
+        end
+     end
+    
+    ::JU8.new.bar(lambda{::JU7.new}).should be == 99
+  end
 end
