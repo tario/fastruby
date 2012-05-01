@@ -1191,74 +1191,108 @@ fastruby_local_next:
     
     # returns a anonymous function who made a dynamic call
     def dynamic_call(signature, mname)
+      # TODO: initialize the table
+      table_size = 64
+      table_name = reserve_table(table_size, signature.size)
+      
       anonymous_function{|funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
 
+          void* fptr = 0;
+
           VALUE klass = CLASS_OF(self);
           char method_name[argc*40+64];
-
-          method_name[0] = '_';
-          method_name[1] = 0;
-
-          strncpy(method_name+1, \"#{mname}\",sizeof(method_name)-4);
-          sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
           
-                      int i;
-                      for (i=0; i<argc; i++) {
-                        sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
-                      }
-
-          void** address = 0;
-          void* fptr = 0;
-          ID id;
-          VALUE rb_method_hash;
-
-          id = rb_intern(method_name);
+          unsigned int fptr_hash = klass;
           
-          if (rb_respond_to(klass, #{intern_num :method_hash})) {
-            rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
-            
-            if (rb_method_hash != Qnil) {
-              VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
-              if (tmp != Qnil) {
-                  address = (void**)NUM2PTR(tmp);
-                  fptr = *address;
-              }
+          int j;
+          for (j=0; j<argc; j++) {
+            fptr_hash += CLASS_OF(argv[j]);
+          }
+          
+          fptr_hash = fptr_hash % #{table_size};
+
+          j = 0;
+          if (#{table_name}[fptr_hash].argument_type[0] == klass) {
+            for (j=1; j<argc+1; j++) {
+              if (#{table_name}[fptr_hash].argument_type[j] != CLASS_OF(argv[j-1])) break;
             }
-            
-            if (fptr == 0) {
-              VALUE fastruby_method = rb_funcall(klass, #{intern_num :fastruby_method}, 1, #{literal_value mname});
-              VALUE tree = rb_funcall(fastruby_method, #{intern_num :tree}, 0,0);
-  
-              if (RTEST(tree)) {
+          }
+
+          if (j==argc+1) {
+            fptr = #{table_name}[fptr_hash].address;
+          } else {
               
-                VALUE argv_class[argc+1];
-                              
-                argv_class[0] = CLASS_OF(self); 
-                for (i=0; i<argc; i++) {
-                argv_class[i+1] = CLASS_OF(argv[i]);
+            method_name[0] = '_';
+            method_name[1] = 0;
+  
+            strncpy(method_name+1, \"#{mname}\",sizeof(method_name)-4);
+            sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
+            
+                        int i;
+                        for (i=0; i<argc; i++) {
+                          sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
+                        }
+  
+            void** address = 0;
+            ID id;
+            VALUE rb_method_hash;
+  
+            id = rb_intern(method_name);
+            
+            if (rb_respond_to(klass, #{intern_num :method_hash})) {
+              rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
+              
+              if (rb_method_hash != Qnil) {
+                VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
+                if (tmp != Qnil) {
+                    address = (void**)NUM2PTR(tmp);
+                    fptr = *address;
                 }
-                              
-                VALUE signature = rb_ary_new4(argc+1,argv_class);
+              }
+              
+              if (fptr == 0) {
+                VALUE fastruby_method = rb_funcall(klass, #{intern_num :fastruby_method}, 1, #{literal_value mname});
+                VALUE tree = rb_funcall(fastruby_method, #{intern_num :tree}, 0,0);
+    
+                if (RTEST(tree)) {
                 
-                rb_funcall(klass, #{intern_num :build}, 2, signature,rb_str_new2(#{mname.to_s.inspect}));
-      
-                id = rb_intern(method_name);
-                rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
-                
-                if (rb_method_hash != Qnil) {
-                  VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
-                  if (tmp != Qnil) {
-                      address = (void**)NUM2PTR(tmp);
-                      fptr = *address;
+                  VALUE argv_class[argc+1];
+                                
+                  argv_class[0] = CLASS_OF(self); 
+                  for (i=0; i<argc; i++) {
+                  argv_class[i+1] = CLASS_OF(argv[i]);
+                  }
+                                
+                  VALUE signature = rb_ary_new4(argc+1,argv_class);
+                  
+                  rb_funcall(klass, #{intern_num :build}, 2, signature,rb_str_new2(#{mname.to_s.inspect}));
+        
+                  id = rb_intern(method_name);
+                  rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
+                  
+                  if (rb_method_hash != Qnil) {
+                    VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
+                    if (tmp != Qnil) {
+                        address = (void**)NUM2PTR(tmp);
+                        fptr = *address;
+                    }
+                  }
+                  
+                  if (fptr == 0) {
+                    rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
                   }
                 }
-                
-                if (fptr == 0) {
-                  rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
-                }
               }
             }
+            
+            // insert the value on table
+            #{table_name}[fptr_hash].argument_type[0] = klass;
+            for (j=1; j<argc+1; j++) {
+              #{table_name}[fptr_hash].argument_type[j] = CLASS_OF(argv[j-1]);
+            }
+            
+            #{table_name}[fptr_hash].address = fptr;
           }
           
           if (fptr != 0) {
@@ -1668,6 +1702,19 @@ fastruby_local_next:
 
       @intern_num_hash[symbol] = name
 
+      name
+    end
+    
+    def reserve_table(size, argument_count)
+      name = "glb_table" + rand(1000000000).to_s
+      
+      extra_code << "
+        static struct {
+          VALUE argument_type[#{argument_count}];
+          void* address;
+        } #{name}[#{size}];
+      "
+      
       name
     end
 
