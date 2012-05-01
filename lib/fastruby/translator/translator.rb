@@ -1203,6 +1203,7 @@ fastruby_local_next:
       
         VALUE mname = #{literal_value mname};
         VALUE recvtype = #{literal_value recvtype};
+        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_builder_module}, 1, recvtype);
         VALUE fastruby_method = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);      
         rb_iterate(#{anonymous_function{|funcname|
           "static VALUE #{funcname}(VALUE recv) {
