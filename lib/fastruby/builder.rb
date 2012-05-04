@@ -34,7 +34,22 @@ require FastRuby.fastruby_load_path + "/../ext/fastruby_base/fastruby_base"
 module FastRuby
   class Method
     attr_accessor :options
-
+    
+    def self.observe_method_name(mname, &blk)
+      @observers ||= Hash.new
+      @observers[mname] = @observers[mname] || Array.new
+      @observers[mname] << lambda(&blk)
+    end
+    
+    def self.notify_method_name(mname)
+      return unless @observers
+      return unless @observers[mname]
+      
+      @observers[mname].each do |obs|
+        obs.call
+      end
+    end
+        
     def initialize(method_name, owner)
       @method_name = method_name
       @owner = owner
@@ -46,6 +61,8 @@ module FastRuby
     end
     
     def tree_changed
+      FastRuby::Method.notify_method_name(@method_name)
+      
       @observers.values.each do |observer|
         observer.call(self)
       end

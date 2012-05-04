@@ -1197,33 +1197,59 @@ fastruby_local_next:
       
       recvtype = signature.first
       if recvtype
-      
-      init_extra << "{
-        memset(#{table_name},0,sizeof(#{table_name}));
-      
-        VALUE mname = #{literal_value mname};
-        VALUE recvtype = #{literal_value recvtype};
-        rb_funcall(#{literal_value FastRuby}, #{intern_num :set_builder_module}, 1, recvtype);
-        VALUE fastruby_method = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);      
-        rb_iterate(#{anonymous_function{|funcname|
-          "static VALUE #{funcname}(VALUE recv) {
-            return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value(mname.to_s + "#" + table_name.to_s)});
-          }
-          "
-        }},fastruby_method,
-          #{anonymous_function{|funcname|
-            "static VALUE #{funcname}() {
-              // clear table
-              memset(#{table_name},0,sizeof(#{table_name}));
-              return Qnil;
+        
+        init_extra << "{
+          memset(#{table_name},0,sizeof(#{table_name}));
+        
+          VALUE mname = #{literal_value mname};
+          VALUE recvtype = #{literal_value recvtype};
+          rb_funcall(#{literal_value FastRuby}, #{intern_num :set_builder_module}, 1, recvtype);
+          VALUE fastruby_method = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);      
+          rb_iterate(#{anonymous_function{|funcname|
+            "static VALUE #{funcname}(VALUE recv) {
+              return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value(mname.to_s + "#" + table_name.to_s)});
             }
-            " 
-          }
-          }
-        ,Qnil);
-      }
-      "
-      
+            "
+          }},fastruby_method,
+            #{anonymous_function{|funcname|
+              "static VALUE #{funcname}() {
+                // clear table
+                memset(#{table_name},0,sizeof(#{table_name}));
+                return Qnil;
+              }
+              " 
+            }
+            }
+          ,Qnil);
+        }
+        "
+      else
+        
+        # TODO: implemente this in ruby
+        init_extra << "
+        {
+          memset(#{table_name},0,sizeof(#{table_name}));
+        
+          rb_iterate(#{anonymous_function{|funcname|
+            "static VALUE #{funcname}(VALUE recv) {
+              return rb_funcall(recv, #{intern_num :observe_method_name}, 1, #{literal_value(mname.to_sym)});
+            }
+            "
+          }},#{literal_value FastRuby::Method},
+            #{anonymous_function{|funcname|
+              "static VALUE #{funcname}() {
+                // clear table
+                memset(#{table_name},0,sizeof(#{table_name}));
+                return Qnil;
+              }
+              " 
+            }
+            }
+          ,Qnil);
+          
+        }
+        "
+          
       end
       
       anonymous_function{|funcname| "
