@@ -445,7 +445,8 @@ end
             frame.return_value = Qnil;
             frame.rescue = 0;
             frame.targetted = 0;
-            frame.thread_data = parent_frame->thread_data;
+            frame.thread_data = 0;
+            if (parent_frame != 0) frame.thread_data = parent_frame->thread_data;
             if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
 
             plocals = frame.plocals;
@@ -669,8 +670,8 @@ end
           funcall_call_code
         end
       else
-        encoded_address = encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name, true)
-
+        encoded_address = dynamic_block_call(signature,mname)
+        
         if call_args_tree.size > 1
           strargs = (0..call_args_tree.size-2).map{|i| "arg#{i}"}.join(",")
         else
@@ -704,26 +705,16 @@ end
                 end
                 } 
 
-                ret = ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))#{encoded_address})(recv, (VALUE)&block, (VALUE)&call_frame, #{call_args_tree.size-1}, (VALUE[]){#{strargs}});
+                int block_call = 0;
+                ret = ((VALUE(*)(VALUE,void*,void*,int,VALUE*,int*))#{encoded_address})(recv, &block, &call_frame, #{call_args_tree.size-1}, (VALUE[]){#{strargs}},&block_call);
+                
+                if (block_call) {
+                  ret = #{funcall_call_code};
+                }
             "
         
         code = "
-          if (#{@last_address_name} == 0) {
-            return #{funcall_call_code};
-          } else {
-            #{if recvtype and inference_complete
-              "if (*#{@last_address_name} == 0) {
-                rb_funcall(#{literal_value recvtype},#{intern_num :build}, 2, #{literal_value signature}, #{literal_value mname});
-              }
-              "
-            end
-            }
-            if (*#{@last_address_name} == 0) {
-              return #{funcall_call_code};
-            } else {
-              #{fastruby_call_code}
-            }
-          }
+            #{fastruby_call_code};
         "
         
         fastruby_precode = "                 #{@block_struct} block;

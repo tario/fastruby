@@ -1189,8 +1189,12 @@ fastruby_local_next:
       name
     end
     
+    def dynamic_block_call(signature, mname)
+      dynamic_call(signature, mname, true)
+    end
+
     # returns a anonymous function who made a dynamic call
-    def dynamic_call(signature, mname)
+    def dynamic_call(signature, mname, return_on_block_call = false)
       # TODO: initialize the table
       table_size = 64
       table_name = reserve_table(table_size, signature.size)
@@ -1251,9 +1255,9 @@ fastruby_local_next:
         "
           
       end
-      
+
       anonymous_function{|funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
+        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv #{return_on_block_call ? ", int* block_call" : ""}){
 
           void* fptr = 0;
 
@@ -1373,377 +1377,82 @@ fastruby_local_next:
                 };
           
             } else {
-              return #{
-                  protected_block "
-                        #{@block_struct} *pblock;
-                        pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
-                        last_expression = rb_iterate(
-                        #{anonymous_function{|name_|
-                          "
-                            static VALUE #{name_} (VALUE data) {
-                              VALUE* method_arguments = (VALUE*)data;
-                              return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
-                            }
-                          "
-                        }},
-                          (VALUE)method_arguments,
-                          
-                        #{anonymous_function{|name_|
-                          "
-                            static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
-
-           VALUE arg;
-            #{
-            # TODO: access directly to argc and argv for optimal execution
-            if RUBY_VERSION =~ /^1\.9/ 
-              "
-                if (TYPE(arg_) == T_ARRAY) {
-                  if (_RARRAY_LEN(arg_) <= 1) {
-                    arg = rb_ary_new4(argc,argv);
-                  } else {
-                    arg = arg_;
-                  }
-                } else {
-                  arg = rb_ary_new4(argc,argv);
-                }
-              "
-            else
-              "arg = arg_;"
-            end
-            }
-        
-                              return rb_proc_call(param, arg);
-                            }
-                          "
-                        }},
-                          pblock->proc
-                        );
-                ", true, "method_arguments"
-                };
-            }
-
-        }
-        "
-      }
-    end
-
-    def encode_address(recvtype,signature,mname,call_tree,inference_complete,convention_global_name = nil, is_block_call = false)
-      name = self.add_global_name("void*", 0);
-      address_name = self.add_global_name("void**", 0);
-      @last_address_name = address_name
-      cfunc_address_name = self.add_global_name("void**", 0);
-      cfunc_real_address_name  = self.add_global_name("void*", 0);
-      tree_pointer_name = self.add_global_name("VALUE*", 0);
-      
-      if call_tree[3].select{|st| st.respond_to?(:node_type) ? st[0] == :block_pass : false}
-        is_block_call = true
-      end
-      
-      args_tree = call_tree[3].reject{|st| st.respond_to?(:node_type) ? st[0] == :block_pass : false}
-      method_tree = nil
-
-      begin
-        method_tree = recvtype.instance_method(@method_name.to_sym).fastruby.tree
-      rescue NoMethodError
-      end
-
-      strargs_signature = (0..args_tree.size-2).map{|x| "VALUE arg#{x}"}.join(",")
-      strargs = (0..args_tree.size-2).map{|x| "arg#{x}"}.join(",")
-      inprocstrargs = (1..args_tree.size-1).map{|x| "((VALUE*)method_arguments)[#{x}]"}.join(",")
-
-      if args_tree.size > 1
-        strargs_signature = "," + strargs_signature
-        toprocstrargs = "self,"+strargs
-        strargs = "," + strargs
-        inprocstrargs = ","+inprocstrargs
-      else
-        toprocstrargs = "self"
-      end
-
-      value_cast = ( ["VALUE"]*(args_tree.size) ).join(",") + ",VALUE,VALUE"
-
-      recvdump = nil
-
-      begin
-         recvdump = literal_value recvtype
-      rescue
-      end
-      
-      pureruby_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
-          #{@frame_struct}* pframe = frame;
-          VALUE method_arguments[3];
-          
-          method_arguments[0] = (VALUE)argc;
-          method_arguments[1] = (VALUE)argv;
-          method_arguments[2] = (VALUE)self;
-          
-          return #{
-            protected_block "last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", false, "method_arguments"
-            };
-        }
-      "
-      }
-      
-      generic_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv){
-        
-          #{@frame_struct}* pframe = frame;
-          VALUE method_arguments[4];
-          
-          method_arguments[0] = (VALUE)argc;
-          method_arguments[1] = (VALUE)argv;
-          method_arguments[2] = (VALUE)self;
-          method_arguments[3] = (VALUE)block;
-          
-          void* fptr = 0;
-          
-          if (*#{address_name} == 0) {
-            if (#{tree_pointer_name} != 0) {
-              if (*#{tree_pointer_name} != Qnil) {
-                VALUE signature = #{literal_value signature};
-                VALUE recvtype = #{recvdump};
-                VALUE mname = #{literal_value mname};
-                
-                rb_funcall(recvtype, #{intern_num :build}, 2, signature, mname);
-              }
-            }
-          }
-          
-          fptr = *#{address_name};
-          
-            if (fptr == 0) {
-              fptr = *#{cfunc_address_name};
-              if (fptr != 0) {
-                return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*) ) (fptr) )(self,(VALUE)block,(VALUE)frame, argc, argv);  
-              }
-            }
-
-          if (fptr == 0) {
-            if (block==0) {
-              return #{
-                protected_block "last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", false, "method_arguments"
-                };
-
-            } else {
-              return #{
-                  protected_block "
-                        #{@block_struct} *pblock;
-                        pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
-                        last_expression = rb_iterate(
-                        #{anonymous_function{|name_|
-                          "
-                            static VALUE #{name_} (VALUE data) {
-                              VALUE* method_arguments = (VALUE*)data;
-                              return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
-                            }
-                          "
-                        }},
-                          (VALUE)method_arguments,
-                          
-                        #{anonymous_function{|name_|
-                          "
-                            static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
-
-           VALUE arg;
-            #{
-            # TODO: access directly to argc and argv for optimal execution
-            if RUBY_VERSION =~ /^1\.9/ 
-              "
-                if (TYPE(arg_) == T_ARRAY) {
-                  if (_RARRAY_LEN(arg_) <= 1) {
-                    arg = rb_ary_new4(argc,argv);
-                  } else {
-                    arg = arg_;
-                  }
-                } else {
-                  arg = rb_ary_new4(argc,argv);
-                }
-              "
-            else
-              "arg = arg_;"
-            end
-            }
-        
-                              return rb_proc_call(param, arg);
-                            }
-                          "
-                        }},
-                          pblock->proc
-                        );
-                ", false, "method_arguments"
-                };
-            }
-
-          } else {
-            return ( (VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*)) (fptr) )(self,(VALUE)block,(VALUE)frame,argc,argv);  
-          }
-        }
-        "
-      }
-
-
-      cfuncall1inprocargs = (0..args_tree.size-2).map{|x| "argv[#{x}]"}.join(",")
-      cfuncall1inprocargs = ","+cfuncall1inprocargs if cfuncall1inprocargs != ""
-      
-      cfunc_value_cast = (["VALUE"]*args_tree.size).join(",")
-      cfunc_wrapper = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
-          return rb_vm_call(ruby_current_thread, self, #{intern_num mname.to_sym}, argc, argv, #{cfunc_real_address_name});
-        }
-        "
-      }
-      
-      toprocstrargs = (0..25).map{|x| "arg#{x}"}.join(",")
-      strargs_signature = (0..25).map{|x| "VALUE arg#{x}"}.join(",")
-
-      cfunc_wrapper_1 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
-            return ( (VALUE(*)(int, VALUE*, VALUE)) (#{cfunc_real_address_name}) )(argc,argv,self);
-        }
-        "
-      }
-
-      cfunc_wrapper_2 = anonymous_function{ |funcname| "
-        static VALUE #{funcname}(VALUE self, void* block,void* frame, int argc, VALUE* argv){
-            VALUE args = rb_ary_new3(argc, argv);
-            return ( (VALUE(*)(VALUE,VALUE)) (#{cfunc_real_address_name}) )(self,args);
-        }
-        "
-      }
-
-      update_cfunc_method = anonymous_function{ |funcname| "
-          static VALUE #{funcname}(){
-                void** default_address = (void**)#{cfunc_address_name};
-                ID default_id = rb_intern(\"default\");
-                VALUE recvtype = #{recvdump};
-
-                if (1) {
-                  *default_address = 0;
-    
-    #{
-    if RUBY_VERSION == "1.9.2"
-      
-    "
-                  rb_method_entry_t* me = rb_method_entry(recvtype,#{intern_num mname});
-                  if (me != 0) {
-                    rb_method_definition_t* def = me->def;
-                    
-                    if (def->type == VM_METHOD_TYPE_CFUNC) {
-                      *default_address = #{cfunc_wrapper};
-                      #{cfunc_real_address_name} = (void*)me;
-                    }
-                  }
-    "
-    end
-    }
-                  if (default_address != 0) {
-                    if (recvtype != Qnil) { 
-                      rb_funcall(
-                          recvtype,
-                          #{intern_num :register_method_value}, 
-                          3,
-                          #{literal_value mname},
-                          PTR2NUM(default_id),
-                          PTR2NUM(default_address)
-                          );
-                    }
-                  }
-                }
-              return Qnil;
-          }
-        "
-      }
-        
-        
-
-      if recvdump and recvtype
-        init_extra << "
-          {
-            VALUE recvtype = #{recvdump};
-            rb_funcall(#{literal_value FastRuby}, #{intern_num :set_builder_module}, 1, recvtype);
-            VALUE signature = #{literal_value signature};
-            VALUE mname = #{literal_value mname};
-            VALUE tree = #{literal_value method_tree};
-            VALUE rb_str_signature = rb_funcall(
-                                      #{literal_value FastRuby},
-                                      #{intern_num :make_str_signature},
-                                      2,
-                                      mname,
-                                      signature);
-
-
-
-            VALUE fastruby_method = rb_funcall(recvtype, #{intern_num :fastruby_method}, 1, mname);
-            #{tree_pointer_name} = (VALUE*)NUM2PTR(fastruby_method_tree_pointer(fastruby_method));
-            
-            ID id;
-            ID default_id = rb_intern(\"default\");
-            VALUE rb_method_hash;
-            void** address = 0;
-            void** default_address = 0;
-            id = rb_intern(RSTRING_PTR(rb_str_signature));
-            rb_method_hash = rb_funcall(recvtype, #{intern_num :method_hash},1,mname);
-
-            if (rb_method_hash != Qnil) {
-              VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
-              if (tmp != Qnil) {
-                  address = (void*)NUM2PTR(tmp);
-              }
-              
-              tmp = rb_hash_aref(rb_method_hash, PTR2NUM(default_id));
-              if (tmp != Qnil) {
-                 default_address = (void*)NUM2PTR(tmp);
-              }
-            }
-            
-            if (default_address==0) {
-              default_address = malloc(sizeof(void*));
-              *default_address = 0;
-            }
-            #{cfunc_address_name} = default_address;
-            #{unless is_block_call
-              "
-              #{update_cfunc_method}();
-              rb_iterate(#{anonymous_function{|funcname|
-                "static VALUE #{funcname}(VALUE recv) {
-                  return rb_funcall(recv, #{intern_num :observe}, 1, #{literal_value(@alt_method_name + "#" + cfunc_address_name)});
-                }
+              #{
+              if return_on_block_call
+                "*block_call = 1;
+                return Qnil;
                 "
-              }},fastruby_method,#{update_cfunc_method},Qnil);
-              "
-            end
-            }
-
-            if (address==0) {
-              address = malloc(sizeof(void*));
-              
-              if (recvtype != Qnil) { 
-                rb_funcall(
-                    recvtype,
-                    #{intern_num :register_method_value}, 
-                    3,
-                    #{literal_value mname},
-                    PTR2NUM(id),
-                    PTR2NUM(address)
-                    );
-              }
-  
-              *address = 0; //(void*)
-            }
+              else
+                "
+                return #{
+                    protected_block "
+                          #{@block_struct} *pblock;
+                          pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
+                          last_expression = rb_iterate(
+                          #{anonymous_function{|name_|
+                            "
+                              static VALUE #{name_} (VALUE data) {
+                                VALUE* method_arguments = (VALUE*)data;
+                                return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
+                              }
+                            "
+                          }},
+                            (VALUE)method_arguments,
+                            
+                          #{anonymous_function{|name_|
+                            "
+                              static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
+                              #{@block_struct}* pblock = (void*)param;
+                              
+                                if (pblock->proc != Qnil) {
+                                   VALUE arg;
+                                    #{
+                                    # TODO: access directly to argc and argv for optimal execution
+                                    if RUBY_VERSION =~ /^1\.9/ 
+                                      "
+                                        if (TYPE(arg_) == T_ARRAY) {
+                                          if (_RARRAY_LEN(arg_) <= 1) {
+                                            arg = rb_ary_new4(argc,argv);
+                                          } else {
+                                            arg = arg_;
+                                          }
+                                        } else {
+                                          arg = rb_ary_new4(argc,argv);
+                                        }
+                                      "
+                                    else
+                                      "arg = arg_;"
+                                    end
+                                    }
             
-            #{address_name} = address;
-            #{name} = (void*)#{generic_wrapper};
-          }
-        "
-      else
-        init_extra << "
-        // ruby, wrap rb_funcall
-        #{name} = (void*)#{pureruby_wrapper};
-        "
-      end
+                                  return rb_proc_call(pblock->proc, arg);
+    
+                                } else {
+                                    #{
+                                    # TODO: access directly to argc and argv for optimal execution
+                                    if RUBY_VERSION =~ /^1\.9/
+                                      "return ((VALUE(*)(int,VALUE*,VALUE,VALUE))pblock->block_function_address)(argc,argv,(VALUE)pblock->block_function_param,(VALUE)0);" 
+                                    else
+                                      "return Qnil;"
+                                    end
+                                    }
+                                }
+                              
+                              }
+                            "
+                          }},
+                            (VALUE)pblock
+                          );
+                  ", true, "method_arguments"
+                  };
+                "
+              end
+              }
+            }
 
-      name
+        }
+        "
+      }
     end
 
     def intern_num(symbol)
