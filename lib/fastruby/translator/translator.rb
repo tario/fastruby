@@ -1196,11 +1196,31 @@ fastruby_local_next:
     # returns a anonymous function who made a dynamic call
     def dynamic_call(signature, mname, return_on_block_call = false, funcall_fallback = true, global_klass_variable = nil)
       # TODO: initialize the table
-      table_size = 64
-      max_argument_size = signature.size
-      table_name = reserve_table(table_size, max_argument_size)
-      
+      max_argument_size = 0
       recvtype = signature.first
+
+      unless recvtype
+        max_argument_size = max_argument_size + 1
+      end
+
+      compare_hash = {}
+      (1..signature.size-1).each do |j|
+        unless signature[j]
+          compare_hash[max_argument_size] = j-1
+          max_argument_size = max_argument_size + 1
+        end
+      end
+
+      table_size = if compare_hash.size == 0
+        1
+      elsif compare_hash.size == 1
+        16
+      else
+        64
+      end
+
+      table_name = reserve_table(table_size, max_argument_size)
+
       if recvtype
         
         init_extra << "{
@@ -1259,9 +1279,7 @@ fastruby_local_next:
 
       anonymous_function{|funcname| "
         static VALUE #{funcname}(VALUE self,void* block,void* frame, int argc, VALUE* argv #{return_on_block_call ? ", int* block_call" : ""}){
-
           void* fptr = 0;
-
           #{if global_klass_variable
           "
           VALUE klass = #{global_klass_variable};
@@ -1275,26 +1293,58 @@ fastruby_local_next:
 
           char method_name[argc*40+64];
           
-          unsigned int fptr_hash = klass;
-          
-          int j;
-          for (j=0; j<argc; j++) {
-            fptr_hash += CLASS_OF(argv[j]);
-          }
-          
-          fptr_hash = fptr_hash % #{table_size};
+          unsigned int fptr_hash = 0;
+          int match = 1;
 
-          j = 0;
-
-          if (#{max_argument_size-1} > argc) {
-            if (#{table_name}[fptr_hash].argument_type[0] == klass) {
-              for (j=1; j<argc+1; j++) {
-                if (#{table_name}[fptr_hash].argument_type[j] != CLASS_OF(argv[j-1])) break;
-              }
+          #{if table_size > 1
+          "
+            #{unless signature.first
+              "fptr_hash = klass;
+              "
+            end
             }
+            
+            #{
+            compare_hash.map { |k,v|
+              "if (#{v} < argc) {
+                   fptr_hash += CLASS_OF(argv[#{v}]);
+              }
+              "
+            }.join("\n")
+            };
+
+            fptr_hash = fptr_hash % #{table_size};
+
+            int j = 0;
+
+            if (argc+15 != #{table_name}[fptr_hash].argc) {
+              match = 0;
+            }
+
+            #{unless recvtype
+              "
+              if (match == 1 && #{table_name}[fptr_hash].argument_type[0] != klass ) {
+                match = 0;
+              }
+              "
+            end
+            }
+
+            #{
+            compare_hash.map { |k,v|
+              "if (match == 1 && #{table_name}[fptr_hash].argument_type[#{k}] != CLASS_OF(argv[#{v}])) {
+                   match = 0;
+              }
+              "
+            }.join("\n")
+            };
+          "
+          end
           }
 
-          if (j==argc+1) {
+          if (#{table_name}[fptr_hash].address == 0) match = 0;
+
+          if (match == 1) {
             fptr = #{table_name}[fptr_hash].address;
           } else {
             method_name[0] = '_';
@@ -1360,11 +1410,24 @@ fastruby_local_next:
             }
             
             // insert the value on table
-            #{table_name}[fptr_hash].argument_type[0] = klass;
-            for (j=1; j<argc+1; j++) {
-              #{table_name}[fptr_hash].argument_type[j] = CLASS_OF(argv[j-1]);
+            #{table_name}[fptr_hash].argc = argc+15;
+
+            #{unless recvtype
+              "
+              #{table_name}[fptr_hash].argument_type[0] = klass;
+              "
+            end
             }
-            
+
+            #{
+            compare_hash.map { |k,v|
+              "if (#{v} < argc) { 
+                #{table_name}[fptr_hash].argument_type[#{k}] = CLASS_OF(argv[#{v}]);
+              }
+              "
+            }.join("\n")
+            };
+
             #{table_name}[fptr_hash].address = fptr;
           }
           
@@ -1498,6 +1561,7 @@ fastruby_local_next:
         static struct {
           VALUE argument_type[#{argument_count}];
           void* address;
+          int argc;
         } #{name}[#{size}];
       "
       
