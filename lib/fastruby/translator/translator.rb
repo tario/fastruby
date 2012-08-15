@@ -1194,10 +1194,11 @@ fastruby_local_next:
     end
 
     # returns a anonymous function who made a dynamic call
-    def dynamic_call(signature, mname, return_on_block_call = false)
+    def dynamic_call(signature, mname, return_on_block_call = false, funcall_fallback = true, global_klass_variable = nil)
       # TODO: initialize the table
       table_size = 64
-      table_name = reserve_table(table_size, signature.size)
+      max_argument_size = signature.size
+      table_name = reserve_table(table_size, max_argument_size)
       
       recvtype = signature.first
       if recvtype
@@ -1261,7 +1262,17 @@ fastruby_local_next:
 
           void* fptr = 0;
 
+          #{if global_klass_variable
+          "
+          VALUE klass = #{global_klass_variable};
+          "
+          else
+          "
           VALUE klass = CLASS_OF(self);
+          "
+          end
+          }
+
           char method_name[argc*40+64];
           
           unsigned int fptr_hash = klass;
@@ -1274,16 +1285,18 @@ fastruby_local_next:
           fptr_hash = fptr_hash % #{table_size};
 
           j = 0;
-          if (#{table_name}[fptr_hash].argument_type[0] == klass) {
-            for (j=1; j<argc+1; j++) {
-              if (#{table_name}[fptr_hash].argument_type[j] != CLASS_OF(argv[j-1])) break;
+
+          if (#{max_argument_size-1} > argc) {
+            if (#{table_name}[fptr_hash].argument_type[0] == klass) {
+              for (j=1; j<argc+1; j++) {
+                if (#{table_name}[fptr_hash].argument_type[j] != CLASS_OF(argv[j-1])) break;
+              }
             }
           }
 
           if (j==argc+1) {
             fptr = #{table_name}[fptr_hash].address;
           } else {
-              
             method_name[0] = '_';
             method_name[1] = 0;
   
@@ -1317,7 +1330,6 @@ fastruby_local_next:
                 VALUE tree = rb_funcall(fastruby_method, #{intern_num :tree}, 0,0);
     
                 if (RTEST(tree)) {
-                
                   VALUE argv_class[argc+1];
                                 
                   argv_class[0] = CLASS_OF(self); 
@@ -1360,96 +1372,104 @@ fastruby_local_next:
             return ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))fptr)(self,(VALUE)block,(VALUE)frame, argc, argv);
           }
 
-
+          #{if funcall_fallback
+          "
        
-          #{@frame_struct}* pframe = frame;
-          VALUE method_arguments[4];
-          
-          method_arguments[0] = (VALUE)argc;
-          method_arguments[1] = (VALUE)argv;
-          method_arguments[2] = (VALUE)self;
-          method_arguments[3] = (VALUE)block;
+            #{@frame_struct}* pframe = frame;
+            VALUE method_arguments[4];
             
-            if (block == 0) {
-              return #{
-                protected_block "
-                  last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", true, "method_arguments"
-                };
-          
-            } else {
-              #{
-              if return_on_block_call
-                "*block_call = 1;
-                return Qnil;
-                "
-              else
-                "
+            method_arguments[0] = (VALUE)argc;
+            method_arguments[1] = (VALUE)argv;
+            method_arguments[2] = (VALUE)self;
+            method_arguments[3] = (VALUE)block;
+              
+              if (block == 0) {
                 return #{
-                    protected_block "
-                          #{@block_struct} *pblock;
-                          pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
-                          last_expression = rb_iterate(
-                          #{anonymous_function{|name_|
-                            "
-                              static VALUE #{name_} (VALUE data) {
-                                VALUE* method_arguments = (VALUE*)data;
-                                return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
-                              }
-                            "
-                          }},
-                            (VALUE)method_arguments,
-                            
-                          #{anonymous_function{|name_|
-                            "
-                              static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
-                              #{@block_struct}* pblock = (void*)param;
-                              
-                                if (pblock->proc != Qnil) {
-                                   VALUE arg;
-                                    #{
-                                    # TODO: access directly to argc and argv for optimal execution
-                                    if RUBY_VERSION =~ /^1\.9/ 
-                                      "
-                                        if (TYPE(arg_) == T_ARRAY) {
-                                          if (_RARRAY_LEN(arg_) <= 1) {
-                                            arg = rb_ary_new4(argc,argv);
-                                          } else {
-                                            arg = arg_;
-                                          }
-                                        } else {
-                                          arg = rb_ary_new4(argc,argv);
-                                        }
-                                      "
-                                    else
-                                      "arg = arg_;"
-                                    end
-                                    }
-            
-                                  return rb_proc_call(pblock->proc, arg);
-    
-                                } else {
-                                    #{
-                                    # TODO: access directly to argc and argv for optimal execution
-                                    if RUBY_VERSION =~ /^1\.9/
-                                      "return ((VALUE(*)(int,VALUE*,VALUE,VALUE))pblock->block_function_address)(argc,argv,(VALUE)pblock->block_function_param,(VALUE)0);" 
-                                    else
-                                      "return Qnil;"
-                                    end
-                                    }
-                                }
-                              
-                              }
-                            "
-                          }},
-                            (VALUE)pblock
-                          );
-                  ", true, "method_arguments"
+                  protected_block "
+                    last_expression = rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);", true, "method_arguments"
                   };
-                "
-              end
+            
+              } else {
+                #{
+                if return_on_block_call
+                  "*block_call = 1;
+                  return Qnil;
+                  "
+                else
+                  "
+                  return #{
+                      protected_block "
+                            #{@block_struct} *pblock;
+                            pblock = (typeof(pblock))( ((VALUE*)method_arguments)[3] );
+                            last_expression = rb_iterate(
+                            #{anonymous_function{|name_|
+                              "
+                                static VALUE #{name_} (VALUE data) {
+                                  VALUE* method_arguments = (VALUE*)data;
+                                  return rb_funcall2(((VALUE*)method_arguments)[2], #{intern_num mname.to_sym}, ((int*)method_arguments)[0], ((VALUE**)method_arguments)[1]);
+                                }
+                              "
+                            }},
+                              (VALUE)method_arguments,
+                              
+                            #{anonymous_function{|name_|
+                              "
+                                static VALUE #{name_} (VALUE arg_, VALUE param, int argc, VALUE* argv) {
+                                #{@block_struct}* pblock = (void*)param;
+                                
+                                  if (pblock->proc != Qnil) {
+                                     VALUE arg;
+                                      #{
+                                      # TODO: access directly to argc and argv for optimal execution
+                                      if RUBY_VERSION =~ /^1\.9/ 
+                                        "
+                                          if (TYPE(arg_) == T_ARRAY) {
+                                            if (_RARRAY_LEN(arg_) <= 1) {
+                                              arg = rb_ary_new4(argc,argv);
+                                            } else {
+                                              arg = arg_;
+                                            }
+                                          } else {
+                                            arg = rb_ary_new4(argc,argv);
+                                          }
+                                        "
+                                      else
+                                        "arg = arg_;"
+                                      end
+                                      }
+              
+                                    return rb_proc_call(pblock->proc, arg);
+      
+                                  } else {
+                                      #{
+                                      # TODO: access directly to argc and argv for optimal execution
+                                      if RUBY_VERSION =~ /^1\.9/
+                                        "return ((VALUE(*)(int,VALUE*,VALUE,VALUE))pblock->block_function_address)(argc,argv,(VALUE)pblock->block_function_param,(VALUE)0);" 
+                                      else
+                                        "return Qnil;"
+                                      end
+                                      }
+                                  }
+                                
+                                }
+                              "
+                            }},
+                              (VALUE)pblock
+                            );
+                    ", true, "method_arguments"
+                    };
+                  "
+                end
+                }
               }
-            }
-
+            "
+            else
+            "
+              rb_raise(rb_eRuntimeError, \"Error: invalid dynamic call for defn\");
+              return Qnil;
+            "
+            end
+          }
         }
         "
       }

@@ -147,120 +147,64 @@ private
     def anonymous_dispatcher(global_klass_variable, method_name)
       
       strmethodargs = "self,block,(VALUE)&frame"
-      
+      nilsignature = [nil]*32      
+
       anonymous_function{ |anonymous_method_name| "VALUE #{anonymous_method_name}(int argc_, VALUE* argv, VALUE self) {
-          VALUE klass = #{global_klass_variable};
-          char method_name[argc_*40+64];
+          struct {
+            void* parent_frame;
+            void* plocals;
+            jmp_buf jmp;
+            VALUE return_value;
+            int rescue;
+            VALUE last_error;
+            VALUE next_recv;
+            int targetted;
+            struct FASTRUBYTHREADDATA* thread_data;
+          } frame;
 
-          method_name[0] = '_';
-          method_name[1] = 0;
+          frame.parent_frame = 0;
+          frame.rescue = 0;
+          frame.return_value = Qnil;
+          frame.thread_data = rb_current_thread_data();
+          frame.targetted = 0;
 
-          sprintf(method_name+1, \"#{method_name}\");
-          sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(self))));
-          
-                      int i;
-                      for (i=0; i<argc_; i++) {
-                        sprintf(method_name+strlen(method_name), \"%li\", (long)NUM2PTR(rb_obj_id(CLASS_OF(argv[i]))));
-                      }
+          volatile VALUE block = Qfalse;
 
-          void** address = 0;
-          void* fptr = 0;
-          ID id;
-          VALUE rb_method_hash;
+          if (rb_block_given_p()) {
+            struct {
+              void* block_function_address;
+              void* block_function_param;
+              VALUE proc;
+            } block_struct;
 
-          id = rb_intern(method_name);
-          rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value method_name});
-          
-          if (rb_method_hash != Qnil) {
-            VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
-            if (tmp != Qnil) {
-                address = (void**)NUM2PTR(tmp);
-                fptr = *address;
-            }
+            block_struct.block_function_address = re_yield;
+            block_struct.block_function_param = 0;
+            block_struct.proc = rb_block_proc();
+
+            block = (VALUE)&block_struct;
           }
 
-          if (fptr == 0) {
-                          VALUE argv_class[argc_+1];
-                          
-                          argv_class[0] = CLASS_OF(self); 
-                          for (i=0; i<argc_; i++) {
-                            argv_class[i+1] = CLASS_OF(argv[i]);
-                          }
-                          
-                          VALUE signature = rb_ary_new4(argc_+1,argv_class);
-            
-            rb_funcall(#{global_klass_variable}, #{intern_num :build}, 2, signature,rb_str_new2(#{method_name.to_s.inspect}));
-  
-            id = rb_intern(method_name);
-            rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value method_name});
-            
-            if (rb_method_hash != Qnil) {
-              VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
-              if (tmp != Qnil) {
-                  address = (void**)NUM2PTR(tmp);
-                  fptr = *address;
-              }
-            }
-            
-            if (fptr == 0) {
-              rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
+
+          int aux = setjmp(frame.jmp);
+          if (aux != 0) {
+            if (aux == FASTRUBY_TAG_RAISE) {
+              rb_funcall(self, #{intern_num :raise}, 1, frame.thread_data->exception);
             }
 
+            if (frame.targetted == 0) {
+              frb_jump_tag(aux);
+            }
+
+            return Qnil;
           }
-
-              struct {
-                void* parent_frame;
-                void* plocals;
-                jmp_buf jmp;
-                VALUE return_value;
-                int rescue;
-                VALUE last_error;
-                VALUE next_recv;
-                int targetted;
-                struct FASTRUBYTHREADDATA* thread_data;
-              } frame;
-
-              frame.parent_frame = 0;
-              frame.rescue = 0;
-              frame.return_value = Qnil;
-              frame.thread_data = rb_current_thread_data();
-              frame.targetted = 0;
-
-              volatile VALUE block = Qfalse;
-
-              if (rb_block_given_p()) {
-                struct {
-                  void* block_function_address;
-                  void* block_function_param;
-                  VALUE proc;
-                } block_struct;
-
-                block_struct.block_function_address = re_yield;
-                block_struct.block_function_param = 0;
-                block_struct.proc = rb_block_proc();
-
-                block = (VALUE)&block_struct;
-              }
-
-              int aux = setjmp(frame.jmp);
-              if (aux != 0) {
-                if (aux == FASTRUBY_TAG_RAISE) {
-                  rb_funcall(self, #{intern_num :raise}, 1, frame.thread_data->exception);
-                }
-
-                if (frame.targetted == 0) {
-                    frb_jump_tag(aux);
-                }
-
-                return Qnil;
-              }
               
-              VALUE tmp = Qnil;
-              if (argv == 0) argv = &tmp;
+          VALUE tmp = Qnil;
+          if (argv == 0) argv = &tmp;
 
-              return ((VALUE(*)(VALUE,VALUE,VALUE,int,VALUE*))fptr)(#{strmethodargs}, argc_, argv);
+          return #{dynamic_call(nilsignature, method_name.to_sym, false, false, global_klass_variable)}(self, (void*)block, (void*)&frame, argc_, argv);
         }"
       }
+
       
     end
   end
