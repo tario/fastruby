@@ -1319,12 +1319,14 @@ fastruby_local_next:
 
             if (argc+15 != #{table_name}[fptr_hash].argc) {
               match = 0;
+              goto does_not_match;
             }
 
             #{unless recvtype
               "
               if (match == 1 && #{table_name}[fptr_hash].argument_type[0] != klass ) {
                 match = 0;
+                goto does_not_match;
               }
               "
             end
@@ -1333,7 +1335,8 @@ fastruby_local_next:
             #{
             compare_hash.map { |k,v|
               "if (match == 1 && #{table_name}[fptr_hash].argument_type[#{k}] != CLASS_OF(argv[#{v}])) {
-                   match = 0;
+                 match = 0;
+                 goto does_not_match;
               }
               "
             }.join("\n")
@@ -1343,10 +1346,10 @@ fastruby_local_next:
           }
 
           if (#{table_name}[fptr_hash].address == 0) match = 0;
-
           if (match == 1) {
             fptr = #{table_name}[fptr_hash].address;
           } else {
+does_not_match:
             method_name[0] = '_';
             method_name[1] = 0;
   
