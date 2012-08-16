@@ -38,6 +38,9 @@ Benchmark::bm(20) do |b|
   Y.optimize(:bar)
   X.build([X,Fixnum,Fixnum],:foo)
   Y.build([Y,X],:bar)
+  Fixnum.build([Fixnum,Fixnum],:-)
+  Fixnum.build([Fixnum,Fixnum],:>)
+  Fixnum.build([Fixnum,Fixnum],:+)
 
 	b.report("fastruby") do
 		y.bar(x)
