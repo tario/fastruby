@@ -23,7 +23,7 @@ module FastRuby
 
     define_translator_for(:yield, :method => :to_c_yield, :arity => 1)
     def to_c_yield(tree)
-
+      @has_yield = true
       block_code = proc { |name| "
         static VALUE #{name}(VALUE frame_param, VALUE* block_args, int size) {
 

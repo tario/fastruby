@@ -24,6 +24,8 @@ module FastRuby
     define_translator_for(:iter, :method => :to_c_iter)
     def to_c_iter(tree, result_var = nil)
 
+      @has_inline_block = true
+
       call_tree = tree[1]
       args_tree = tree[2]
       recv_tree = call_tree[1]

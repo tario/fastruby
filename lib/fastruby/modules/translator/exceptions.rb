@@ -23,6 +23,7 @@ module FastRuby
     
     define_translator_for(:rescue, :method => :to_c_rescue, :arity => 1)
     def to_c_rescue(tree)
+      @has_inline_block = true
       catch_on_throw do
         if tree[1][0] == :resbody
           else_tree = tree[2]

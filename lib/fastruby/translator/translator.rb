@@ -250,6 +250,8 @@ module FastRuby
 
 
     def _raise(class_tree, message_tree = nil)
+      @has_raise = true
+      @has_inline_block = true
       class_tree = to_c class_tree unless class_tree.instance_of? String
 
       if message_tree.instance_of? String
@@ -443,12 +445,22 @@ module FastRuby
         block_argument = tree[3].find{|x| x.to_s[0] == ?&}
         impl_tree = tree[4][1]
       end
+
+      @method_arguments = original_args_tree[1..-1]
       
       if "0".respond_to?(:ord)
         @alt_method_name = "_" + method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x.ord}" } + "_" + rand(10000000000).to_s
       else
         @alt_method_name = "_" + method_name.to_s.gsub("_x_", "_x__x_").gsub(/\W/){|x| "_x_#{x[0]}" } + "_" + rand(10000000000).to_s
       end
+
+        @has_yield = false
+        @has_dynamic_call = false
+        @has_nonlocal_goto = false
+        @has_inline_block = (options[:main] or tree.find_tree(:lasgn))
+        @has_plocals_ref = false
+        @has_raise = false
+        @has_inline_c = false
 
       args_tree = original_args_tree.select{|x| x.to_s[0] != ?&}
 
@@ -534,6 +546,7 @@ module FastRuby
                     else
                         
                       if default_block_tree
+                        @has_inline_block = true
                         initialize_tree = default_block_tree[1..-1].find{|subtree| subtree[1] == arg_}
                         if initialize_tree
                           to_c(initialize_tree) + ";\n"
@@ -550,6 +563,7 @@ module FastRuby
                 }.join("")
                 
               if splat_arg
+                    @has_splat_args = true
                     if signature.size-1 < normalargsnum then
                       read_arguments_code << "
                         plocals->#{splat_arg.to_s.gsub("*","")} = rb_ary_new3(0);
@@ -569,6 +583,8 @@ module FastRuby
           end
   
           if block_argument
+
+            @has_yield = true
   
             proc_reyield_block_tree = s(:iter, s(:call, nil, :proc, s(:arglist)), s(:masgn, s(:array, s(:splat, s(:lasgn, :__xproc_arguments)))), s(:yield, s(:splat, s(:lvar, :__xproc_arguments))))
   
@@ -615,11 +631,29 @@ module FastRuby
           }
           
         evaluate_tree = tree.transform &trs
+
+        impl_code = to_c(impl_tree, "last_expression")
+
+        put_setjmp = (@has_dynamic_call or @has_nonlocal_goto or @has_yield or @has_raise or @has_inline_c)
+        put_block_init = @has_yield
+        if options[:main]
+          put_block_init = false
+        end
         
         scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
+        if scope_mode == :dag or put_setjmp or put_block_init or @has_splat_args
+          put_frame = true
+          put_locals = true
+        else
+          put_frame = @has_inline_block
+          put_locals = @has_plocals_ref
+        end
+
         ret = "VALUE #{@alt_method_name || method_name}(#{options[:main] ? "VALUE self" : strargs}) {
           #{validate_arguments_code}
 
+#{if put_frame
+"
           #{@frame_struct} frame;
           #{@frame_struct} * volatile pframe;
           
@@ -629,12 +663,15 @@ module FastRuby
           frame.targetted = 0;
           frame.thread_data = #{options[:main] ? "0" : "((typeof(pframe))_parent_frame)->thread_data"};
           if (frame.thread_data == 0) frame.thread_data = rb_current_thread_data();
-
-          int stack_chunk_instantiated = 0;
+"
+end
+}
           
 #{
 if scope_mode == :dag
   " 
+          int stack_chunk_instantiated = 0;
+
           volatile VALUE rb_previous_stack_chunk = Qnil;
           VALUE rb_stack_chunk = frame.thread_data->rb_stack_chunk;
           struct STACKCHUNK* volatile stack_chunk = 0;
@@ -670,6 +707,8 @@ else
 end
 }
 
+#{if put_locals and put_frame
+"
           plocals->parent_locals = (frame.thread_data->last_plocals);
           void* volatile old_parent_locals = frame.thread_data->last_plocals;
           
@@ -680,15 +719,25 @@ end
           }
           
           frame.plocals = plocals;
+          plocals->pframe = (&frame);
+          pframe = (void*)&frame;
+"
+end
+}
+
+#{if put_locals
+"
           plocals->active = Qtrue;
           plocals->targetted = Qfalse;
-          plocals->pframe = (&frame);
           plocals->call_frame = (0);
+"
+end
+}
 
-          pframe = (void*)&frame;
-
-          #{@block_struct} * volatile pblock;
           volatile VALUE last_expression = Qnil;
+
+#{if put_setjmp
+"
 
           int aux = setjmp(pframe->jmp);
           if (aux != 0) {
@@ -722,12 +771,21 @@ end
             
             return plocals->return_value;
           }
+"
+end
+}
 
+#{if put_locals
+"
           plocals->self = self;
+"
+end
+}
 
           #{
-          unless options[:main]
+          if put_block_init
             "
+            #{@block_struct} * volatile pblock;
             pblock = (void*)block;
             if (pblock) {
               plocals->block_function_address = pblock->block_function_address;
@@ -740,9 +798,14 @@ end
           end
           }
 
+#{if put_locals
+"
           #{read_arguments_code}
+"
+end
+}
 
-          #{to_c impl_tree, "last_expression"};
+          #{impl_code};
           
 local_return:
 #{
@@ -757,10 +820,21 @@ if scope_mode == :dag
 "
 end
 }
+
+#{if put_locals
+"
           plocals->active = Qfalse;
+"
+end
+}          
           
+#{if put_locals and put_frame
+"
           frame.thread_data->last_plocals = old_parent_locals;
-          
+"
+end
+}          
+
           return last_expression;
         }"
 
@@ -775,6 +849,7 @@ end
     end
 
     def locals_accessor
+      @has_plocals_ref = true
       "plocals->"
     end
 
@@ -830,9 +905,10 @@ end
       if mname == :infer
         return to_c(recv)
       elsif mname == :block_given?
+        @has_yield = true
         return "plocals->block_function_address == 0 ? Qfalse : Qtrue"
       elsif mname == :inline_c
-
+        @has_inline_c = true
         code = args[1][1]
 
         unless (args[2] == s(:false))
@@ -856,6 +932,8 @@ end
     end
 
     def inline_block_reference(arg, nolocals = false)
+      @has_inline_block = true
+
       code = nil
 
       if arg.instance_of? FastRuby::FastRubySexp
@@ -891,6 +969,7 @@ end
     end
 
     def inline_block(*args)
+      @has_inline_block = true
       
       unless block_given?
         code = args.first
@@ -1196,6 +1275,7 @@ fastruby_local_next:
     # returns a anonymous function who made a dynamic call
     def dynamic_call(signature, mname, return_on_block_call = false, funcall_fallback = true, global_klass_variable = nil)
       # TODO: initialize the table
+      @has_dynamic_call = true
       max_argument_size = 0
       recvtype = signature.first
 

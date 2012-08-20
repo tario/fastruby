@@ -43,14 +43,14 @@ module FastRuby
       code = "
       
       
-        if (rb_obj_is_kind_of(plocals->self, rb_cClass) || rb_obj_is_kind_of(plocals->self, rb_cModule)) {
+        if (rb_obj_is_kind_of(#{locals_accessor}self, rb_cClass) || rb_obj_is_kind_of(#{locals_accessor}self, rb_cModule)) {
 
           #{unless options[:fastruby_only]
            "rb_define_method(plocals->self, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1);"
           end
           }
           
-          #{global_klass_variable} = plocals->self;
+          #{global_klass_variable} = #{locals_accessor}self;
           // set tree
           rb_funcall(#{literal_value FastRuby}, #{intern_num :set_tree}, 4,
                   #{global_klass_variable},
@@ -61,7 +61,7 @@ module FastRuby
                   );
           
         } else {
-          VALUE obj = plocals->self;
+          VALUE obj = #{locals_accessor}self;
           rb_define_singleton_method(obj, #{method_name.to_s.inspect}, #{anonymous_method_name}, -1 );
           
           #{global_klass_variable} = CLASS_OF(obj);

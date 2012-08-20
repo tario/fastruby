@@ -106,7 +106,14 @@ module FastRuby
       end
     end
 
-    define_translator_for(:self, :arity => 1){|*x| tree = x.first; locals_accessor + "self"}
+    define_translator_for(:self, :arity => 1){|*x| tree = x.first; 
+      if @has_inline_block
+        locals_accessor + "self"
+      else
+        "self"
+      end
+    }
+
     define_translator_for(:false, :arity => 1){|*x| "Qfalse"}
     define_translator_for(:true, :arity => 1){|*x| "Qtrue"}
 

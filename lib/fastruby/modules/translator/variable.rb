@@ -22,7 +22,7 @@ module FastRuby
   class Context
     define_translator_for(:cvar, :method => :to_c_cvar, :arity => 1)
     def to_c_cvar(tree)
-      "rb_cvar_get(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]})"
+      "rb_cvar_get(CLASS_OF(#{var_self}) != rb_cClass ? CLASS_OF(#{var_self}) : #{var_self},#{intern_num tree[1]})"
     end
 
     define_translator_for(:cvasgn, :method => :to_c_cvasgn)
@@ -30,7 +30,7 @@ module FastRuby
       if result_var
         "
           {
-            VALUE recv = CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self;
+            VALUE recv = CLASS_OF(#{var_self}) != rb_cClass ? CLASS_OF(#{var_self}) : #{var_self};
 
             #{to_c tree[2], result_var};
             
@@ -45,7 +45,7 @@ module FastRuby
           }
        "
       else
-      "__rb_cvar_set(CLASS_OF(plocals->self) != rb_cClass ? CLASS_OF(plocals->self) : plocals->self,#{intern_num tree[1]},#{to_c tree[2]},Qfalse)"
+      "__rb_cvar_set(CLASS_OF(#{var_self}) != rb_cClass ? CLASS_OF(#{var_self}) : #{var_self},#{intern_num tree[1]},#{to_c tree[2]},Qfalse)"
       end
     end
 
@@ -92,7 +92,7 @@ module FastRuby
     end
 
     define_translator_for(:const, :arity => 1) do |*x| tree = x.first;
-      "rb_const_get(CLASS_OF(plocals->self), #{intern_num(tree[1])})"
+      "rb_const_get(CLASS_OF(#{var_self}), #{intern_num(tree[1])})"
     end
     
     define_translator_for(:cdecl, :method => :to_c_cdecl)
@@ -215,9 +215,27 @@ module FastRuby
         "_lvar_assing(&#{locals_accessor}#{tree[1]},#{to_c tree[2]})"
       end
     end
+
+    def is_argument(variable)
+      @method_arguments.include?(variable)
+    end
     
     define_translator_for(:lvar, :arity => 1) do |*x| tree = x.first;
-      locals_accessor + tree[1].to_s
+      if @has_inline_block or (not is_argument(tree[1]))
+        locals_accessor + tree[1].to_s
+      else
+        # search in arguments
+        index = @method_arguments.find_index{|argument| argument == tree[1]}
+        if index
+          "argv[#{index}]"
+        else
+          locals_accessor + tree[1].to_s
+        end
+      end
+    end
+
+    def var_self
+      @has_inline_block ? locals_accessor + "self" : "self";
     end
 
     define_translator_for(:defined, :method => :to_c_defined, :arity => 1)
@@ -253,7 +271,7 @@ module FastRuby
       elsif nt == :yield
         "rb_block_given_p() ? #{literal_value "yield"} : Qnil"
       elsif nt == :ivar
-      "rb_ivar_defined(plocals->self,#{intern_num obj_tree[1]}) ? #{literal_value "instance-variable"} : Qnil"
+      "rb_ivar_defined(#{var_self},#{intern_num obj_tree[1]}) ? #{literal_value "instance-variable"} : Qnil"
       elsif nt == :attrset or
             nt == :op_asgn1 or
             nt == :op_asgn2 or

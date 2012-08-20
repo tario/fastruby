@@ -23,6 +23,7 @@ module FastRuby
     
     define_translator_for(:return, :method => :to_c_return)
     def to_c_return(tree, return_variable = nil)
+      @has_nonlocal_goto = true
       code = proc{"
         #{to_c(tree[1],"last_expression")};
         goto local_return;
@@ -38,6 +39,7 @@ module FastRuby
 
     define_translator_for(:break, :method => :to_c_break)
     def to_c_break(tree, result_var = nil)
+      @has_nonlocal_goto = true
       
         value_tmp_var = "value_" + rand(10000000).to_s
       
@@ -77,6 +79,7 @@ module FastRuby
 
     define_translator_for(:retry, :method => :to_c_retry)
     def to_c_retry(tree, result_var = nil)
+      @has_nonlocal_goto = true
         code = "
           {
          typeof(pframe) target_frame_;
@@ -99,6 +102,7 @@ module FastRuby
 
     define_translator_for(:redo, :method => :to_c_redo)
     def to_c_redo(tree, result_var = nil)
+      @has_nonlocal_goto = true
       if @on_block
          code = "
             goto fastruby_local_redo;
@@ -116,6 +120,7 @@ module FastRuby
 
     define_translator_for(:next, :method => :to_c_next)
     def to_c_next(tree, result_var = nil)
+      @has_nonlocal_goto = true
       tmp_varname = "_acc_" + rand(10000000).to_s
       if @on_block
        code =proc {"
@@ -249,6 +254,7 @@ module FastRuby
     }
 
     define_method_handler(:to_c, :priority => 100) { |*x|
+      @has_nonlocal_goto = true
       tree, result_var  = x
 
       code = ""
@@ -275,6 +281,7 @@ module FastRuby
     }
     
     define_method_handler(:to_c, :priority => 100) { |*x|
+      @has_nonlocal_goto = true
       tree, result_var  = x
 
       code = ""

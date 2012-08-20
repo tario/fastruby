@@ -58,6 +58,7 @@ module FastRuby
         end
         
         if method_name == "inline_c"
+          @has_inline_c = true
           arg = tree[3][1]
           
           if arg.node_type != :str

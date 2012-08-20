@@ -106,6 +106,8 @@ module FastRuby
 
         if args.last[0] == :splat
           aux_varname = "_aux_" + rand(1000000).to_s
+
+          @has_inline_block = true
           code = protected_block(
             "
             
