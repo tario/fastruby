@@ -223,11 +223,19 @@ module FastRuby
         end
         newblock
     end
+
+    def inline_subtree(tree)
+      ret_tree = fs(:iter)
+      ret_tree << tree[1].duplicate
+        
+      tree[2..-1].each do |subtree|
+        ret_tree << inline(subtree)
+      end
+
+      ret_tree
+    end
     
     define_method_handler(:inline) { |tree|
-        ret_tree = fs(:iter)
-        ret_tree << tree[1].duplicate
-        
         call_tree = tree[1]
         recv_tree = call_tree[1] || fs(:self)
         method_name = call_tree[2]
@@ -235,11 +243,7 @@ module FastRuby
         block_tree = tree[3] || fs(:nil)
         block_args_tree = tree[2]
         
-        tree[2..-1].each do |subtree|
-          ret_tree << inline(subtree)
-        end
-        
-        next ret_tree if block_tree.find_tree(:retry)
+        next inline_subtree(tree) if block_tree.find_tree(:retry)
 
         recvtype = infer_type(recv_tree)
 
@@ -247,8 +251,8 @@ module FastRuby
           # search the tree of target method
           mobject = method_obj_or_gtfo(recvtype,method_name)
   
-          next ret_tree unless mobject
-          next ret_tree unless mobject.tree
+          next inline_subtree(tree) unless mobject
+          next inline_subtree(tree) unless mobject.tree
         
           exit_now = false
           if block_tree.find_tree(:break) or block_tree.find_tree(:return)
@@ -262,21 +266,20 @@ module FastRuby
             end
           end
           
-          next ret_tree if exit_now
+          next inline_subtree(tree) if exit_now
           
           target_method_tree_args = mobject.tree[2]
-          next ret_tree if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
+          next inline_subtree(tree) if target_method_tree_args.find{|subtree| subtree.to_s =~ /^\*/}
 
-          method_tree_to_inlined_block(mobject, call_tree, method_name, block_args_tree, block_tree) || ret_tree
+          method_tree_to_inlined_block(mobject, call_tree, method_name, block_args_tree, block_tree) || inline_subtree(tree)
   
         else
           # nothing to do, we don't know what is the method
-          ret_tree
+          inline_subtree(tree)
         end
      }.condition{|tree| tree.node_type == :iter}
     
     define_method_handler(:inline) { |tree|
-      
       next tree if tree.find_tree(:block_pass)
       
       recv_tree = tree[1] || fs(:self)

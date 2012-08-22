@@ -176,7 +176,6 @@ module FastRuby
       alt_options = options.dup
       alt_options.delete(:self)
       
-      #require "pry"; binding.pry
       code_sha1 = FastRuby.cache.hash_snippet(inlined_tree.inspect, FastRuby::VERSION + signature.map(&:to_s).join('-') + alt_options.inspect)
       
       paths = FastRuby.cache.retrieve(code_sha1)
