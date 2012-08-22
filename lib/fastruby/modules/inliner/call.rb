@@ -149,14 +149,13 @@ module FastRuby
         end
          
         block_num = 0
-        
         target_method_tree_block.walk_tree do |subtree|
           if subtree.node_type == :call
             if subtree[1] == nil
               if subtree[2] == :block_given?
                 subtree[0..-1] = block_tree ? fs(:true) : fs(:false)
               else
-                subtree[1] = recv_tree.duplicate
+                subtree[1] = fs(:lvar, inlined_name)
               end
             end
           end
