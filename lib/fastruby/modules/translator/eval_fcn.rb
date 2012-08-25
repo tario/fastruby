@@ -29,7 +29,7 @@ module FastRuby
       else
         "{
           #{to_c tree[3][1], "last_expression"};
-          rb_funcall(#{literal_value FastRuby::Method}, #{intern_num :build_block}, 2, last_expression, #{literal_value @locals_struct});
+          rb_funcall(#{literal_value FastRuby::Method}, #{intern_num :build_block}, 3, last_expression, #{literal_value @locals_struct}, #{literal_value @locals});
           VALUE ___block_args[4];
 
           VALUE (*___func) (int, VALUE*, VALUE, VALUE);

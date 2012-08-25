@@ -68,12 +68,12 @@ module FastRuby
       end
     end
 
-    def self.build_block(code, locals_struct)
+    def self.build_block(code, locals_struct, locals)
       fastruby "
         eval_block do
           #{code}
         end
-      ", :locals_struct => locals_struct
+      ", :locals_struct => locals_struct, :locals => locals
     end
 
     def build(signature, noreturn = false)

@@ -23,11 +23,14 @@ module FastRuby
     define_translator_for(:call, :method => :to_c_call)
     def to_c_call(tree, result_var = nil)
       repass_var = @repass_var
-
       recv = tree[1]
       mname = tree[2]
       args = tree[3]
       args_tree = tree[3]
+
+      if args_tree.size == 1 and recv == nil
+        return to_c(fs(:lvar, mname), result_var)
+      end
       
       if mname == :_class
         if result_var

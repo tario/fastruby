@@ -337,6 +337,8 @@ module FastRuby
     end
 
     def initialize_method_structs(args_tree)
+      @locals = options[:locals] if options[:locals]
+
       @locals_struct = options[:locals_struct] || "struct {
         int size;        
         void* call_frame;
