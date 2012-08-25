@@ -14,4 +14,7 @@ describe FastRuby, "fastruby" do
     EVALX01.new.foo('a').should be == 3
   end 
 
+  it "should raise NameError when trying to eval undefined variable" do
+    EVALX01.new.foo('b').should be == 3
+  end 
 end
