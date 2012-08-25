@@ -28,7 +28,7 @@ module FastRuby
       args = tree[3]
       args_tree = tree[3]
 
-      if args_tree.size == 1 and recv == nil
+      if args_tree.size == 1 and recv == nil and @locals.include?(mname)
         return to_c(fs(:lvar, mname), result_var)
       end
       

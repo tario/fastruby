@@ -38,8 +38,12 @@ module FastRuby
         }"
       end
     }.condition { |tree, result_var=nil|
-      if tree.node_type == :call
-        tree[2] == :eval
+      if tree
+        if tree.node_type == :call
+          tree[2] == :eval
+        else
+          false
+        end
       else
         false
       end
