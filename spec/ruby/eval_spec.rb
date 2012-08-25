@@ -10,6 +10,16 @@ describe FastRuby, "fastruby" do
     end
   "
 
+  fastruby "
+    class EVALX02
+      def foo(code)
+        c = 100
+        eval(code)
+        c
+      end
+    end
+  "
+
   it "should eval local variable" do
     EVALX01.new.foo('a').should be == 3
   end 
@@ -18,5 +28,9 @@ describe FastRuby, "fastruby" do
     lambda {
       EVALX01.new.foo('b')
     }.should raise_error(NameError)
+  end 
+
+  it "should allow assing local variables on eval" do
+    EVALX02.new.foo('c = 43').should be == 43
   end 
 end
