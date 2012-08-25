@@ -663,6 +663,14 @@ end
             )
           };
           "        
+        
+      if mname == :eval_block
+        init_extra << "
+          rb_gvar_set((void*)#{global_entry :$last_eval_block}, PTR2NUM((void*)#{anonymous_function(&block_code)}));
+        "
+
+        return "last_expression=Qnil;"
+      end
 
       recvtype = nil if call_args_tree.size > 1 ? call_args_tree.last[0] == :splat : false
       unless recvtype

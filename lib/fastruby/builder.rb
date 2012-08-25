@@ -68,6 +68,14 @@ module FastRuby
       end
     end
 
+    def self.build_block(code, locals_struct)
+      fastruby "
+        eval_block do
+          #{code}
+        end
+      ", :locals_struct => locals_struct
+    end
+
     def build(signature, noreturn = false)
       return nil unless tree
 

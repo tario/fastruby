@@ -337,7 +337,7 @@ module FastRuby
     end
 
     def initialize_method_structs(args_tree)
-      @locals_struct = "struct {
+      @locals_struct = options[:locals_struct] || "struct {
         int size;        
         void* call_frame;
         void* parent_locals;
@@ -858,7 +858,7 @@ end
        old_locals_struct = @locals_struct
 
        @locals = locals
-        @locals_struct = "struct {
+        @locals_struct = options[:locals_struct] || "struct {
         int size;
         void* call_frame;
         void* parent_locals;
