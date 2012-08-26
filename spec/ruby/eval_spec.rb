@@ -36,6 +36,23 @@ describe FastRuby, "fastruby" do
 
   it "should allow assing new defined local variables on eval" do
     EVALX01.new.foo('b = 43; b').should be == 43
+  end
+
+  fastruby "
+    class EVALX03
+      def foo
+        a = 1
+        b = 2
+        c = 3
+        binding
+      end
+    end
+  "
+
+  it "should allow eval on fastruby binding" do
+    EVALX03.new.foo.eval("a").should be == 1
+    EVALX03.new.foo.eval("b").should be == 2
+    EVALX03.new.foo.eval("c").should be == 3
   end 
  
 end
