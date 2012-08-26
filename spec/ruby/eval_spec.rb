@@ -32,5 +32,10 @@ describe FastRuby, "fastruby" do
 
   it "should allow assing local variables on eval" do
     EVALX02.new.foo('c = 43').should be == 43
+  end
+
+  it "should allow assing new defined local variables on eval" do
+    EVALX01.new.foo('b = 43; b').should be == 43
   end 
+ 
 end
