@@ -22,6 +22,7 @@ module FastRuby
   class Context
     define_method_handler(:to_c, :priority => 1000) { |tree, result_var=nil|
       @has_yield = true
+      @scope_mode = :dag
       unless result_var
         inline_block "{
           return Qnil;
@@ -37,6 +38,75 @@ module FastRuby
       if tree
         if tree.node_type == :call
           tree[2] == :eval
+        else
+          false
+        end
+      else
+        false
+      end
+    }
+
+    define_method_handler(:to_c, :priority => 1000) { |tree, result_var=nil|
+      @has_yield = true
+      @scope_mode = :dag
+      unless result_var
+        inline_block "{
+          VALUE aux = create_fastruby_binding(pframe, plocals, #{literal_value @locals_struct}, #{literal_value @locals});
+
+
+              // freeze all stacks
+              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+
+              if (thread_data != 0) {
+                VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
+
+                // add reference to stack chunk to lambda object
+                rb_ivar_set(aux,#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+
+                // freeze the complete chain of stack chunks
+                while (rb_stack_chunk != Qnil) {
+                  struct STACKCHUNK* stack_chunk;
+                  Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+
+                  stack_chunk_freeze(stack_chunk);
+
+                  rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                }
+              }
+
+          return aux;
+        }"
+      else
+        "{
+          #{result_var} = create_fastruby_binding(pframe, plocals, #{literal_value @locals_struct}, #{literal_value @locals});
+
+              // freeze all stacks
+              struct FASTRUBYTHREADDATA* thread_data = rb_current_thread_data();
+
+              if (thread_data != 0) {
+                VALUE rb_stack_chunk = thread_data->rb_stack_chunk;
+
+                // add reference to stack chunk to lambda object
+                rb_ivar_set(#{result_var},#{intern_num :_fastruby_stack_chunk},rb_stack_chunk);
+
+                // freeze the complete chain of stack chunks
+                while (rb_stack_chunk != Qnil) {
+                  struct STACKCHUNK* stack_chunk;
+                  Data_Get_Struct(rb_stack_chunk,struct STACKCHUNK,stack_chunk);
+
+                  stack_chunk_freeze(stack_chunk);
+
+                  rb_stack_chunk = rb_ivar_get(rb_stack_chunk,#{intern_num :_parent_stack_chunk});
+                }
+              }
+
+         // add reference to current stack chunk
+        }"
+      end
+    }.condition { |tree, result_var=nil|
+      if tree
+        if tree.node_type == :call
+          tree[2] == :binding
         else
           false
         end

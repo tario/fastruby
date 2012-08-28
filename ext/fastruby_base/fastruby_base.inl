@@ -145,6 +145,7 @@ struct METHOD {
 
         
 RUBY_EXTERN void* ruby_current_thread;
+# define NUM2PTR(x)   ((void*)(NUM2ULONG(x)))
 
 static inline VALUE eval_code_block(void* plocals, void* pframe) {
   VALUE ___block_args[4];
@@ -152,6 +153,36 @@ static inline VALUE eval_code_block(void* plocals, void* pframe) {
   VALUE (*___func) (int, VALUE*, VALUE, VALUE);
   ___func = (void*)( NUM2PTR(rb_gvar_get(rb_global_entry(rb_intern("$last_eval_block")))));
   return ___func(0,___block_args,(VALUE)plocals,(VALUE)pframe);
+}
+
+VALUE fastruby_binding_eval(VALUE self, VALUE code) {
+
+  void *plocals = NUM2PTR(rb_ivar_get(self, rb_intern("plocals")));
+  void *pframe = NUM2PTR(rb_ivar_get(self, rb_intern("pframe")));
+  VALUE locals = rb_ivar_get(self, rb_intern("locals"));
+  VALUE locals_struct = rb_ivar_get(self, rb_intern("locals_struct"));
+
+  VALUE rb_eFastRuby = rb_const_get(rb_cObject, rb_intern("FastRuby"));
+  VALUE rb_cFastRubyMethod = rb_const_get(rb_eFastRuby, rb_intern("Method"));
+
+  rb_funcall(rb_cFastRubyMethod, rb_intern("build_block"), 3, code, locals_struct, locals);
+
+  return eval_code_block(plocals,pframe);
+
+}
+
+static inline VALUE create_fastruby_binding(void* pframe, void* plocals, VALUE locals_struct, VALUE locals) {
+  
+  VALUE rb_eFastRuby = rb_const_get(rb_cObject, rb_intern("FastRuby"));
+  VALUE rb_cFastRubyBinding = rb_const_get(rb_eFastRuby, rb_intern("Binding"));
+  VALUE new_binding = rb_funcall(rb_cFastRubyBinding, rb_intern("new"), 0);
+  
+  rb_ivar_set(new_binding, rb_intern("plocals"), PTR2NUM(plocals));
+  rb_ivar_set(new_binding, rb_intern("pframe"), PTR2NUM(pframe));
+  rb_ivar_set(new_binding, rb_intern("locals_struct"), locals_struct);
+  rb_ivar_set(new_binding, rb_intern("locals"), locals);
+
+  return new_binding;
 }
 
 static inline void stack_chunk_initialize(struct STACKCHUNK* sc) {
@@ -362,7 +393,7 @@ static void init_stack_chunk() {
 	rb_define_singleton_method(rb_cStackChunk, "create", rb_stack_chunk_create,0);
 	rb_define_method(rb_cStackChunk, "alloc", rb_stack_chunk_alloc,1);
 }
-# define NUM2PTR(x)   ((void*)(NUM2ULONG(x)))
+
 static VALUE clear_method_hash_addresses(VALUE klass,VALUE rb_method_hash) {
   if (rb_method_hash != Qnil) {
 	  VALUE rb_values = rb_funcall(rb_method_hash, rb_intern("values"),0);
@@ -433,4 +464,8 @@ static void init_fastruby_method() {
 	rb_define_method(rb_cFastRubyMethod, "tree_pointer", fastruby_method_tree_pointer,0);
 	rb_define_method(rb_cFastRubyMethod, "tree", fastruby_method_tree,0);
 	rb_define_method(rb_cFastRubyMethod, "tree=", fastruby_method_tree_eq,1);
+
+	VALUE rb_cFastRubyBinding = rb_define_class_under(rb_mFastRuby, "Binding", rb_cObject);
+  rb_define_method(rb_cFastRubyBinding, "eval", fastruby_binding_eval, 1);
 }
+

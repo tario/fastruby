@@ -641,8 +641,8 @@ module FastRuby
         if options[:main]
           put_block_init = false
         end
-        
-        scope_mode = FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
+
+        scope_mode = @scope_mode || FastRuby::ScopeModeHelper.get_scope_mode(evaluate_tree)
         if scope_mode == :dag or put_setjmp or put_block_init or @has_splat_args
           put_frame = true
           put_locals = true
