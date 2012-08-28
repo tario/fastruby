@@ -30,11 +30,7 @@ module FastRuby
         "{
           #{to_c tree[3][1], "last_expression"};
           rb_funcall(#{literal_value FastRuby::Method}, #{intern_num :build_block}, 3, last_expression, #{literal_value @locals_struct}, #{literal_value @locals});
-          VALUE ___block_args[4];
-
-          VALUE (*___func) (int, VALUE*, VALUE, VALUE);
-          ___func = (void*)( NUM2PTR(rb_gvar_get((struct global_entry*)#{global_entry(:$last_eval_block)})) );
-          #{result_var} = ___func(0,___block_args,(VALUE)plocals,(VALUE)pframe);
+          #{result_var} = eval_code_block(plocals,pframe);
         }"
       end
     }.condition { |tree, result_var=nil|

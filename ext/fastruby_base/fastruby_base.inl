@@ -146,6 +146,13 @@ struct METHOD {
         
 RUBY_EXTERN void* ruby_current_thread;
 
+static inline VALUE eval_code_block(void* plocals, void* pframe) {
+  VALUE ___block_args[4];
+
+  VALUE (*___func) (int, VALUE*, VALUE, VALUE);
+  ___func = (void*)( NUM2PTR(rb_gvar_get(rb_global_entry(rb_intern("$last_eval_block")))));
+  return ___func(0,___block_args,(VALUE)plocals,(VALUE)pframe);
+}
 
 static inline void stack_chunk_initialize(struct STACKCHUNK* sc) {
 	// initialize pointers with zeros
