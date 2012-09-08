@@ -84,4 +84,13 @@ describe FastRuby, "fastruby" do
     EVALX05.new.foo(create_binding_0(), "a").should be == 32
   end 
 
+  it "should eval on bindings defined on fastruby using Binding#eval" do
+    binding_ = EVALX03.new.foo
+    EVALX04.new.foo(binding_, "c").should be == 3
+  end 
+
+  it "should eval on bindings defined on fastruby passing binding on eval" do
+    binding_ = EVALX03.new.foo
+    EVALX05.new.foo(binding_, "c").should be == 3
+  end 
 end
