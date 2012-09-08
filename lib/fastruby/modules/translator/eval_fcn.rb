@@ -37,15 +37,7 @@ module FastRuby
     }.condition { |tree, result_var=nil|
       recv = tree[1]
       args = tree[3]
-      if tree
-        if tree.node_type == :call and not recv and args.size == 2
-          tree[2] == :eval
-        else
-          false
-        end
-      else
-        false
-      end
+      tree and tree.node_type == :call and not recv and args.size == 2
     }
 
     define_method_handler(:to_c, :priority => 1000) { |tree, result_var=nil|
@@ -54,15 +46,7 @@ module FastRuby
     }.condition { |tree, result_var=nil|
       recv = tree[1]
       args = tree[3]
-      if tree
-        if tree.node_type == :call and not recv and args.size > 2
-          tree[2] == :eval
-        else
-          false
-        end
-      else
-        false
-      end
+      tree and tree.node_type == :call and not recv and args.size > 2
     }
 
     define_method_handler(:to_c, :priority => 1000) { |tree, result_var=nil|
