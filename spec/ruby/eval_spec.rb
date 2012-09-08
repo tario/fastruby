@@ -54,5 +54,34 @@ describe FastRuby, "fastruby" do
     EVALX03.new.foo.eval("b").should be == 2
     EVALX03.new.foo.eval("c").should be == 3
   end 
- 
+
+  fastruby "
+    class EVALX04
+      def foo(b, code)
+        b.eval(code)
+      end
+    end
+  " 
+
+  def create_binding_0
+    a = 32
+    binding
+  end
+
+  it "should eval on bindings defined on ruby using Binding#eval" do
+    EVALX04.new.foo(create_binding_0(), "a").should be == 32
+  end 
+
+  fastruby "
+    class EVALX05
+      def foo(b, code)
+        eval(code,b)
+      end
+    end
+  " 
+
+  it "should eval on bindings defined on ruby passing binding on eval" do
+    EVALX05.new.foo(create_binding_0(), "a").should be == 32
+  end 
+
 end
