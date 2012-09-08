@@ -36,8 +36,9 @@ module FastRuby
       end
     }.condition { |tree, result_var=nil|
       recv = tree[1]
+      args = tree[3]
       if tree
-        if tree.node_type == :call and not recv
+        if tree.node_type == :call and not recv and args.size == 2
           tree[2] == :eval
         else
           false
