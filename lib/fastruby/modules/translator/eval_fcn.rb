@@ -35,9 +35,9 @@ module FastRuby
         }"
       end
     }.condition { |tree, result_var=nil|
-      recv = tree[1]
-      args = tree[3]
       if tree
+        recv = tree[1]
+        args = tree[3]
         if tree.node_type == :call and not recv and args.size == 2
           tree[2] == :eval
         else
@@ -52,9 +52,9 @@ module FastRuby
       args = tree[3];
       to_c(fs(:call, args[2], :eval, fs(:args, args[1])), result_var);
     }.condition { |tree, result_var=nil|
-      recv = tree[1]
-      args = tree[3]
       if tree
+        recv = tree[1]
+        args = tree[3]
         if tree.node_type == :call and not recv and args.size > 2
           tree[2] == :eval
         else
