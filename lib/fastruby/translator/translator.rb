@@ -349,6 +349,7 @@ module FastRuby
         VALUE active;
         VALUE targetted;
         VALUE return_value;
+        VALUE __dynavars;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 
@@ -870,6 +871,7 @@ end
         VALUE active;
         VALUE targetted;
         VALUE return_value;
+        VALUE __dynavars;
         #{@locals.map{|l| "VALUE #{l};\n"}.join}
         }"
 

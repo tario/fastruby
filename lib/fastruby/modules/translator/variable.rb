@@ -202,12 +202,27 @@ module FastRuby
 
     define_translator_for(:lasgn, :method => :to_c_lasgn)
     def to_c_lasgn(tree, result_var = nil)
-      code = "
+
+      code = if @locals.include? tree[1]
+        "
           {
             #{to_c tree[2], result_var};
             #{locals_accessor}#{tree[1]} = #{result_var};
            }
            "
+      else
+        "
+          {
+            #{to_c tree[2], result_var};
+            
+            if (!RTEST(#{locals_accessor}__dynavars)) {
+              #{locals_accessor}__dynavars = rb_hash_new();
+            }
+
+            rb_hash_aset(#{locals_accessor}__dynavars,#{literal_value tree[1]},#{result_var});
+           }
+           "
+      end
 
       if result_var
         code
@@ -221,16 +236,20 @@ module FastRuby
     end
     
     define_translator_for(:lvar, :arity => 1) do |*x| tree = x.first;
-      if @has_inline_block or (not is_argument(tree[1]))
-        locals_accessor + tree[1].to_s
-      else
-        # search in arguments
-        index = @method_arguments.find_index{|argument| argument == tree[1]}
-        if index
-          "argv[#{index}]"
-        else
+      if @locals.include? tree[1]
+        if @has_inline_block or (not is_argument(tree[1]))
           locals_accessor + tree[1].to_s
+        else
+          # search in arguments
+          index = @method_arguments.find_index{|argument| argument == tree[1]}
+          if index
+            "argv[#{index}]"
+          else
+            locals_accessor + tree[1].to_s
+          end
         end
+      else
+        "rb_hash_aref(#{locals_accessor}__dynavars,#{literal_value tree[1]})"
       end
     end
 
