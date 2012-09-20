@@ -244,13 +244,11 @@ describe FastRuby, "fastruby" do
     }.should be == 77
   end
 
-  fastruby "
       class CFX14
         def foo
           55
         end
       end
-    "
 
   fastruby "
       class CFX15
