@@ -1450,36 +1450,13 @@ does_not_match:
             VALUE rb_method_hash;
   
             id = rb_intern(method_name);
-            
-            if (rb_respond_to(klass, #{intern_num :method_hash})) {
-              rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
-              
-              if (rb_method_hash != Qnil) {
-                VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
-                if (tmp != Qnil) {
-                    address = (void**)NUM2PTR(tmp);
-                    fptr = *address;
-                }
-              }
-              
-              if (fptr == 0) {
-                VALUE fastruby_method = rb_funcall(klass, #{intern_num :fastruby_method}, 1, #{literal_value mname});
-                VALUE tree = rb_funcall(fastruby_method, #{intern_num :tree}, 0,0);
-    
-                if (RTEST(tree)) {
-                  VALUE argv_class[argc+1];
-                                
-                  argv_class[0] = CLASS_OF(self); 
-                  for (i=0; i<argc; i++) {
-                  argv_class[i+1] = CLASS_OF(argv[i]);
-                  }
-                                
-                  VALUE signature = rb_ary_new4(argc+1,argv_class);
-                  
-                  rb_funcall(klass, #{intern_num :build}, 2, signature,rb_str_new2(#{mname.to_s.inspect}));
-        
-                  id = rb_intern(method_name);
-                  rb_method_hash = rb_funcall(klass, #{intern_num :method_hash},1,#{literal_value mname});
+
+            VALUE parent_klass = klass;
+
+            while (1) {
+                
+                if (rb_respond_to(parent_klass, #{intern_num :method_hash})) {
+                  rb_method_hash = rb_funcall(parent_klass, #{intern_num :method_hash},1,#{literal_value mname});
                   
                   if (rb_method_hash != Qnil) {
                     VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
@@ -1490,12 +1467,45 @@ does_not_match:
                   }
                   
                   if (fptr == 0) {
-                    rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
+                    VALUE fastruby_method = rb_funcall(parent_klass, #{intern_num :fastruby_method}, 1, #{literal_value mname});
+                    VALUE tree = rb_funcall(fastruby_method, #{intern_num :tree}, 0,0);
+        
+                    if (RTEST(tree)) {
+                      VALUE argv_class[argc+1];
+                                    
+                      argv_class[0] = CLASS_OF(self); 
+                      for (i=0; i<argc; i++) {
+                      argv_class[i+1] = CLASS_OF(argv[i]);
+                      }
+                                    
+                      VALUE signature = rb_ary_new4(argc+1,argv_class);
+                      
+                      rb_funcall(parent_klass, #{intern_num :build}, 2, signature,rb_str_new2(#{mname.to_s.inspect}));
+            
+                      id = rb_intern(method_name);
+                      rb_method_hash = rb_funcall(parent_klass, #{intern_num :method_hash},1,#{literal_value mname});
+                      
+                      if (rb_method_hash != Qnil) {
+                        VALUE tmp = rb_hash_aref(rb_method_hash, PTR2NUM(id));
+                        if (tmp != Qnil) {
+                            address = (void**)NUM2PTR(tmp);
+                            fptr = *address;
+                        }
+                      }
+                      
+                      if (fptr == 0) {
+                        rb_raise(rb_eRuntimeError, \"Error: method not found after build\");
+                      }
+                    }
                   }
                 }
-              }
+
+                if (fptr != 0) break;
+                if (parent_klass == rb_cObject) break;
+                parent_klass = rb_funcall(parent_klass, #{intern_num :superclass}, 0);
+
             }
-            
+
             // insert the value on table
             #{table_name}[fptr_hash].argc = argc+15;
 
