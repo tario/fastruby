@@ -189,4 +189,37 @@ describe FastRuby, "fastruby" do
     
     ::JU8.new.bar(lambda{::JU7.new}).should be == 99
   end
+
+
+  it "should allow replace inherited methods with ruby methods" do
+    fastruby "
+      class ::JU9
+        def bar
+          77
+        end
+
+        def foo
+          bar
+        end
+      end
+    "
+
+    fastruby "
+      class ::JU10 < ::JU9
+        def bar
+          78
+        end
+      end
+    "
+
+    ::JU10.new.bar.should be == 78
+
+      class ::JU10
+        def bar
+          79
+        end
+     end
+    
+    ::JU10.new.foo.should be == 79
+  end
 end
