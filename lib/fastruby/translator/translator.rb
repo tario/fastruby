@@ -1504,8 +1504,10 @@ does_not_match:
 
                 if (fptr != 0) break;
 
-                me = rb_method_entry(parent_klass, #{intern_num mname.to_sym});
-                if (!UNDEFINED_METHOD_ENTRY_P(me)) break;
+                st_data_t body;
+                if (st_lookup(RCLASS_M_TBL(parent_klass), #{intern_num mname.to_sym}, &body)) {
+                   break;
+                }
 
                 if (parent_klass == rb_cObject) break;
                 parent_klass = rb_funcall(parent_klass, #{intern_num :superclass}, 0);
